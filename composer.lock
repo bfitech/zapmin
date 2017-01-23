@@ -1,0 +1,81 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "708dec74887fab152501163f08843f6c",
+    "packages": [
+        {
+            "name": "bfitech/zapcore",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "git@bfinews.com:bfin/zapcore.git",
+                "reference": "57e2075ccefa37fd1e67512ee633553f87e98c90"
+            },
+            "require": {
+                "php": ">=5.4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "BFITech\\ZapCore\\": ""
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Rendra Suroso",
+                    "email": "rs@cogsci.bandungfe.net"
+                }
+            ],
+            "description": "A very simple router.",
+            "time": "2017-01-21 07:52:17"
+        },
+        {
+            "name": "bfitech/zapstore",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "git@bfinews.com:bfin/zapstore.git",
+                "reference": "7203cd638741308cf33c0fedd03e05f6fd8d3b3c"
+            },
+            "require": {
+                "php": ">=5.4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "BFITech\\ZapStore\\": ""
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Rendra Suroso",
+                    "email": "rs@cogsci.bandungfe.net"
+                }
+            ],
+            "description": "A simple SQL connection wrapper.",
+            "time": "2017-01-23 04:57:18"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": {
+        "bfitech/zapcore": 20,
+        "bfitech/zapstore": 20
+    },
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": {
+        "php": ">=5.4.0"
+    },
+    "platform-dev": []
+}

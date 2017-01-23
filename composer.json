@@ -1,0 +1,34 @@
+{
+    "name": "bfitech/zapmin",
+    "description": "A simple authentication manager.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Rendra Suroso",
+            "email": "rs@cogsci.bandungfe.net"
+        }
+    ],
+	"repositories": [
+	  {
+		"type": "vcs",
+		"url": "git@bfinews.com:bfin/zapcore.git",
+		"minimum-stability": "dev"
+	  },
+	  {
+		"type": "vcs",
+		"url": "git@bfinews.com:bfin/zapstore.git",
+		"minimum-stability": "dev"
+	  }
+	],
+    "require": {
+	  "php": ">=5.4.0",
+	  "bfitech/zapcore": "dev-master",
+	  "bfitech/zapstore": "dev-master"
+	},
+	"autoload": {
+	  "psr-4": {
+		"BFITech\\ZapAdmin\\": ""
+	  }
+	}
+}

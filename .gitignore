@@ -1,0 +1,9 @@
+
+*~
+*.swp
+*.log
+*.conf
+*.ini
+
+/vendor/
+

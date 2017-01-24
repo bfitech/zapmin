@@ -16,7 +16,9 @@ class AdminStore {
 
 	private $expiration = 3600 * 2; # seconds
 
-	public function __construct($sql, $expiration=null, $create_table=false) {
+	public function __construct(
+		$sql, $expiration=null, $force_create_table=false
+	) {
 
 		$this->sql = $sql;
 		$sql_params = $this->sql->get_connection_params();
@@ -26,8 +28,7 @@ class AdminStore {
 		if ($expiration)
 			$this->expiration = $expiration;
 
-		if ($create_table)
-			$this->create_table();
+		$this->check_tables($force_create_table);
 	}
 
 	public static function check_keys($array, $keys) {
@@ -43,9 +44,19 @@ class AdminStore {
 		return $array;
 	}
 
-	public function create_table() {
+	public function check_tables($force_create_table=false) {
 
 		$sql = $this->sql;
+
+		# Test if tables exist. There's no generic way to check
+		# it across databases. Just use 'udata' since it must
+		# never be empty. Also, every request calls this. Whatevs.
+		try {
+			$test = $sql->query("SELECT uid FROM udata LIMIT 1");
+			if (!$force_create_table)
+				return;
+		} catch (\PDOException $e) {}
+
 		$index = $sql->stmt_fragment('index');
 		$engine = $sql->stmt_fragment('engine');
 		$dtnow = $sql->stmt_fragment('datetime');

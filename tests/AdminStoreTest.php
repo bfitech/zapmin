@@ -33,7 +33,7 @@ class AdminStoreTest extends TestCase {
 			'dbname' => ':memory:'
 		]);
 		self::$sql->open();
-		self::$store= new za\AdminStore(self::$sql, 600, true);
+		self::$store= new za\AdminStore(self::$sql, 600);
 	}
 
 	public static function tearDownAfterClass() {

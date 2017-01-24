@@ -433,7 +433,7 @@ class AdminStore {
 		$post = self::check_keys($args['post'], $keys);
 		if (!$post)
 			return [3, 1];
-		extract($args['post'], EXTR_SKIP);
+		extract($post, EXTR_SKIP);
 
 		if (!$pass_twice)
 			$addpass2 = $addpass1;

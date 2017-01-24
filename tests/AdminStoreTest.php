@@ -6,6 +6,9 @@ use BFITech\ZapStore as zs;
 use BFITech\ZapAdmin as za;
 
 
+/**
+ * @todo Test session expiration.
+ */
 class AdminStoreTest extends TestCase {
 
 	protected static $sql;
@@ -67,9 +70,9 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public function test_set_user_token() {
-		# user data is empty array
+		# loading user data is forbidden
 		$this->assertEquals(
-			self::$store->get_safe_user_data(), []);
+			self::$store->get_safe_user_data()[0], 1);
 
 		# set an invalid token
 		self::$store->set_user_token('invalid token');
@@ -77,11 +80,11 @@ class AdminStoreTest extends TestCase {
 		# reset status
 		self::$store->status();
 
-		# user data is still empty array
+		# loading user data is still forbidden
 		$this->assertEquals(
-			self::$store->get_safe_user_data(), []);
+			self::$store->get_safe_user_data()[0], 1);
 
-		# cannot sing out with no valid session
+		# cannot sign out with no valid session
 		$this->assertEquals(
 			self::$store->logout()[0], 1);
 	}
@@ -191,7 +194,7 @@ class AdminStoreTest extends TestCase {
 
 	public function test_change_bio() {
 		self::loginOK();
-		$safe_data = self::$store->get_safe_user_data();
+		$safe_data = self::$store->get_safe_user_data()[1];
 		$this->assertEquals($safe_data['fname'], '');
 
 		# change fname
@@ -199,7 +202,7 @@ class AdminStoreTest extends TestCase {
 			'post' => [
 				'fname' => 'The Administrator']]);
 
-		$safe_data = self::$store->get_safe_user_data();
+		$safe_data = self::$store->get_safe_user_data()[1];
 		$this->assertEquals($safe_data['site'], '');
 		$this->assertEquals($safe_data['fname'], 'The Administrator');
 	}
@@ -223,6 +226,19 @@ class AdminStoreTest extends TestCase {
 		self::loginOK('john', 'asdf');
 		$user_data = self::$store->status();
 		$this->assertEquals($user_data['uname'], 'john');
+		self::$store->logout();
+
+		# using shorthand
+		$args['post']['addname'] = 'jack';
+		$args['post']['addpass1'] = 'qwer';
+		unset($args['post']['addpass2']);
+		# not typing password twice
+		$this->assertEquals(
+			self::$store->self_add_user($args, true)[0], 3);
+		# success
+		$args['post']['addpass2'] = 'qwer';
+		$this->assertEquals(
+			self::$store->self_add_user($args, true)[0], 0);
 	}
 
 	/**
@@ -273,7 +289,7 @@ class AdminStoreTest extends TestCase {
 
 		# as 'jocelyn'
 		self::loginOK('jocelyn', 'asdf');
-		$uname = self::$store->get_safe_user_data()['uname'];
+		$uname = self::$store->get_safe_user_data()[1]['uname'];
 		$cbp = ['uname' => $uname];
 		# no authz, doesn't satisfy callback
 		$this->assertEquals(
@@ -286,7 +302,7 @@ class AdminStoreTest extends TestCase {
 
 		# as 'john'
 		self::loginOK('john', 'asdf');
-		$uname = self::$store->get_safe_user_data()['uname'];
+		$uname = self::$store->get_safe_user_data()[1]['uname'];
 		$cbp = ['uname' => $uname];
 		# pass authz but password doesn't check out
 		$this->assertEquals(
@@ -315,9 +331,9 @@ class AdminStoreTest extends TestCase {
 		$args = self::postFormatter(['uid' => 0]);
 
 		self::loginOK();
-		$user_list = self::$store->list_user()[1];
-		# so far we have 4 users
-		$this->assertEquals(count($user_list), 4);
+		$user_list = self::$store->list_user($args)[1];
+		# so far we have 5 users
+		$this->assertEquals(count($user_list), 5);
 		self::$store->logout();
 
 		# create uid arrays
@@ -357,7 +373,7 @@ class AdminStoreTest extends TestCase {
 
 		# as john
 		self::loginOK('john', 'asdf');
-		$uname = self::$store->get_safe_user_data()['uname'];
+		$uname = self::$store->get_safe_user_data()[1]['uname'];
 		$cbp = ['uname' => $uname];
 		# user doesn't exist
 		$this->assertEquals(

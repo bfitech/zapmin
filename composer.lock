@@ -41,7 +41,7 @@
             "source": {
                 "type": "git",
                 "url": "git@bfinews.com:bfin/zapstore.git",
-                "reference": "7203cd638741308cf33c0fedd03e05f6fd8d3b3c"
+                "reference": "cce20906914c63b86162f91f4868379db098d62d"
             },
             "require": {
                 "php": ">=5.4.0"
@@ -62,7 +62,7 @@
                 }
             ],
             "description": "A simple SQL connection wrapper.",
-            "time": "2017-01-23 04:57:18"
+            "time": "2017-01-24 04:05:10"
         }
     ],
     "packages-dev": [],

@@ -159,11 +159,11 @@ class AdminStore {
 	 */
 	public function get_safe_user_data() {
 		if (!$this->is_logged_in())
-			return [];
+			return [1];
 		$data = $this->user_data;
 		foreach (['upass', 'usalt'] as $key)
 			unset($data[$key]);
-		return $data;
+		return [0, $data];
 	}
 
 	/**
@@ -426,13 +426,13 @@ class AdminStore {
 
 		# check vars
 		if (!isset($args['post']))
-			return [3];
+			return [3, 0];
 		$keys = ['addname', 'addpass1'];
 		if ($pass_twice)
 			$keys[] = 'addpass2';
 		$post = self::check_keys($args['post'], $keys);
 		if (!$post)
-			return [3];
+			return [3, 1];
 		extract($args['post'], EXTR_SKIP);
 
 		if (!$pass_twice)
@@ -458,6 +458,22 @@ class AdminStore {
 
 		# success
 		return [0];
+	}
+
+	/**
+	 * Self-register.
+	 *
+	 * This is just a special case of add_user() with additional
+	 * condition: user must not be authenticated.
+	 *
+	 * @param array $args Post data with keys: 'addname', 'addpass1',
+	 *     and optional 'addpass2' unless $pass_twice is set to true.
+	 * @param bool $pass_twice Whether password must be entered twice.
+	 */
+	public function self_add_user($args, $pass_twice=false) {
+		if ($this->is_logged_in())
+			return [1];
+		return $this->add_user($args, $pass_twice, true);
 	}
 
 	/*
@@ -536,14 +552,14 @@ class AdminStore {
 	/**
 	 * List all users.
 	 *
-	 * @param int $page Page number.
-	 * @param int $limit Limit per page.
+	 * @param array $args Post data with keys: 'page', 'limit', 'order'
+	 *     where 'order' is 'ASC' or 'DESC'.
 	 * @param function $callback_authz A function that takes one parameter
 	 *     $callback_args to allow listing. Default to current user being root.
 	 * @param array $callback_param Parameter to pass to $callback_authz.
 	 */
 	public function list_user(
-		$page=0, $limit=10, $callback_authz=null, $callback_param=null
+		$args, $callback_authz=null, $callback_param=null
 	) {
 		if (!$callback_authz) {
 			$this->is_logged_in();
@@ -560,15 +576,28 @@ class AdminStore {
 		if ($ret !== 0)
 			return [1, $ret];
 
+		extract($args['post'], EXTR_SKIP);
+
+		$page = isset($page) ? (int)$page : 0;
 		if ($page < 0)
 			$page = 0;
+
+		$limit = 10;
+		$limit = isset($limit) ? (int)$limit : 10;
+		if ($limit <= 0 || $limit >= 40)
+			$limit = 10;
+
 		$offset = $page * $limit;
-		return [0,
-			$this->sql->query(
-				"SELECT uid, uname, fname, site, since " .
-				"FROM udata ORDER BY uid LIMIT ? OFFSET ?",
-				[$limit, $offset], true)
-		];
+
+		if (!isset($order) || !in_array($order, ['ASC', 'DESC']))
+			$order = '';
+
+		$sql = sprintf(
+			"SELECT uid, uname, fname, site, since " .
+			"FROM udata ORDER BY uid %s LIMIT ? OFFSET ?",
+			$order);
+
+		return [0, $this->sql->query($sql, [$limit, $offset], true)];
 	}
 }
 

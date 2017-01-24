@@ -6,7 +6,7 @@ use BFITech\ZapStore as zs;
 use BFITech\ZapAdmin as za;
 
 
-class AdminTest extends TestCase {
+class AdminStoreTest extends TestCase {
 
 	protected static $sql;
 	protected static $store;

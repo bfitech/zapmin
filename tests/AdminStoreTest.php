@@ -63,7 +63,7 @@ class AdminStoreTest extends TestCase {
 			self::$store->check_keys($array, $keys), false);
 	}
 
-	public function test_create_table() {
+	public function test_table() {
 		$qr = self::$sql->query(
 			"SELECT uname FROM udata LIMIT 1");
 		$this->assertEquals($qr['uname'], 'root');
@@ -145,27 +145,25 @@ class AdminStoreTest extends TestCase {
 		# incomplete data
 		$args['pass2'] = '1234';
 		$args = self::postFormatter($args);
-		$this->assertEquals(
-			self::$store->change_password($args, true)[0], 2);
+		$result = self::$store->change_password($args, true);
+		$this->assertEquals($result[0], 2);
 
 		# wrong old password
 		$args['post']['pass0'] = '1234';
-		$this->assertEquals(
-			self::$store->change_password($args, true)[0], 3);
+		$result = self::$store->change_password($args, true);
+		$this->assertEquals($result[0], 3);
 
 		# new passwords don't verify
 		$args['post']['pass0'] = 'admin';
-		$this->assertEquals(
-			self::$store->change_password($args, true)[0], 4);
-		$this->assertEquals(
-			self::$store->change_password($args, true)[1], 1);
+		$result = self::$store->change_password($args, true);
+		$this->assertEquals($result[0], 4);
+		$this->assertEquals($result[1], 1);
 
 		# new password too short
 		$args['post']['pass2'] = '123';
-		$this->assertEquals(
-			self::$store->change_password($args, true)[0], 4);
-		$this->assertEquals(
-			self::$store->change_password($args, true)[1], 2);
+		$result = self::$store->change_password($args, true);
+		$this->assertEquals($result[0], 4);
+		$this->assertEquals($result[1], 2);
 
 		# success
 		$args['post']['pass1'] = '1234';
@@ -231,17 +229,17 @@ class AdminStoreTest extends TestCase {
 		# using shorthand, with email required
 		$args['post']['addname'] = 'jack';
 		$args['post']['addpass1'] = 'qwer';
-		unset($args['post']['addpass2']);
 		# not typing password twice and no email
-		$this->assertEquals(
-			self::$store->self_add_user($args, true, true)[0], 3);
+		unset($args['post']['addpass2']);
+		$result = self::$store->self_add_user($args, true, true);
+		$this->assertEquals($result[0], 3);
+
 		# invalid email
 		$args['post']['addpass2'] = 'qwer';
 		$args['post']['email'] = '#qwer';
-		$this->assertEquals(
-			self::$store->self_add_user($args, true, true)[0], 5);
-		$this->assertEquals(
-			self::$store->self_add_user($args, true, true)[1], 0);
+		$result = self::$store->self_add_user($args, true, true);
+		$this->assertEquals($result[0], 5);
+		$this->assertEquals($result[1], 0);
 
 		# success
 		$args['post']['email'] = 'test+bed@example.org';
@@ -250,10 +248,9 @@ class AdminStoreTest extends TestCase {
 
 		# email exists
 		$args['post']['addname'] = 'jonathan';
-		$this->assertEquals(
-			self::$store->self_add_user($args, true, true)[0], 5);
-		$this->assertEquals(
-			self::$store->self_add_user($args, true, true)[1], 1);
+		$result = self::$store->self_add_user($args, true, true);
+		$this->assertEquals($result[0], 5);
+		$this->assertEquals($result[1], 1);
 
 		# uname too long
 		$args['post']['addname'] = str_repeat('jonathan', 24);
@@ -263,10 +260,9 @@ class AdminStoreTest extends TestCase {
 		# email too long
 		$args['post']['addname'] = 'jonathan';
 		$args['post']['email'] = str_repeat('jonathan', 12) . '@l.co';
-		$this->assertEquals(
-			self::$store->self_add_user($args, true, true)[0], 5);
-		$this->assertEquals(
-			self::$store->self_add_user($args, true, true)[1], 0);
+		$result = self::$store->self_add_user($args, true, true);
+		$this->assertEquals($result[0], 5);
+		$this->assertEquals($result[1], 0);
 	}
 
 	/**
@@ -284,23 +280,20 @@ class AdminStoreTest extends TestCase {
 		# as 'john' with default callback
 		self::loginOK('john', 'asdf');
 		# no authz
-		$this->assertEquals(
-			self::$store->add_user($args)[0], 1);
-		$this->assertEquals(
-			self::$store->add_user($args)[1], 1);
+		$result = self::$store->add_user($args);
+		$this->assertEquals($result[0], 1);
+		$this->assertEquals($result[1], 1);
 		self::$store->logout();
 
 		# as root, with unavailable name
 		self::loginOK();
 		# user exists
-		$this->assertEquals(
-			self::$store->add_user($args)[0], 7);
+		$this->assertEquals(self::$store->add_user($args)[0], 7);
 
 		# as root, with available name
 		$args['post']['addname'] = 'jocelyn';
 		# success, no autologin
-		$this->assertEquals(
-			self::$store->add_user($args)[0], 0);
+		$this->assertEquals(self::$store->add_user($args)[0], 0);
 		self::$store->logout();
 
 		# with callback
@@ -320,12 +313,10 @@ class AdminStoreTest extends TestCase {
 		$uname = self::$store->get_safe_user_data()[1]['uname'];
 		$cbp = ['uname' => $uname];
 		# no authz, doesn't satisfy callback
-		$this->assertEquals(
-			self::$store->add_user(
-				$args, false, false, false, $cbf, $cbp)[0], 1);
-		$this->assertEquals(
-			self::$store->add_user(
-				$args, false, false, false, $cbf, $cbp)[1], 1);
+		$result = self::$store->add_user(
+			$args, false, false, false, $cbf, $cbp);
+		$this->assertEquals($result[0], 1);
+		$this->assertEquals($result[1], 1);
 		self::$store->logout();
 
 		# as 'john'
@@ -333,12 +324,10 @@ class AdminStoreTest extends TestCase {
 		$uname = self::$store->get_safe_user_data()[1]['uname'];
 		$cbp = ['uname' => $uname];
 		# pass authz but password doesn't check out
-		$this->assertEquals(
-			self::$store->add_user(
-				$args, false, false, false, $cbf, $cbp)[0], 6);
-		$this->assertEquals(
-			self::$store->add_user(
-				$args, false, false, false, $cbf, $cbp)[1], 2);
+		$result = self::$store->add_user(
+			$args, false, false, false, $cbf, $cbp);
+		$this->assertEquals($result[0], 6);
+		$this->assertEquals($result[1], 2);
 
 		# as 'john'
 		$args['post']['addpass1'] = 'asdfgh';
@@ -348,7 +337,7 @@ class AdminStoreTest extends TestCase {
 				$args, false, false, false, $cbf, $cbp)[0], 0);
 		self::$store->logout();
 
-		# try sign in as 'jonah'
+		# try sign in as 'jonah', no exception thrown
 		self::loginOK('jonah', 'asdfgh');
 	}
 
@@ -422,6 +411,57 @@ class AdminStoreTest extends TestCase {
 		} catch (Exception $e) {
 			$this->assertEquals(self::$store->status(), null);
 		}
+	}
+
+	public function test_self_register_passwordless() {
+		$args = ['post' => null];
+
+		# no 'service' in args
+		$result = self::$store->self_add_user_passwordless($args);
+		$this->assertEquals($result[0], 2);
+		$this->assertEquals($result[1], 0);
+
+		# not enought args
+		$args['service'] = ['uname' => '1234'];
+		$result = self::$store->self_add_user_passwordless($args);
+		$this->assertEquals($result[0], 2);
+		$this->assertEquals($result[1], 1);
+
+		# success
+		$args['service']['uservice'] = 'github';
+		$result = self::$store->self_add_user_passwordless($args);
+		$this->assertEquals($result[0], 0);
+		$this->assertEquals($result[1]['uname'], '+1234:github');
+
+		# use token
+		$token = $result[1]['token'];
+		self::$store->set_user_token($token);
+
+		# sign success
+		$result = self::$store->get_safe_user_data();
+		$this->assertEquals($result[0], 0);
+		$this->assertEquals($result[1]['uname'], '+1234:github');
+		# generated uid is 6, continued in next test
+	}
+
+	/**
+	 * @depends test_self_register_passwordless
+	 */
+	public function test_login_passwordless() {
+		$args = ['service' => [
+			'uname' => '1234',
+			'uservice' => 'google',
+		]];
+		$result = self::$store->self_add_user_passwordless($args);
+		$this->assertEquals($result[0], 0);
+		$this->assertEquals($result[1]['uname'], '+1234:google');
+
+		# uid doesn't increment
+		$args['service']['uservice'] = 'github';
+		$result = self::$store->self_add_user_passwordless($args);
+		$this->assertEquals($result[0], 0);
+		$this->assertEquals($result[1]['uname'], '+1234:github');
+		$this->assertEquals($result[1]['uid'], 6);
 	}
 }
 

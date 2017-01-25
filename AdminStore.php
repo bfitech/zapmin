@@ -218,7 +218,7 @@ class AdminStore {
 		if (!$this->is_logged_in())
 			return [1];
 		$data = $this->user_data;
-		foreach (['upass', 'usalt'] as $key)
+		foreach (['upass', 'usalt', 'sid', 'token', 'expire'] as $key)
 			unset($data[$key]);
 		return [0, $data];
 	}
@@ -231,9 +231,19 @@ class AdminStore {
 		$this->user_token = null;
 	}
 
+	/**
+	 * Match password and return user data on success.
+	 *
+	 * @param string $uname Username.
+	 * @param string $upass User plain text password.
+	 * @param string $usalt User salt.
+	 * @return array|bool False on failure, user data on
+	 *     success. User data elements are just subset of
+	 *     those returned by get_safe_user_data().
+	 */
 	private function match_password($uname, $upass, $usalt) {
 		$udata = $this->sql->query(
-			"SELECT uid, uname, fname, site " .
+			"SELECT uid, uname " .
 				"FROM udata WHERE upass=? LIMIT 1",
 			[$this->hash_password($uname, $upass, $usalt)]);
 		if (!$udata)
@@ -335,12 +345,12 @@ class AdminStore {
 			'token' => $token,
 		]);
 
-		// token must be used by the router
+		// token must be used by the router; this is a subset
+		// of return value of get_safe_user_data() so it needs
+		// a re-request after signing in
 		return [0, [
 			'uid' => $udata['uid'],
 			'uname' => $udata['uname'],
-			'fname' => $udata['fname'],
-			'site' => $udata['site'],
 			'token' => $token,
 		]];
 	}
@@ -527,8 +537,18 @@ class AdminStore {
 			return [3, 1];
 		extract($post, EXTR_SKIP);
 
+		# check name, allow unicode but not whitespace
 		if (strlen($addname) > 64)
-			return [4];
+			# max 64 chars
+			return [4, 0];
+		foreach([" ", "\n", "\r", "\t"] as $white) {
+			# never allow whitespace in the middle
+			if (strpos($addname, $white) !== false)
+				return [4, 1];
+		}
+		if ($addname[0] == '+')
+			# leading '+' is reserved for passwordless accounts
+			return [4, 2];
 
 		if ($email_required) {
 			if (!self::verify_email_address($email))
@@ -586,6 +606,70 @@ class AdminStore {
 		if ($this->is_logged_in())
 			return [1];
 		return $this->add_user($args, $pass_twice, true, $email_required);
+	}
+
+	/**
+	 * Passwordless self-registration.
+	 *
+	 * This doesn't differ between sign in and sign up.
+	 *
+	 * @note Use this with caution, e.g. with proper authentication
+	 *     via OAuth* or the like.
+	 * @param array $args Array with key 'service' containing another
+	 *     array with keys: 'uname' and 'uservice'. This can be added
+	 *     to $args parameter of route handlers.
+	 */
+	public function self_add_user_passwordless($args) {
+		if ($this->is_logged_in())
+			return [1];
+
+		# check vars
+		if (!isset($args['service']))
+			return [2, 0];
+		$service = self::check_keys($args['service'], ['uname', 'uservice']);
+		if (!$service)
+			return [2, 1];
+		extract($service, EXTR_SKIP);
+
+		$dbuname = '+' . $uname . ':' . $uservice;
+		$check = $this->sql->query(
+			"SELECT uid FROM udata WHERE uname=? LIMIT 1",
+			[$dbuname]);
+		if (!$check) {
+			$uid = $this->sql->insert("udata", [
+				'uname' => $dbuname,
+			], 'uid');
+		} else {
+			$uid = $check['uid'];
+		}
+
+		# token generation is a little different
+		$token = $this->generate_secret(
+			$dbuname . time(), $uname);
+
+		# expiration is much longer, 7 days
+		$expire = 3600 * 24 * 7;
+		$date_expire = $this->sql->query(
+			sprintf(
+				"SELECT %s AS date_expire",
+				$this->sql->stmt_fragment(
+					'datetime', ['delta' => $expire])
+				)
+			)['date_expire'];
+
+		# insert
+		$this->sql->insert('usess', [
+			'uid'    => $uid,
+			'token'  => $token,
+			'expire' => $date_expire,
+		]);
+
+		# use token for next request
+		return [0, [
+			'uid' => $uid,
+			'uname' => $dbuname,
+			'token' => $token,
+		]];
 	}
 
 	/**

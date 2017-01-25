@@ -18,8 +18,8 @@ class AdminRoute extends AdminStore {
 
 	protected $routes_processed = false;
 
-	protected $token_name = null;
-	protected $token_value = null;
+	private $token_name = null;
+	private $token_value = null;
 
 	public function __construct(
 		$home=null, $host=null,
@@ -44,6 +44,10 @@ class AdminRoute extends AdminStore {
 		if (!$prefix)
 			return null;
 		return '/' . $prefix;
+	}
+
+	public function get_token_name() {
+		return $this->token_name;
 	}
 
 	# route manipulation

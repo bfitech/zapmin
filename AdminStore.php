@@ -25,8 +25,12 @@ class AdminStore {
 		if (!$sql_params)
 			throw new StorageError("Database not connected.");
 
-		if ($expiration)
+		if ($expiration) {
+			$expiration = (int)$expiration;
+			if ($expiration < 600)
+				$expiration = 600;
 			$this->expiration = $expiration;
+		}
 
 		$this->check_tables($force_create_table);
 	}
@@ -142,6 +146,16 @@ class AdminStore {
 		if (!$user_token)
 			return;
 		$this->user_token = $user_token;
+	}
+
+	/**
+	 * Get expiration interval.
+	 *
+	 * Useful for client-side manipulation such as sending
+	 * cookies.
+	 */
+	public function get_expiration() {
+		return $this->expiration;
 	}
 
 	/**

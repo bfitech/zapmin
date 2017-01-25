@@ -79,12 +79,19 @@ class AdminRouteDefault extends AdminRoute {
 	protected function _login($args) {
 		$retval = $this->login($args);
 		if ($retval[0] === 0)
-			setcookie('adm', $retval[1]['token'], 7200, '/');
+			setcookie(
+				$this->get_token_name(), $retval[1]['token'],
+				$this->get_expiration(), '/');
 		return $this->_json($retval);
 	}
 
 	protected function _logout($args) {
-		return $this->_json($this->logout($args));
+		$retval = $this->logout($args);
+		if ($retval[0] === 0)
+			setcookie(
+				$this->get_token_name(), '',
+				(-3600 * 48), '/');
+		return $this->_json($retval);
 	}
 
 	protected function _chpasswd($args) {
@@ -104,7 +111,9 @@ class AdminRouteDefault extends AdminRoute {
 		$args['post']['uname'] = $args['post']['addname'];
 		$args['post']['upass'] = $args['post']['addpass1'];
 		$retval = $this->login($args);
-		setcookie('adm', $retval[1]['token'], 7200, '/');
+		setcookie(
+			$this->get_token_name(), $retval[1]['token'],
+			$this->get_expiration(), '/');
 		return $this->_json($retval);
 	}
 

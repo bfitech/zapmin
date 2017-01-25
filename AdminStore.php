@@ -48,8 +48,8 @@ class AdminStore {
 
 		$sql = $this->sql;
 
-		# Test if tables exist. There's no generic way to check
-		# it across databases. Just use 'udata' since it must
+		# @note Test if tables exist. There's no generic way to
+		# check it across databases. Just use 'udata' since it must
 		# never be empty. Also, every request calls this. Whatevs.
 		try {
 			$test = $sql->query("SELECT uid FROM udata LIMIT 1");
@@ -73,6 +73,10 @@ class AdminStore {
 					"Cannot drop data:" . $sql->errmsg);
 		}
 
+		# @note Unique and null in one column is not portable.
+		# Must check email uniqueness manually.
+		# @note Email verification must be held separately.
+		# Table only reserves a column for it.
 		$user_table = (
 			"CREATE TABLE udata (" .
 			"  uid %s," .
@@ -80,6 +84,8 @@ class AdminStore {
 			"  upass VARCHAR(64)," .
 			"  usalt VARCHAR(16)," .
 			"  since DATE NOT NULL DEFAULT %s," .
+			"  email VARCHAR(64)," .
+			"  email_verified INT NOT NULL DEFAULT 0," .
 			"  fname VARCHAR(128)," .
 			"  site VARCHAR(128)" .
 			") %s;"
@@ -216,6 +222,21 @@ class AdminStore {
 		if (strlen($pass1) < 4)
 			return 2;
 		return 0;
+	}
+
+	/**
+	 * Verify email address.
+	 *
+	 * See: https://archive.fo/W1X0O
+	 */
+	public static function verify_email_address($email) {
+		$email = trim($email);
+		if (!$email || strlen($email) > 64)
+			return false;
+		$pat = '/^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\"))' .
+			   '@' .
+			   '(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i';
+		return preg_match($pat, $email);
 	}
 
 	/**
@@ -410,6 +431,7 @@ class AdminStore {
 	 * @param bool $pass_twice Whether password must be entered twice.
 	 * @param bool $allow_self_register Whether self-registration is
 	 *     allowed.
+	 * @param bool $email_required Whether email address is mandatory.
 	 * @param function $callback_authz A function that takes one parameter
 	 *     $callback_param to allow registration to proceed. Default to
 	 *     current user being root.
@@ -417,7 +439,7 @@ class AdminStore {
 	 */
 	public function add_user(
 		$args, $pass_twice=false, $allow_self_register=false,
-		$callback_authz=null, $callback_param=null
+		$email_required=false, $callback_authz=null, $callback_param=null
 	) {
 		if ($this->is_logged_in()) {
 			if (!$callback_authz) {
@@ -449,30 +471,48 @@ class AdminStore {
 		$keys = ['addname', 'addpass1'];
 		if ($pass_twice)
 			$keys[] = 'addpass2';
+		if ($email_required)
+			$keys[] = 'email';
 		$post = self::check_keys($args['post'], $keys);
 		if (!$post)
 			return [3, 1];
 		extract($post, EXTR_SKIP);
 
+		if (strlen($addname) > 64)
+			return [4];
+
+		if ($email_required) {
+			if (!self::verify_email_address($email))
+				return [5, 0];
+			if ($this->sql->query(
+				"SELECT uid FROM udata WHERE email=? LIMIT 1",
+				[$email])
+			)
+				return [5, 1];
+		}
+
 		if (!$pass_twice)
 			$addpass2 = $addpass1;
 		$verify_password = $this->verify_password($addpass1, $addpass2);
 		if ($verify_password !== 0)
-			return [4, $verify_password];
+			return [6, $verify_password];
 
 		# hashes generation
 		$usalt = $this->generate_secret($addname . $addpass1, null, 16);
 		$hpass = $this->hash_password($addname, $addpass1, $usalt);
 
 		# insert
-		if (!$this->sql->insert('udata', [
+		$udata = [
 			'uname' => $addname,
 			'upass' => $hpass,
 			'usalt' => $usalt,
-		], 'uid')) {
+		];
+		if ($email_required)
+			$udata['email'] = $email;
+		if (!$this->sql->insert('udata', $udata, 'uid')) {
 			# user exists
 			# FIXME: Relying on PDO exception seems fishy.
-			return [6];
+			return [7];
 		}
 
 		# success
@@ -489,10 +529,12 @@ class AdminStore {
 	 *     and optional 'addpass2' unless $pass_twice is set to true.
 	 * @param bool $pass_twice Whether password must be entered twice.
 	 */
-	public function self_add_user($args, $pass_twice=false) {
+	public function self_add_user(
+		$args, $pass_twice=false, $email_required=false
+	) {
 		if ($this->is_logged_in())
 			return [1];
-		return $this->add_user($args, $pass_twice, true);
+		return $this->add_user($args, $pass_twice, true, $email_required);
 	}
 
 	/*

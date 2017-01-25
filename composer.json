@@ -26,6 +26,9 @@
 	  "bfitech/zapcore": "dev-master",
 	  "bfitech/zapstore": "dev-master"
 	},
+	"require-dev": {
+	  "guzzlehttp/guzzle": "6.*" 
+	},
 	"autoload": {
 	  "psr-4": {
 		"BFITech\\ZapAdmin\\": ""

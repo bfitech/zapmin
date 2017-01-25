@@ -55,6 +55,7 @@ class AdminRouteDefault extends AdminRoute {
 		$this->add_route('/useradd',  [$this, '_useradd'], 'POST');
 		$this->add_route('/userdel',  [$this, '_userdel'], 'POST');
 		$this->add_route('/userlist', [$this, '_userlist'], 'POST');
+		$this->add_route('/byway',    [$this, '_byway'], ['GET', 'POST']);
 	}
 
 	/**
@@ -111,7 +112,7 @@ class AdminRouteDefault extends AdminRoute {
 
 	/** `POST: /chpasswd` */
 	protected function _chpasswd($args) {
-		return $this->_json($this->change_password($args));
+		return $this->_json($this->change_password($args, true));
 	}
 
 	/** `POST: /chbio` */
@@ -121,7 +122,7 @@ class AdminRouteDefault extends AdminRoute {
 
 	/** `POST: /register` */
 	protected function _register($args) {
-		$retval = $this->self_add_user($args);
+		$retval = $this->self_add_user($args, true, true);
 		if ($retval[0] !== 0)
 			# fail
 			return $this->_json($retval);
@@ -138,19 +139,47 @@ class AdminRouteDefault extends AdminRoute {
 	/** `POST: /useradd` */
 	protected function _useradd($args) {
 		return $this->_json(
-			$this->add_user($args, false, false));
+			$this->add_user($args, false, true, true), 403);
 	}
 
 	/** `POST: /userdel` */
 	protected function _userdel($args) {
 		return $this->_json(
-			$this->delete_user($args));
+			$this->delete_user($args), 403);
 	}
 
 	/** `POST: /userlist` */
 	protected function _userlist($args) {
 		return $this->_json(
-			$this->list_user($args));
+			$this->list_user($args), 403);
+	}
+
+	/**
+	 * `GET|POST: /byway`
+	 * @todo
+	 * - This is a mock method. Real method must manipulate $args
+	 *   into containing 'service' key that is not sent by client,
+	 *   but by 3rd-party instead.
+	 * - Move hardcoded expiration to an attribute retriavable by
+	 *   a getter like get_expiration().
+	 */
+	protected function _byway($args) {
+		### start mock
+		if (isset($args['post']['service']))
+			$args['service'] = $args['post']['service'];
+		### end mock
+		$retval = $this->self_add_user_passwordless($args);
+		if ($retval[0] !== 0)
+			return $this->_json($retval, 403);
+		if (!isset($retval[1]) || !isset($retval[1]['token']))
+			return $this->_json($retval, 403);
+		# alway autologin on success
+		$token = $retval[1]['token'];
+		$this->set_user_token($token);
+		setcookie(
+			$this->get_token_name(), $token,
+			time() + (3600 * 24 * 7), '/');
+		return $this->_json($retval);
 	}
 }
 

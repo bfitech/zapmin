@@ -721,7 +721,7 @@ class AdminStore {
 		if (!$this->sql->query(
 			"SELECT uid FROM udata WHERE uid=? LIMIT 1",
 			[$uid]))
-			# user doesn't exist
+			# user does not exist
 			return [5];
 
 		# delete user data and its related session history via

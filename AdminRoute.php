@@ -10,26 +10,49 @@ use BFITech\ZapStore as zs;
 
 class AdminRoute extends AdminStore {
 
+	/**
+	 * Core instance. Subclasses are expected to collect HTTP variables
+	 * with this.
+	 */
 	public static $core = null;
+	/**
+	 * Storage instance. Subclasses are expected to manipulate tables
+	 * with this.
+	 */
 	public static $store = null;
 
+	/** Path prefix. */
 	protected $prefix = null;
+	/** Collection of routes. */
 	protected $routes = [];
 
+	/** Marker whether routes have been processed. */
 	protected $routes_processed = false;
 
 	private $token_name = null;
 	private $token_value = null;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param string $home Core home.
+	 * @param string $host Core host.
+	 * @param array $dbargs Database connection parameter.
+	 * @param int $expiration Expiration interval.
+	 * @param bool $force_create_table Whether overwriting tables is allowed.
+	 * @param string $token_name Name of authorization token. Defaults
+	 *     to 'zapmin'.
+	 * @param string $route_prefix Route prefix.
+	 */
 	public function __construct(
 		$home=null, $host=null,
-		$dbargs=[], $expiration=null, $create_table=false,
+		$dbargs=[], $expiration=null, $force_create_table=false,
 		$token_name=null, $route_prefix=null
 	) {
 		self::$core = new zc\Router($home, $host);
 		self::$store = new zs\SQL($dbargs);
 		self::$store->open();
-		parent::__construct(self::$store, $expiration, $create_table);
+		parent::__construct(self::$store, $expiration, $force_create_table);
 
 		if (!$token_name)
 			$token_name = 'zapmin';
@@ -46,12 +69,21 @@ class AdminRoute extends AdminStore {
 		return '/' . $prefix;
 	}
 
+	/**
+	 * Safely retrieve authentication token name.
+	 *
+	 * Useful for the client for e.g. setting cookie name or HTTP
+	 * request header.
+	 */
 	public function get_token_name() {
 		return $this->token_name;
 	}
 
 	# route manipulation
 
+	/**
+	 * Add a route.
+	 */
 	public function add_route($path, $callback_method, $request_method) {
 		if ($this->routes_processed)
 			return;
@@ -64,6 +96,17 @@ class AdminRoute extends AdminStore {
 		];
 	}
 
+	/**
+	 * Delete a registered route.
+	 *
+	 * @param string $path Registered path.
+	 * @param string|array $request_method Request method associated
+	 *     with the route.
+	 * @todo
+	 *     - Unlike its add_route() counterpart, this doesn't take
+	 *       prefix into account.
+	 *     - The way it handles request method comparison is not foolproof.
+	 */
 	public function delete_route($path, $request_method) {
 		if ($this->routes_processed)
 			return;
@@ -82,6 +125,7 @@ class AdminRoute extends AdminStore {
 	 * Collect custom request headers and append it to args.
 	 *
 	 * @todo Move this to core.
+	 *
 	 * @param array $args Router HTTP variables.
 	 */
 	public function get_request_headers($args) {

@@ -6,23 +6,29 @@ namespace BFITech\ZapAdmin;
 
 /**
  * Default routes.
- *
- * @example
- *
- * # index.php
- * use BFITech\ZapAdmin as za;
- * $route = new za\AdminRouteDefault(null, null, [
- *     'dbtype' => 'sqlite3',
- *     'dbname' => '/tmp/zapmin.sq3',
- * ]);
- * $route->process_routes();
- *
- * # run it with `php -S 0.0.0.0:8000`
  */
 class AdminRouteDefault extends AdminRoute {
 
 	/**
 	 * Constructor.
+	 *
+	 * @see AdminRoute
+	 *
+	 * ## Example:
+	 * ~~~~.php
+	 *
+	 * # index.php
+	 *
+	 * use BFITech\ZapAdmin as za;
+	 * $route = new za\AdminRouteDefault(null, null, [
+	 *     'dbtype' => 'sqlite3',
+	 *     'dbname' => '/tmp/zapmin.sq3',
+	 * ]);
+	 * $route->process_routes();
+	 *
+	 * # run it with `php -S 0.0.0.0:8000`
+	 *
+	 * ~~~~
 	 */
 	public function __construct(
 		$home=null, $host=null,
@@ -42,7 +48,7 @@ class AdminRouteDefault extends AdminRoute {
 		$this->add_route('/',         [$this, '_home'], 'GET');
 		$this->add_route('/status',   [$this, '_status'], 'GET');
 		$this->add_route('/login',    [$this, '_login'], 'POST');
-		$this->add_route('/logout',   [$this, '_logout'], 'POST');
+		$this->add_route('/logout',   [$this, '_logout'], ['GET', 'POST']);
 		$this->add_route('/chpasswd', [$this, '_chpasswd'], 'POST');
 		$this->add_route('/chbio',    [$this, '_chbio'], 'POST');
 		$this->add_route('/register', [$this, '_register'], 'POST');
@@ -53,6 +59,11 @@ class AdminRouteDefault extends AdminRoute {
 
 	/**
 	 * Wrapper for JSON response header and body.
+	 *
+	 * @param array $retval Return value of a method call.
+	 * @param int $forbidden_code If $retval[0]==0, HTTP code is 200.
+	 *     Otherwise it defaults to 401 which we can override with
+	 *     this parameter, e.g. 403.
 	 */
 	protected function _json($retval, $forbidden_code=null) {
 		if (count($retval) < 2)
@@ -68,14 +79,17 @@ class AdminRouteDefault extends AdminRoute {
 
 	# default handlers
 
+	/** `GET: /` */
 	protected function _home($args) {
 		echo '<h1>It wurks!</h1>';
 	}
 
+	/** `GET: /status` */
 	protected function _status($args) {
 		return $this->_json($this->get_safe_user_data());
 	}
 
+	/** `POST: /login` */
 	protected function _login($args) {
 		$retval = $this->login($args);
 		if ($retval[0] === 0)
@@ -85,6 +99,7 @@ class AdminRouteDefault extends AdminRoute {
 		return $this->_json($retval);
 	}
 
+	/** `GET|POST: /logout` */
 	protected function _logout($args) {
 		$retval = $this->logout($args);
 		if ($retval[0] === 0)
@@ -94,14 +109,17 @@ class AdminRouteDefault extends AdminRoute {
 		return $this->_json($retval);
 	}
 
+	/** `POST: /chpasswd` */
 	protected function _chpasswd($args) {
 		return $this->_json($this->change_password($args));
 	}
 
+	/** `POST: /chbio` */
 	protected function _chbio($args) {
 		return $this->_json($this->change_bio($args));
 	}
 
+	/** `POST: /register` */
 	protected function _register($args) {
 		$retval = $this->self_add_user($args);
 		if ($retval[0] !== 0)
@@ -117,16 +135,19 @@ class AdminRouteDefault extends AdminRoute {
 		return $this->_json($retval);
 	}
 
+	/** `POST: /useradd` */
 	protected function _useradd($args) {
 		return $this->_json(
 			$this->add_user($args, false, false));
 	}
 
+	/** `POST: /userdel` */
 	protected function _userdel($args) {
 		return $this->_json(
 			$this->delete_user($args));
 	}
 
+	/** `POST: /userlist` */
 	protected function _userlist($args) {
 		return $this->_json(
 			$this->list_user($args));

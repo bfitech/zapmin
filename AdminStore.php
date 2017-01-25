@@ -5,7 +5,7 @@ namespace BFITech\ZapAdmin;
 
 
 # must move to storage
-class StorageError extends \Exception {}
+class AdminStoreError extends \PDOException {}
 
 class AdminStore {
 
@@ -14,8 +14,17 @@ class AdminStore {
 	private $user_token = null;
 	private $user_data = null;
 
-	private $expiration = 3600 * 2; # seconds
+	private $expiration = 3600 * 2;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param object $sql An instance of ZapStore\\SQL.
+	 * @param int $expiration Session expiration interval in seconds.
+	 *     Defaults to 2 hours.
+	 * @param bool $force_create_table Whether tables are to be created
+	 *     regardless current installation.
+	 */
 	public function __construct(
 		$sql, $expiration=null, $force_create_table=false
 	) {
@@ -23,7 +32,7 @@ class AdminStore {
 		$this->sql = $sql;
 		$sql_params = $this->sql->get_connection_params();
 		if (!$sql_params)
-			throw new StorageError("Database not connected.");
+			throw new AdminStoreError("Database not connected.");
 
 		if ($expiration) {
 			$expiration = (int)$expiration;
@@ -35,6 +44,14 @@ class AdminStore {
 		$this->check_tables($force_create_table);
 	}
 
+	/**
+	 * Check if an associative array has all the intended keys.
+	 *
+	 * @param array $array Input array.
+	 * @param array $keys List of keys.
+	 * @return array|bool A filtered array with trimmed element if all
+	 *     keys exist, false otherwise.
+	 */
 	public static function check_keys($array, $keys) {
 		foreach ($keys as $key) {
 			if (!isset($array[$key]))
@@ -48,13 +65,20 @@ class AdminStore {
 		return $array;
 	}
 
-	public function check_tables($force_create_table=false) {
+
+	/**
+	 * Check if tables exist.
+	 *
+	 * @param bool $force_create_table When set to true, new table
+	 *     will be created despite the old one.
+	 */
+	private function check_tables($force_create_table=false) {
 
 		$sql = $this->sql;
 
-		# @note Test if tables exist. There's no generic way to
-		# check it across databases. Just use 'udata' since it must
-		# never be empty. Also, every request calls this. Whatevs.
+		# @fixme There's no generic way to check this across databases.
+		# Just use 'udata' since it must never be empty. Also, every
+		# request calls this. Whatevs.
 		try {
 			$test = $sql->query("SELECT uid FROM udata LIMIT 1");
 			if (!$force_create_table)
@@ -73,14 +97,15 @@ class AdminStore {
 			"DROP TABLE IF EXISTS udata;",
 		] as $drop) {
 			if (!$sql->query_raw($drop))
-				throw new StorageError(
+				throw new AdminStoreError(
 					"Cannot drop data:" . $sql->errmsg);
 		}
 
-		# @note Unique and null in one column is not portable.
-		# Must check email uniqueness manually.
-		# @note Email verification must be held separately.
-		# Table only reserves a column for it.
+		# @note
+		# - Unique and null in one column is not portable.
+		#   Must check email uniqueness manually.
+		# - Email verification must be held separately.
+		#   Table only reserves a column for it.
 		$user_table = (
 			"CREATE TABLE udata (" .
 			"  uid %s," .
@@ -96,7 +121,7 @@ class AdminStore {
 		);
 		$user_table = sprintf($user_table, $index, $dtnow, $engine);
 		if (!$sql->query_raw($user_table))
-			throw new StorageError(
+			throw new AdminStoreError(
 				"Cannot create udata table:" . $sql->errmsg);
 		$root_salt = $this->generate_secret('root', null, 16);
 		$root_pass = $this->hash_password('root', 'admin', $root_salt);
@@ -118,7 +143,7 @@ class AdminStore {
 		$session_table = sprintf(
 			$session_table, $index, $expire, $engine);
 		if (!$sql->query_raw($session_table))
-			throw new StorageError(
+			throw new AdminStoreError(
 				"Cannot create usess table:" . $sql->errmsg);
 
 		$user_session_view = (
@@ -133,12 +158,12 @@ class AdminStore {
 			"    udata.uid=usess.uid;"
 		);
 		if (!$sql->query_raw($user_session_view))
-			throw new StorageError(
+			throw new AdminStoreError(
 				"Cannot create v_usess view:" . $sql->errmsg);
 	}
 
 	/**
-	 * Set user token from environment or HTTP variables.
+	 * Set user token.
 	 *
 	 * Token can be obtained from cookie or custom header.
 	 */
@@ -151,8 +176,7 @@ class AdminStore {
 	/**
 	 * Get expiration interval.
 	 *
-	 * Useful for client-side manipulation such as sending
-	 * cookies.
+	 * Useful for client-side manipulation such as sending cookies.
 	 */
 	public function get_expiration() {
 		return $this->expiration;
@@ -162,7 +186,7 @@ class AdminStore {
 	 * Populate session data.
 	 *
 	 * Call this early on in every HTTP request once token
-	 * is available.
+	 * is available or use its shorthand is_logged_in().
 	 */
 	public function status() {
 		if ($this->user_token === null)
@@ -186,8 +210,11 @@ class AdminStore {
 
 	/**
 	 * Get user data excluding sensitive info.
+	 *
+	 * @param array $args Unused. Keep it here to keep callback
+	 *     pattern consistent.
 	 */
-	public function get_safe_user_data() {
+	public function get_safe_user_data($args=null) {
 		if (!$this->is_logged_in())
 			return [1];
 		$data = $this->user_data;
@@ -274,7 +301,7 @@ class AdminStore {
 	/**
 	 * Sign in.
 	 *
-	 * @param array $arg Post data with keys: 'uname', 'upass'.
+	 * @param array $args Post data with keys: 'uname', 'upass'.
 	 */
 	public function login($args) {
 		if ($this->is_logged_in())
@@ -339,8 +366,11 @@ class AdminStore {
 
 	/**
 	 * Sign out.
+	 *
+	 * @param array $args Unused. Retained for callback pattern consistency.
+	 * @note Using _GET is enough for this operation.
 	 */
-	public function logout() {
+	public function logout($args=null) {
 		if (!$this->is_logged_in())
 			return [1];
 		# this just close sessions with current sid, whether
@@ -357,7 +387,8 @@ class AdminStore {
 	/**
 	 * Change password.
 	 *
-	 * @param array $args HTTP variables.
+	 * @param array $args Post data with keys: 'pass1', 'pass2' and
+	 *     optionally 'pass0' if $with_old_password is set to true.
 	 * @param bool $with_old_password Whether user should
 	 *     enter valid old password.
 	 */
@@ -403,6 +434,10 @@ class AdminStore {
 
 	/**
 	 * Change user info.
+	 *
+	 * @param array $args Post data with keys: 'fname', 'site'.
+	 * @todo Change email, although this is more complicated if
+	 *     we also need to verify the email.
 	 */
 	public function change_bio($args) {
 		if (!$this->is_logged_in())
@@ -536,12 +571,14 @@ class AdminStore {
 	/**
 	 * Self-register.
 	 *
-	 * This is just a special case of add_user() with additional
+	 * @note This is just a special case of add_user() with additional
 	 * condition: user must not be authenticated.
 	 *
 	 * @param array $args Post data with keys: 'addname', 'addpass1',
 	 *     and optional 'addpass2' unless $pass_twice is set to true.
 	 * @param bool $pass_twice Whether password must be entered twice.
+	 * @param bool $email_required Whether an email address must be
+	 *     provided.
 	 */
 	public function self_add_user(
 		$args, $pass_twice=false, $email_required=false
@@ -551,14 +588,10 @@ class AdminStore {
 		return $this->add_user($args, $pass_twice, true, $email_required);
 	}
 
-	/*
+	/**
 	 * Delete a user.
 	 *
 	 * @param array $args Post data with keys: 'uid'.
-	 * @param int $uid User ID to be deleted.
-	 * @param function $callback_authz Callback to determine whether
-	 *     current user is allowed to delete. Defaults to root and
-	 *     self-delete.
 	 * @param function $callback_authz A function that takes one parameter
 	 *     $callback_args to allow deletion to proceed. Default to current
 	 *     user being root, or non-root self-deletion.

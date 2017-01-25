@@ -6,4 +6,5 @@
 *.ini
 
 /vendor/
+/docs/
 

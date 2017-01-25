@@ -51,11 +51,14 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public function test_check_keys() {
-		$array = [
-			'foo' => 1,
-			'bar' => 2,
-		];
+		$array = ['foo' => 1];
 		$keys = ['foo', 'bar'];
+		$this->assertEquals(
+			self::$store->check_keys($array, $keys), false);
+		$array['bar'] = '2';
+		$this->assertEquals(
+			self::$store->check_keys($array, $keys), false);
+		$array['foo'] = '1';
 		$this->assertNotEquals(
 			self::$store->check_keys($array, $keys), false);
 		$keys[] = 'baz';
@@ -345,7 +348,7 @@ class AdminStoreTest extends TestCase {
 	 * @depends test_register
 	 */
 	public function test_delete_user() {
-		$args = self::postFormatter(['uid' => 0]);
+		$args = self::postFormatter(['uid' => '0']);
 
 		self::loginOK();
 		$user_list = self::$store->list_user($args)[1];
@@ -355,7 +358,7 @@ class AdminStoreTest extends TestCase {
 
 		# create uid arrays
 		$uids = array_map(function($_arr){
-			return $_arr['uid'];
+			return (string)$_arr['uid'];
 		}, $user_list);
 
 		# no authn
@@ -396,11 +399,11 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals(
 			self::$store->delete_user($args, $cbf, $cbp)[0], 5);
 		# cannot delete 'root'
-		$args['post']['uid'] = 1;
+		$args['post']['uid'] = '1';
 		$this->assertEquals(
 			self::$store->delete_user($args, $cbf, $cbp)[0], 4);
 		# success, delete 'jocelyn' uid=3
-		$args['post']['uid'] = 3;
+		$args['post']['uid'] = '3';
 		$this->assertEquals(
 			self::$store->delete_user($args, $cbf, $cbp)[0], 0);
 		self::$store->logout();

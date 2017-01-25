@@ -50,7 +50,7 @@ class AdminStore {
 	 * @param array $array Input array.
 	 * @param array $keys List of keys.
 	 * @return array|bool A filtered array with trimmed element if all
-	 *     keys exist, false otherwise.
+	 *     keys exist, false otherwise. Values must all be strings.
 	 */
 	public static function check_keys($array, $keys) {
 		foreach ($keys as $key) {
@@ -60,6 +60,8 @@ class AdminStore {
 				$array[$key] = trim($array[$key]);
 				if ($array[$key] == '')
 					return false;
+			} else {
+				return false;
 			}
 		}
 		return $array;

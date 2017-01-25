@@ -77,7 +77,7 @@ class AdminStore {
 			"CREATE TABLE udata (" .
 			"  uid %s," .
 			"  uname VARCHAR(64) UNIQUE," .
-			"  upass VARCHAR(128)," .
+			"  upass VARCHAR(64)," .
 			"  usalt VARCHAR(16)," .
 			"  since DATE NOT NULL DEFAULT %s," .
 			"  fname VARCHAR(128)," .
@@ -88,8 +88,7 @@ class AdminStore {
 		if (!$sql->query_raw($user_table))
 			throw new StorageError(
 				"Cannot create udata table:" . $sql->errmsg);
-		$root_salt = $this->generate_secret('root');
-		$root_salt = substr($root_salt, 0, 16);
+		$root_salt = $this->generate_secret('root', null, 16);
 		$root_pass = $this->hash_password('root', 'admin', $root_salt);
 		$sql->insert('udata', [
 			'uid' => 1,
@@ -204,7 +203,8 @@ class AdminStore {
 	/**
 	 * Verify plaintext password.
 	 *
-	 * Used by password change, registration, password reset, etc.
+	 * Used by password change, registration, and derivatives
+	 * like password reset, etc.
 	 */
 	private function verify_password($pass1, $pass2) {
 		$pass1 = trim($pass1);
@@ -218,13 +218,22 @@ class AdminStore {
 		return 0;
 	}
 
-	private function generate_secret($data, $key=null) {
+	/**
+	 * Generate salt.
+	 *
+	 * @param string $data Input data.
+	 * @param string $key HMAC key.
+	 * @param int $length Maximum length of generated salt. Normal
+	 *     usage is 16 for user salt and 64 for hashed password.
+	 */
+	private function generate_secret($data, $key=null, $length=64) {
 		if (!$key)
-			$key = (string)time();
+			$key = dechex(time() + mt_rand());
 		$bstr = $data . $key;
-		# NOTE: Keep $key <= 16 bytes.
 		$bstr = hash_hmac('sha256', $bstr, $key, true);
-		return base64_encode($bstr);
+		$bstr = base64_encode($bstr);
+		$bstr = str_replace(['/', '+', '='], '', $bstr);
+		return substr($bstr, 0, $length);
 	}
 
 	/**
@@ -256,9 +265,8 @@ class AdminStore {
 			return [5];
 
 		// generate token
-		$token = $this->generate_secret($upass . $usalt . time(), $usalt);
-		$token = str_replace(['=', '+', '/'], '', $token);
-		$token = substr($token, 0, 64);
+		$token = $this->generate_secret(
+			$upass . $usalt . time(), $usalt);
 
 		$this->sql->insert('usess', [
 			'uid'   => $udata['uid'],
@@ -453,7 +461,7 @@ class AdminStore {
 			return [4, $verify_password];
 
 		# hashes generation
-		$usalt = $this->generate_secret($addname . $addpass1);
+		$usalt = $this->generate_secret($addname . $addpass1, null, 16);
 		$hpass = $this->hash_password($addname, $addpass1, $usalt);
 
 		# insert

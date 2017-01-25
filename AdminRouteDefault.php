@@ -95,7 +95,7 @@ class AdminRouteDefault extends AdminRoute {
 		if ($retval[0] === 0)
 			setcookie(
 				$this->get_token_name(), $retval[1]['token'],
-				$this->get_expiration(), '/');
+				time() + $this->get_expiration(), '/');
 		return $this->_json($retval);
 	}
 
@@ -105,7 +105,7 @@ class AdminRouteDefault extends AdminRoute {
 		if ($retval[0] === 0)
 			setcookie(
 				$this->get_token_name(), '',
-				(-3600 * 48), '/');
+				time() - (3600 * 48), '/');
 		return $this->_json($retval);
 	}
 
@@ -131,7 +131,7 @@ class AdminRouteDefault extends AdminRoute {
 		$retval = $this->login($args);
 		setcookie(
 			$this->get_token_name(), $retval[1]['token'],
-			$this->get_expiration(), '/');
+			time() + $this->get_expiration(), '/');
 		return $this->_json($retval);
 	}
 

@@ -724,18 +724,8 @@ class AdminStore {
 			# user doesn't exist
 			return [5];
 
-		# kill all sessions; this should be faster
-		# with raw SQL, oh well
-		$sessions = $this->sql->query(
-			sprintf(
-				"SELECT sid FROM usess WHERE ".
-					"uid=? AND expire>=%s",
-				$this->sql->stmt_fragment('datetime')
-			), [$uid], true);
-		foreach ($sessions as $s)
-			$this->close_session($s['sid']);
-
-		# delete user data
+		# delete user data and its related session history via
+		# foreign key constraint
 		$this->sql->delete('udata', ['uid' => $uid]);
 
 		# in case of self-delete, router must send redirect header

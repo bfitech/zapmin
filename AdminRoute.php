@@ -122,25 +122,6 @@ class AdminRoute extends AdminStore {
 	# wrappers
 
 	/**
-	 * Collect custom request headers and append it to args.
-	 *
-	 * @todo Move this to core.
-	 *
-	 * @param array $args Router HTTP variables.
-	 */
-	public function get_request_headers($args) {
-		$args['header'] = [];
-		foreach ($_SERVER as $key => $val) {
-			if (strpos($key, 'HTTP_') === 0) {
-				$key = substr($key, 5, strlen($key));
-				$key = strtolower($key);
-				$args['header'][$key] = $val;
-			}
-		}
-		return $args;
-	}
-
-	/**
 	 * Add a route.
 	 *
 	 * @param array $route An array with keys: 'path', 'callback_method',
@@ -162,8 +143,6 @@ class AdminRoute extends AdminStore {
 			return;
 		}
 		self::$core->route($path, function($args) use($callback_method){
-			# collect request headers
-			$args = $this->get_request_headers($args);
 			# set token if available
 			if (isset($args['cookie'][$this->token_name])) {
 				$this->set_user_token(

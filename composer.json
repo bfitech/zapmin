@@ -33,5 +33,10 @@
 	  "psr-4": {
 		"BFITech\\ZapAdmin\\": ""
 	  }
+	},
+	"autoload-dev": {
+	  "psr-4": {
+		"BFITech\\ZapCoreDev\\": ""
+	  }
 	}
 }

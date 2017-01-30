@@ -4,12 +4,15 @@
 use PHPUnit\Framework\TestCase;
 use GuzzleHttp\Cookie\FileCookieJar;
 use GuzzleHttp\Client;
+use BFITech\ZapCoreDev as zd;
 
 
 class AdminRouteDefaultTest extends TestCase {
 
 	public static $cookiejar;
 	public static $cookiefile;
+
+	public static $server_pid;
 
 	private $response;
 	private $code;
@@ -51,6 +54,8 @@ class AdminRouteDefaultTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
+		self::$server_pid = zd\CoreDev::server_up(
+			__DIR__ . '/htdocs-test');
 		self::$cookiefile = '/tmp/zapmin-cookie.txt';
 		if (file_exists(self::$cookiefile))
 			unlink(self::$cookiefile);
@@ -62,6 +67,8 @@ class AdminRouteDefaultTest extends TestCase {
 			unlink(self::$cookiefile);
 		self::client()->request('GET', '/', [
 			'query' => ['reloaddb' => 1]]);
+		if (self::$server_pid)
+			zd\CoreDev::server_down(self::$server_pid);
 	}
 
 	public function tearDown() {

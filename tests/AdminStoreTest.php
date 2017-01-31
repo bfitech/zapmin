@@ -118,6 +118,8 @@ class AdminStoreTest extends TestCase {
 		$login_data = self::$store->login($args);
 		$this->assertEquals($login_data[0], 0);
 		$token = $login_data[1]['token'];
+		# unlike passwordless login, this has no sid
+		$this->assertEquals(isset($login_data['sid']), false);
 
 		# simulating next load
 		self::$store->set_user_token($token);
@@ -458,6 +460,7 @@ class AdminStoreTest extends TestCase {
 		$result = self::$store->self_add_user_passwordless($args);
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:google');
+		$this->assertEquals(isset($result[1]['sid']), true);
 
 		# uid doesn't increment
 		$args['service']['uservice'] = 'github';

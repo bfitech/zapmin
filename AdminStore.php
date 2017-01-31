@@ -47,6 +47,7 @@ class AdminStore {
 	/**
 	 * Check if an associative array has all the intended keys.
 	 *
+	 * @todo Replace with Common class.
 	 * @param array $array Input array.
 	 * @param array $keys List of keys.
 	 * @return array|bool A filtered array with trimmed element if all
@@ -613,10 +614,13 @@ class AdminStore {
 	/**
 	 * Passwordless self-registration.
 	 *
-	 * This doesn't differ between sign in and sign up.
+	 * This doesn't differ sign in and sign up.
 	 *
-	 * @note Use this with caution, e.g. with proper authentication
-	 *     via OAuth* or the like.
+	 * @note
+	 * - Use this with caution, e.g. with proper authentication
+	 *   via OAuth* or the like.
+	 * - Unlike add user with password, this also returns 'sid' to
+	 *   associate session.sid with another column in different table.
 	 * @param array $args Array with key 'service' containing another
 	 *     array with keys: 'uname' and 'uservice'. This can be added
 	 *     to $args parameter of route handlers.
@@ -660,17 +664,18 @@ class AdminStore {
 			)['date_expire'];
 
 		# insert
-		$this->sql->insert('usess', [
+		$sid = $this->sql->insert('usess', [
 			'uid'    => $uid,
 			'token'  => $token,
 			'expire' => $date_expire,
-		]);
+		], 'sid');
 
 		# use token for next request
 		return [0, [
 			'uid' => $uid,
 			'uname' => $dbuname,
 			'token' => $token,
+			'sid' => $sid,
 		]];
 	}
 

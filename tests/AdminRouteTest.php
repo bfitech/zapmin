@@ -2,15 +2,14 @@
 
 
 use PHPUnit\Framework\TestCase;
-use GuzzleHttp\Cookie\FileCookieJar;
-use GuzzleHttp\Client;
+use BFITech\ZapCore as zc;
 use BFITech\ZapCoreDev as zd;
 
 
 class AdminRouteDefaultTest extends TestCase {
 
-	public static $cookiejar;
-	public static $cookiefile;
+	public static $cookiefile = '/tmp/zapmin-cookie.txt';
+	public static $base_uri = 'http://localhost:9999';
 
 	public static $server_pid;
 
@@ -18,55 +17,57 @@ class AdminRouteDefaultTest extends TestCase {
 	private $code;
 	private $body;
 
-	public static function client() {
-		return new Client([
-			'base_uri' => 'http://localhost:9999',
-			'timeout' => 2,
-			'cookies' => true,
-		]);
-	}
-
-	private function format_response($response, $decode_json=true) {
+	private function format_response($response, $expect_json) {
+		if ($expect_json)
+			$response[1] = json_decode($response[1]);
 		$this->response = $response;
-		$this->code = $response->getStatusCode();
-		$body = (string)$response->getBody(); 
-		if ($decode_json)
-			$body = json_decode($body);
-		$this->body = $body;
+		$this->code = $response[0];
+		$this->body = $response[1];
 	}
 
-	public function GET($path, $data=[], $decode_json=true) {
-		$response = self::client()->request('GET', $path, [
-			'query' => $data,
-			'http_errors' => false,
-			'cookies' => self::$cookiejar,
+	private function GET($path, $get=[], $expect_json=true) {
+		$url = self::$base_uri . $path;
+		$response = zc\Common::http_client([
+			'url' => $url,
+			'method' => 'GET',
+			'get' => $get,
+			'custom_opts' => [
+				CURLOPT_COOKIEJAR => self::$cookiefile,
+				CURLOPT_COOKIEFILE => self::$cookiefile,
+			]
 		]);
-		return $this->format_response($response, $decode_json);
+		$this->format_response($response, $expect_json);
 	}
 
-	public function POST($path, $data=[], $decode_json=true) {
-		$response = self::client()->request('POST', $path, [
-			'form_params' => $data,
-			'http_errors' => false,
-			'cookies' => self::$cookiejar,
+	private function POST($path, $post=[], $expect_json=true) {
+		$url = self::$base_uri . $path;
+		$response = zc\Common::http_client([
+			'url' => $url,
+			'method' => 'POST',
+			'post' => $post,
+			'custom_opts' => [
+				CURLOPT_COOKIEJAR => self::$cookiefile,
+				CURLOPT_COOKIEFILE => self::$cookiefile,
+			]
 		]);
-		return $this->format_response($response, $decode_json);
+		$this->format_response($response, $expect_json);
 	}
 
 	public static function setUpBeforeClass() {
 		self::$server_pid = zd\CoreDev::server_up(
 			__DIR__ . '/htdocs-test');
-		self::$cookiefile = '/tmp/zapmin-cookie.txt';
 		if (file_exists(self::$cookiefile))
 			unlink(self::$cookiefile);
-		self::$cookiejar = new FileCookieJar(self::$cookiefile);
 	}
 
 	public static function tearDownAfterClass() {
 		if (file_exists(self::$cookiefile))
 			unlink(self::$cookiefile);
-		self::client()->request('GET', '/', [
-			'query' => ['reloaddb' => 1]]);
+		zc\Common::http_client([
+			'url' => self::$base_uri,
+			'method' => 'GET',
+			'get' => ['reloaddb' => 1]
+		]);
 		if (self::$server_pid)
 			zd\CoreDev::server_down(self::$server_pid);
 	}

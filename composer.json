@@ -27,7 +27,7 @@
 	  "bfitech/zapstore": "dev-master"
 	},
 	"require-dev": {
-	  "guzzlehttp/guzzle": "6.*" 
+	  "ext-curl": "*"
 	},
 	"autoload": {
 	  "psr-4": {

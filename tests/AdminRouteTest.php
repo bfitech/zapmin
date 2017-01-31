@@ -145,30 +145,31 @@ class AdminRouteDefaultTest extends TestCase {
 		$post = ['pass1' => '1234'];
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 2);
+		$this->assertEquals($this->body->errno, 4);
 
 		$post['pass2'] = '123';
 		# cannot post array as value
 		$post['pass0'] = ['xxx'];
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 2);
+		# json_decode fails, causing null body
+		$this->assertEquals($this->body, null);
 
 		$post['pass0'] = 'xxx';
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 3);
+		$this->assertEquals($this->body->errno, 5);
 
 		$post['pass0'] = 'admin';
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 4);
+		$this->assertEquals($this->body->errno, 6);
 		$this->assertEquals($this->body->data, 1);
 
 		$post['pass1'] = '123';
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 4);
+		$this->assertEquals($this->body->errno, 6);
 		$this->assertEquals($this->body->data, 2);
 
 		$post['pass1'] = '1234';
@@ -393,6 +394,12 @@ class AdminRouteDefaultTest extends TestCase {
 		$this->POST('/byway', $post);
 		$this->assertEquals(
 			$this->body->data->uid, $jessie_uid);
+
+		$post['pass1'] = '1234';
+		$post['pass2'] = '1234';
+		$this->POST('/chpasswd', $post);
+		$this->assertEquals($this->code, 401);
+		$this->assertEquals($this->body->errno, 2);
 		# end mock
 	}
 }

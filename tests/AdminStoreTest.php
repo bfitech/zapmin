@@ -50,22 +50,6 @@ class AdminStoreTest extends TestCase {
 			self::$sql->get_connection_params()['dbtype'], 'sqlite3');
 	}
 
-	public function test_check_keys() {
-		$array = ['foo' => 1];
-		$keys = ['foo', 'bar'];
-		$this->assertEquals(
-			self::$store->check_keys($array, $keys), false);
-		$array['bar'] = '2';
-		$this->assertEquals(
-			self::$store->check_keys($array, $keys), false);
-		$array['foo'] = '1';
-		$this->assertNotEquals(
-			self::$store->check_keys($array, $keys), false);
-		$keys[] = 'baz';
-		$this->assertEquals(
-			self::$store->check_keys($array, $keys), false);
-	}
-
 	public function test_table() {
 		$qr = self::$sql->query(
 			"SELECT uname FROM udata LIMIT 1");
@@ -145,29 +129,29 @@ class AdminStoreTest extends TestCase {
 
 		# invalid data
 		$this->assertEquals(
-			self::$store->change_password($args)[0], 2);
+			self::$store->change_password($args)[0], 3);
 
 		# incomplete data
 		$args['pass2'] = '1234';
 		$args = self::postFormatter($args);
 		$result = self::$store->change_password($args, true);
-		$this->assertEquals($result[0], 2);
+		$this->assertEquals($result[0], 4);
 
 		# wrong old password
 		$args['post']['pass0'] = '1234';
 		$result = self::$store->change_password($args, true);
-		$this->assertEquals($result[0], 3);
+		$this->assertEquals($result[0], 5);
 
 		# new passwords don't verify
 		$args['post']['pass0'] = 'admin';
 		$result = self::$store->change_password($args, true);
-		$this->assertEquals($result[0], 4);
+		$this->assertEquals($result[0], 6);
 		$this->assertEquals($result[1], 1);
 
 		# new password too short
 		$args['post']['pass2'] = '123';
 		$result = self::$store->change_password($args, true);
-		$this->assertEquals($result[0], 4);
+		$this->assertEquals($result[0], 6);
 		$this->assertEquals($result[1], 2);
 
 		# success
@@ -468,7 +452,15 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:github');
 		$this->assertEquals($result[1]['uid'], 6);
+
+		# set token
+		self::$store->set_user_token($result[1]['token']);
+		self::$store->status();
+
+		# passwordless login can't change password
+		$args['post']['pass1'] = $args['post']['pass2'] = 'blablabla';
+		$this->assertEquals(
+			self::$store->change_password($args)[0], 2);
 	}
 }
-
 

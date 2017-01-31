@@ -3,6 +3,8 @@
 
 namespace BFITech\ZapAdmin;
 
+use BFITech\ZapCore as zc;
+
 
 # must move to storage
 class AdminStoreError extends \PDOException {}
@@ -43,31 +45,6 @@ class AdminStore {
 
 		$this->check_tables($force_create_table);
 	}
-
-	/**
-	 * Check if an associative array has all the intended keys.
-	 *
-	 * @todo Replace with Common class.
-	 * @param array $array Input array.
-	 * @param array $keys List of keys.
-	 * @return array|bool A filtered array with trimmed element if all
-	 *     keys exist, false otherwise. Values must all be strings.
-	 */
-	public static function check_keys($array, $keys) {
-		foreach ($keys as $key) {
-			if (!isset($array[$key]))
-				return false;
-			if (is_string($array[$key])) {
-				$array[$key] = trim($array[$key]);
-				if ($array[$key] == '')
-					return false;
-			} else {
-				return false;
-			}
-		}
-		return $array;
-	}
-
 
 	/**
 	 * Check if tables exist.
@@ -322,7 +299,7 @@ class AdminStore {
 
 		if (!isset($args['post']))
 			return [2];
-		if (!self::check_keys($args['post'], ['uname', 'upass']))
+		if (!zc\Common::check_dict($args['post'], ['uname', 'upass']))
 			return [3];
 		extract($args['post'], EXTR_SKIP);
 
@@ -409,30 +386,35 @@ class AdminStore {
 		if (!$this->is_logged_in())
 			return [1];
 
+		extract($this->user_data, EXTR_SKIP);
+
+		if (!$usalt)
+			# passwordless has no salt
+			return [2];
+
 		$keys = ['pass1', 'pass2'];
 		if ($with_old_password)
 			$keys[] = 'pass0';
 
 		if (!isset($args['post']))
-			return [2];
-		$post = self::check_keys($args['post'], $keys);
+			return [3];
+		$post = zc\Common::check_dict($args['post'], $keys);
 		if (!$post)
-			return [2];
+			return [4];
 		extract($post, EXTR_SKIP);
 
-		extract($this->user_data, EXTR_SKIP);
 
 		# check old password if applicable
 		if (
 			$with_old_password &&
 			!$this->match_password($uname, $pass0, $usalt)
 		) {
-			return [3];
+			return [5];
 		}
 
 		$verify_password = $this->verify_password($pass1, $pass2);
 		if ($verify_password !== 0)
-			return [4, $verify_password];
+			return [6, $verify_password];
 
 		# update
 		$this->sql->update('udata', [
@@ -535,7 +517,7 @@ class AdminStore {
 			$keys[] = 'addpass2';
 		if ($email_required)
 			$keys[] = 'email';
-		$post = self::check_keys($args['post'], $keys);
+		$post = zc\Common::check_dict($args['post'], $keys);
 		if (!$post)
 			return [3, 1];
 		extract($post, EXTR_SKIP);
@@ -632,7 +614,7 @@ class AdminStore {
 		# check vars
 		if (!isset($args['service']))
 			return [2, 0];
-		$service = self::check_keys($args['service'], ['uname', 'uservice']);
+		$service = zc\Common::check_dict($args['service'], ['uname', 'uservice']);
 		if (!$service)
 			return [2, 1];
 		extract($service, EXTR_SKIP);
@@ -697,7 +679,7 @@ class AdminStore {
 
 		if (!isset($args['post']))
 			return [2];
-		if (!self::check_keys($args['post'], ['uid']))
+		if (!zc\Common::check_dict($args['post'], ['uid']))
 			return [2];
 		extract($args['post'], EXTR_SKIP);
 

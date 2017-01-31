@@ -43,6 +43,20 @@ class AdminRoute extends AdminStore {
 	 * @param string $token_name Name of authorization token. Defaults
 	 *     to 'zapmin'.
 	 * @param string $route_prefix Route prefix.
+	 *
+	 * ## Example:
+	 * ~~~~.php
+	 *
+	 * # index.php
+	 *
+	 * use BFITech\ZapAdmin as za;
+	 * $adm = new za\AdminRoute(null, null, [
+	 *     'dbtype' => 'sqlite3',
+	 *     'dbname' => '/tmp/zapmin.sq3',
+	 * ]);
+	 * $adm->route('/status', [$adm, 'route_status'], 'GET');
+	 *
+	 * # run it with `php -S 0.0.0.0:8000`
 	 */
 	public function __construct(
 		$home=null, $host=null,
@@ -79,70 +93,11 @@ class AdminRoute extends AdminStore {
 		return $this->token_name;
 	}
 
-	# route manipulation
-
 	/**
-	 * Add a route.
+	 * Wrap self::$core->route().
 	 */
-	public function add_route($path, $callback_method, $request_method) {
-		if ($this->routes_processed)
-			return;
-		if ($this->prefix)
-			$path = $this->prefix . $path;
-		$this->routes[] = [
-			'path' => $path,
-			'callback_method' => $callback_method,
-			'request_method' => $request_method,
-		];
-	}
-
-	/**
-	 * Delete a registered route.
-	 *
-	 * @param string $path Registered path.
-	 * @param string|array $request_method Request method associated
-	 *     with the route.
-	 * @todo
-	 *     - Unlike its add_route() counterpart, this doesn't take
-	 *       prefix into account.
-	 *     - The way it handles request method comparison is not foolproof.
-	 */
-	public function delete_route($path, $request_method) {
-		if ($this->routes_processed)
-			return;
-		$this->routes = array_filter($this->routes, function($arr){
-			if ($arr['path'] != $path)
-				return true;
-			if ($arr['request_method'] != $request_method)
-				return true;
-			return false;
-		});
-	}
-
-	# wrappers
-
-	/**
-	 * Add a route.
-	 *
-	 * @param array $route An array with keys: 'path', 'callback_method',
-	 *     'request_method'. 'callback_method' may be string with proper
-	 *     namespace for functions, or a tuple [object, method] for class
-	 *     instances. 'callback_method' cannot accept direct static method
-	 *     call without instantiation.
-	 */
-	private function _apply_route($route) {
-		extract($route, EXTR_SKIP);
-		if (is_string($callback_method)) {
-			# for functions
-			if (!function_exists($callback_method))
-				return;
-		} elseif (!method_exists(
-			$callback_method[0], $callback_method[1])
-		) {
-			# for methods
-			return;
-		}
-		self::$core->route($path, function($args) use($callback_method){
+	public function route($path, $callback, $method='GET') {
+		self::$core->route($path, function($args) use($callback){
 			# set token if available
 			if (isset($args['cookie'][$this->token_name])) {
 				$this->set_user_token(
@@ -154,37 +109,112 @@ class AdminRoute extends AdminStore {
 				}
 			}
 			# execute calback
-			$callback_method($args);
-		}, $request_method);
+			$callback($args);
+		}, $method);
+	}
+
+	# Default route handlers. See each method documentation for more
+	# precise control.
+
+	/** `GET: /` */
+	public function route_home($args) {
+		echo '<h1>It wurks!</h1>';
+	}
+
+	/** `GET: /status` */
+	public function route_status($args) {
+		return self::$core->pj($this->get_safe_user_data());
+	}
+
+	/** `POST: /login` */
+	public function route_login($args) {
+		$retval = $this->login($args);
+		if ($retval[0] === 0)
+			setcookie(
+				$this->get_token_name(), $retval[1]['token'],
+				time() + $this->get_expiration(), '/');
+		return self::$core->pj($retval);
+	}
+
+	/** `GET|POST: /logout` */
+	public function route_logout($args) {
+		$retval = $this->logout($args);
+		if ($retval[0] === 0)
+			setcookie(
+				$this->get_token_name(), '',
+				time() - (3600 * 48), '/');
+		return self::$core->pj($retval);
+	}
+
+	/** `POST: /chpasswd` */
+	public function route_chpasswd($args) {
+		return self::$core->pj($this->change_password($args, true));
+	}
+
+	/** `POST: /chbio` */
+	public function route_chbio($args) {
+		return self::$core->pj($this->change_bio($args));
+	}
+
+	/** `POST: /register` */
+	public function route_register($args) {
+		$retval = $this->self_add_user($args, true, true);
+		if ($retval[0] !== 0)
+			# fail
+			return self::$core->pj($retval);
+		# success, autologin
+		$args['post']['uname'] = $args['post']['addname'];
+		$args['post']['upass'] = $args['post']['addpass1'];
+		$retval = $this->login($args);
+		setcookie(
+			$this->get_token_name(), $retval[1]['token'],
+			time() + $this->get_expiration(), '/');
+		return self::$core->pj($retval);
+	}
+
+	/** `POST: /useradd` */
+	public function route_useradd($args) {
+		return self::$core->pj(
+			$this->add_user($args, false, true, true), 403);
+	}
+
+	/** `POST: /userdel` */
+	public function route_userdel($args) {
+		return self::$core->pj($this->delete_user($args), 403);
+	}
+
+	/** `POST: /userlist` */
+	public function route_userlist($args) {
+		return self::$core->pj($this->list_user($args), 403);
 	}
 
 	/**
-	 * Retrieve all added routes.
+	 * `GET|POST: /byway`
 	 *
-	 * Useful to inspect routes before processing them.
-	 *
-	 * @return array An array with each element having keys: 'path', name
-	 *     of 'callback_method', 'request_method'.
+	 * @todo
+	 * - This is a mock method. Real method must manipulate $args
+	 *   into containing 'service' key that is not sent by client,
+	 *   but by 3rd-party.
+	 * - Move hardcoded expiration to an attribute retriavable by
+	 *   a getter like get_expiration().
 	 */
-	public function show_routes() {
-		if ($this->routes_processed)
-			return;
-		return array_map(function($arr){
-			$arr['callback_method'] = $arr['callback_method'][1];
-			return $arr;
-		}, $this->routes);
+	public function route_byway($args) {
+		### start mock
+		if (isset($args['post']['service']))
+			$args['service'] = $args['post']['service'];
+		### end mock
+		$retval = $this->self_add_user_passwordless($args);
+		if ($retval[0] !== 0)
+			return self::$core->pj($retval, 403);
+		if (!isset($retval[1]) || !isset($retval[1]['token']))
+			return self::$core->pj($retval, 403);
+		# alway autologin on success
+		$token = $retval[1]['token'];
+		$this->set_user_token($token);
+		setcookie(
+			$this->get_token_name(), $token,
+			time() + (3600 * 24 * 7), '/');
+		return self::$core->pj($retval);
 	}
-
-	/**
-	 * Execute route handlers fo realz.
-	 */
-	public function process_routes() {
-		if ($this->routes_processed)
-			return;
-		$this->routes_processed = true;
-		foreach ($this->routes as $route)
-			$this->_apply_route($route);
-	}
-
 }
 

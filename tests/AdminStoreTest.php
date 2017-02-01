@@ -19,12 +19,12 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public static function loginOK($uname='root', $upass='admin') {
-		$result = self::$store->login(self::postFormatter([
+		$result = self::$store->adm_login(self::postFormatter([
 			'uname' => $uname,
 			'upass' => $upass,
 		]));
-		self::$store->set_user_token($result[1]['token']);
-		self::$store->status();
+		self::$store->adm_set_user_token($result[1]['token']);
+		self::$store->adm_status();
 	}
 
 	public static function setUpBeforeClass() {
@@ -41,8 +41,8 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public function tearDown() {
-		if (self::$store->get_safe_user_data())
-			self::$store->logout();
+		if (self::$store->adm_get_safe_user_data())
+			self::$store->adm_logout();
 	}
 
 	public function test_connection() {
@@ -59,98 +59,98 @@ class AdminStoreTest extends TestCase {
 	public function test_set_user_token() {
 		# loading user data is forbidden
 		$this->assertEquals(
-			self::$store->get_safe_user_data()[0], 1);
+			self::$store->adm_get_safe_user_data()[0], 1);
 
 		# set an invalid token
-		self::$store->set_user_token('invalid token');
+		self::$store->adm_set_user_token('invalid token');
 
 		# reset status
-		self::$store->status();
+		self::$store->adm_status();
 
 		# loading user data is still forbidden
 		$this->assertEquals(
-			self::$store->get_safe_user_data()[0], 1);
+			self::$store->adm_get_safe_user_data()[0], 1);
 
 		# cannot sign out with no valid session
 		$this->assertEquals(
-			self::$store->logout()[0], 1);
+			self::$store->adm_logout()[0], 1);
 	}
 
 	public function test_login() {
 		# invalid post data
 		$args = ['uname' => 'admin'];
 		$this->assertEquals(
-			self::$store->login($args)[0], 2);
+			self::$store->adm_login($args)[0], 2);
 
 		# incomplete post data
 		$args = self::postFormatter($args);
 		$this->assertEquals(
-			self::$store->login($args)[0], 3);
+			self::$store->adm_login($args)[0], 3);
 
 		# invalid user
 		$args['post']['upass'] = '1243';
 		$this->assertEquals(
-			self::$store->login($args)[0], 4);
+			self::$store->adm_login($args)[0], 4);
 
 		# invalid password
 		$args['post']['uname'] = 'root';
 		$this->assertEquals(
-			self::$store->login($args)[0], 5);
+			self::$store->adm_login($args)[0], 5);
 
 		# success
 		$args['post']['upass'] = 'admin';
-		$login_data = self::$store->login($args);
+		$login_data = self::$store->adm_login($args);
 		$this->assertEquals($login_data[0], 0);
 		$token = $login_data[1]['token'];
 		# unlike passwordless login, this has no sid
 		$this->assertEquals(isset($login_data['sid']), false);
 
 		# simulating next load
-		self::$store->set_user_token($token);
-		self::$store->status();
+		self::$store->adm_set_user_token($token);
+		self::$store->adm_status();
 		# re-login will fail
 		$this->assertEquals(
-			self::$store->login($args)[0], 1);
+			self::$store->adm_login($args)[0], 1);
 	}
 
 	public function test_logout() {
-		$this->assertEquals(self::$store->logout()[0], 1);
+		$this->assertEquals(self::$store->adm_logout()[0], 1);
 		self::loginOK();
-		$this->assertEquals(self::$store->logout()[0], 0);
+		$this->assertEquals(self::$store->adm_logout()[0], 0);
 	}
 
 	public function test_change_password() {
 		# not logged in
 		$args = ['pass1' => '123'];
 		$this->assertEquals(
-			self::$store->change_password($args)[0], 1);
+			self::$store->adm_change_password($args)[0], 1);
 
 		self::loginOK();
 
 		# invalid data
 		$this->assertEquals(
-			self::$store->change_password($args)[0], 3);
+			self::$store->adm_change_password($args)[0], 3);
 
 		# incomplete data
 		$args['pass2'] = '1234';
 		$args = self::postFormatter($args);
-		$result = self::$store->change_password($args, true);
+		$result = self::$store->adm_change_password($args, true);
 		$this->assertEquals($result[0], 4);
 
 		# wrong old password
 		$args['post']['pass0'] = '1234';
-		$result = self::$store->change_password($args, true);
+		$result = self::$store->adm_change_password($args, true);
 		$this->assertEquals($result[0], 5);
 
 		# new passwords don't verify
 		$args['post']['pass0'] = 'admin';
-		$result = self::$store->change_password($args, true);
+		$result = self::$store->adm_change_password($args, true);
 		$this->assertEquals($result[0], 6);
 		$this->assertEquals($result[1], 1);
 
 		# new password too short
 		$args['post']['pass2'] = '123';
-		$result = self::$store->change_password($args, true);
+		$result = self::$store->adm_change_password($args, true);
 		$this->assertEquals($result[0], 6);
 		$this->assertEquals($result[1], 2);
 
@@ -158,16 +158,16 @@ class AdminStoreTest extends TestCase {
 		$args['post']['pass1'] = '1234';
 		$args['post']['pass2'] = '1234';
 		$this->assertEquals(
-			self::$store->change_password($args, true)[0], 0);
+			self::$store->adm_change_password($args, true)[0], 0);
 
 		# logout
-		$this->assertEquals(self::$store->logout()[0], 0);
+		$this->assertEquals(self::$store->adm_logout()[0], 0);
 
 		# relogin with old password will fail
 		try {
 			self::loginOK();
 		} catch (Exception $e) {
-			$this->assertEquals(self::$store->status(), null);
+			$this->assertEquals(self::$store->adm_status(), null);
 		}
 
 		# login with new password
@@ -176,20 +176,20 @@ class AdminStoreTest extends TestCase {
 		# change password back without old password requirement
 		$args['post']['pass1'] = $args['post']['pass2'] = 'admin';
 		$this->assertEquals(
-			self::$store->change_password($args)[0], 0);
+			self::$store->adm_change_password($args)[0], 0);
 	}
 
 	public function test_change_bio() {
 		self::loginOK();
-		$safe_data = self::$store->get_safe_user_data()[1];
+		$safe_data = self::$store->adm_get_safe_user_data()[1];
 		$this->assertEquals($safe_data['fname'], '');
 
 		# change fname
-		$r = self::$store->change_bio([
+		$r = self::$store->adm_change_bio([
 			'post' => [
 				'fname' => 'The Administrator']]);
 
-		$safe_data = self::$store->get_safe_user_data()[1];
+		$safe_data = self::$store->adm_get_safe_user_data()[1];
 		$this->assertEquals($safe_data['site'], '');
 		$this->assertEquals($safe_data['fname'], 'The Administrator');
 	}
@@ -202,54 +202,54 @@ class AdminStoreTest extends TestCase {
 
 		# user exists
 		$this->assertEquals(
-			self::$store->add_user($args, true, true)[0], 7);
+			self::$store->adm_add_user($args, true, true)[0], 7);
 
 		# success
 		$args['post']['addname'] = 'john';
 		$this->assertEquals(
-			self::$store->add_user($args, true, true)[0], 0);
+			self::$store->adm_add_user($args, true, true)[0], 0);
 		# autologin, this should happen immediately prior to
 		# sending anything to client
 		self::loginOK('john', 'asdf');
-		$user_data = self::$store->status();
+		$user_data = self::$store->adm_status();
 		$this->assertEquals($user_data['uname'], 'john');
-		self::$store->logout();
+		self::$store->adm_logout();
 
 		# using shorthand, with email required
 		$args['post']['addname'] = 'jack';
 		$args['post']['addpass1'] = 'qwer';
 		# not typing password twice and no email
 		unset($args['post']['addpass2']);
-		$result = self::$store->self_add_user($args, true, true);
+		$result = self::$store->adm_self_add_user($args, true, true);
 		$this->assertEquals($result[0], 3);
 
 		# invalid email
 		$args['post']['addpass2'] = 'qwer';
 		$args['post']['email'] = '#qwer';
-		$result = self::$store->self_add_user($args, true, true);
+		$result = self::$store->adm_self_add_user($args, true, true);
 		$this->assertEquals($result[0], 5);
 		$this->assertEquals($result[1], 0);
 
 		# success
 		$args['post']['email'] = 'test+bed@example.org';
 		$this->assertEquals(
-			self::$store->self_add_user($args, true, true)[0], 0);
+			self::$store->adm_self_add_user($args, true, true)[0], 0);
 
 		# email exists
 		$args['post']['addname'] = 'jonathan';
-		$result = self::$store->self_add_user($args, true, true);
+		$result = self::$store->adm_self_add_user($args, true, true);
 		$this->assertEquals($result[0], 5);
 		$this->assertEquals($result[1], 1);
 
 		# uname too long
 		$args['post']['addname'] = str_repeat('jonathan', 24);
 		$this->assertEquals(
-			self::$store->self_add_user($args, true, true)[0], 4);
+			self::$store->adm_self_add_user($args, true, true)[0], 4);
 
 		# email too long
 		$args['post']['addname'] = 'jonathan';
 		$args['post']['email'] = str_repeat('jonathan', 12) . '@l.co';
-		$result = self::$store->self_add_user($args, true, true);
+		$result = self::$store->adm_self_add_user($args, true, true);
 		$this->assertEquals($result[0], 5);
 		$this->assertEquals($result[1], 0);
 	}
@@ -264,26 +264,26 @@ class AdminStoreTest extends TestCase {
 
 		# no authn, self-registration disabled
 		$this->assertEquals(
-			self::$store->add_user($args, false, false)[0], 2);
+			self::$store->adm_add_user($args, false, false)[0], 2);
 
 		# as 'john' with default callback
 		self::loginOK('john', 'asdf');
 		# no authz
-		$result = self::$store->add_user($args);
+		$result = self::$store->adm_add_user($args);
 		$this->assertEquals($result[0], 1);
 		$this->assertEquals($result[1], 1);
-		self::$store->logout();
+		self::$store->adm_logout();
 
 		# as root, with unavailable name
 		self::loginOK();
 		# user exists
-		$this->assertEquals(self::$store->add_user($args)[0], 7);
+		$this->assertEquals(self::$store->adm_add_user($args)[0], 7);
 
 		# as root, with available name
 		$args['post']['addname'] = 'jocelyn';
 		# success, no autologin
-		$this->assertEquals(self::$store->add_user($args)[0], 0);
-		self::$store->logout();
+		$this->assertEquals(self::$store->adm_add_user($args)[0], 0);
+		self::$store->adm_logout();
 
 		# with callback
 		$cbf = function($_args) {
@@ -299,21 +299,21 @@ class AdminStoreTest extends TestCase {
 
 		# as 'jocelyn'
 		self::loginOK('jocelyn', 'asdf');
-		$uname = self::$store->get_safe_user_data()[1]['uname'];
+		$uname = self::$store->adm_get_safe_user_data()[1]['uname'];
 		$cbp = ['uname' => $uname];
 		# no authz, doesn't satisfy callback
-		$result = self::$store->add_user(
+		$result = self::$store->adm_add_user(
 			$args, false, false, false, $cbf, $cbp);
 		$this->assertEquals($result[0], 1);
 		$this->assertEquals($result[1], 1);
-		self::$store->logout();
+		self::$store->adm_logout();
 
 		# as 'john'
 		self::loginOK('john', 'asdf');
-		$uname = self::$store->get_safe_user_data()[1]['uname'];
+		$uname = self::$store->adm_get_safe_user_data()[1]['uname'];
 		$cbp = ['uname' => $uname];
 		# pass authz but password doesn't check out
-		$result = self::$store->add_user(
+		$result = self::$store->adm_add_user(
 			$args, false, false, false, $cbf, $cbp);
 		$this->assertEquals($result[0], 6);
 		$this->assertEquals($result[1], 2);
@@ -322,9 +322,9 @@ class AdminStoreTest extends TestCase {
 		$args['post']['addpass1'] = 'asdfgh';
 		# success
 		$this->assertEquals(
-			self::$store->add_user(
+			self::$store->adm_add_user(
 				$args, false, false, false, $cbf, $cbp)[0], 0);
-		self::$store->logout();
+		self::$store->adm_logout();
 
 		# try sign in as 'jonah', no exception thrown
 		self::loginOK('jonah', 'asdfgh');
@@ -337,10 +337,10 @@ class AdminStoreTest extends TestCase {
 		$args = self::postFormatter(['uid' => '0']);
 
 		self::loginOK();
-		$user_list = self::$store->list_user($args)[1];
+		$user_list = self::$store->adm_list_user($args)[1];
 		# so far we have 5 users
 		$this->assertEquals(count($user_list), 5);
-		self::$store->logout();
+		self::$store->adm_logout();
 
 		# create uid arrays
 		$uids = array_map(function($_arr){
@@ -349,22 +349,22 @@ class AdminStoreTest extends TestCase {
 
 		# no authn
 		$this->assertEquals(
-			self::$store->delete_user($args)[0], 1);
+			self::$store->adm_delete_user($args)[0], 1);
 
 		# as 'jonah'
 		self::loginOK('jonah', 'asdfgh');
 		# with default callback, any user cannot delete another user 
 		# except root
 		$this->assertEquals(
-			self::$store->delete_user($args)[0], 3);
+			self::$store->adm_delete_user($args)[0], 3);
 		# but s/he can self-delete
-		$args['post']['uid'] = self::$store->status()['uid'];
+		$args['post']['uid'] = self::$store->adm_status()['uid'];
 		$this->assertEquals(
-			self::$store->delete_user($args)[0], 0);
+			self::$store->adm_delete_user($args)[0], 0);
 		# logout is still allowed since it doesn't check sid
-		self::$store->logout();
+		self::$store->adm_logout();
 		# unable to re-login because user is no longer found
-		$this->assertEquals(self::$store->login(self::postFormatter([
+		$this->assertEquals(self::$store->adm_login(self::postFormatter([
 			'uname' => 'jonah',
 			'upass' => 'asdfgh',
 		]))[0], 4);
@@ -379,26 +379,26 @@ class AdminStoreTest extends TestCase {
 
 		# as john
 		self::loginOK('john', 'asdf');
-		$uname = self::$store->get_safe_user_data()[1]['uname'];
+		$uname = self::$store->adm_get_safe_user_data()[1]['uname'];
 		$cbp = ['uname' => $uname];
 		# user doesn't exist
 		$this->assertEquals(
-			self::$store->delete_user($args, $cbf, $cbp)[0], 5);
+			self::$store->adm_delete_user($args, $cbf, $cbp)[0], 5);
 		# cannot delete 'root'
 		$args['post']['uid'] = '1';
 		$this->assertEquals(
-			self::$store->delete_user($args, $cbf, $cbp)[0], 4);
+			self::$store->adm_delete_user($args, $cbf, $cbp)[0], 4);
 		# success, delete 'jocelyn' uid=3
 		$args['post']['uid'] = '3';
 		$this->assertEquals(
-			self::$store->delete_user($args, $cbf, $cbp)[0], 0);
-		self::$store->logout();
+			self::$store->adm_delete_user($args, $cbf, $cbp)[0], 0);
+		self::$store->adm_logout();
 
 		# sign in as 'jocelyn' fails
 		try {
 			self::loginOK('jocelyn', '1234');
 		} catch (Exception $e) {
-			$this->assertEquals(self::$store->status(), null);
+			$this->assertEquals(self::$store->adm_status(), null);
 		}
 	}
 
@@ -406,28 +406,28 @@ class AdminStoreTest extends TestCase {
 		$args = ['post' => null];
 
 		# no 'service' in args
-		$result = self::$store->self_add_user_passwordless($args);
+		$result = self::$store->adm_self_add_user_passwordless($args);
 		$this->assertEquals($result[0], 2);
 		$this->assertEquals($result[1], 0);
 
 		# not enought args
 		$args['service'] = ['uname' => '1234'];
-		$result = self::$store->self_add_user_passwordless($args);
+		$result = self::$store->adm_self_add_user_passwordless($args);
 		$this->assertEquals($result[0], 2);
 		$this->assertEquals($result[1], 1);
 
 		# success
 		$args['service']['uservice'] = 'github';
-		$result = self::$store->self_add_user_passwordless($args);
+		$result = self::$store->adm_self_add_user_passwordless($args);
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:github');
 
 		# use token
 		$token = $result[1]['token'];
-		self::$store->set_user_token($token);
+		self::$store->adm_set_user_token($token);
 
 		# sign success
-		$result = self::$store->get_safe_user_data();
+		$result = self::$store->adm_get_safe_user_data();
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:github');
 		# generated uid is 6, continued in next test
@@ -441,26 +441,26 @@ class AdminStoreTest extends TestCase {
 			'uname' => '1234',
 			'uservice' => 'google',
 		]];
-		$result = self::$store->self_add_user_passwordless($args);
+		$result = self::$store->adm_self_add_user_passwordless($args);
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:google');
 		$this->assertEquals(isset($result[1]['sid']), true);
 
 		# uid doesn't increment
 		$args['service']['uservice'] = 'github';
-		$result = self::$store->self_add_user_passwordless($args);
+		$result = self::$store->adm_self_add_user_passwordless($args);
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:github');
 		$this->assertEquals($result[1]['uid'], 6);
 
 		# set token
-		self::$store->set_user_token($result[1]['token']);
-		self::$store->status();
+		self::$store->adm_set_user_token($result[1]['token']);
+		self::$store->adm_status();
 
 		# passwordless login can't change password
 		$args['post']['pass1'] = $args['post']['pass2'] = 'blablabla';
 		$this->assertEquals(
-			self::$store->change_password($args)[0], 2);
+			self::$store->adm_change_password($args)[0], 2);
 	}
 }
 

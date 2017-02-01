@@ -147,7 +147,7 @@ class AdminStore {
 	 *
 	 * Token can be obtained from cookie or custom header.
 	 */
-	public function set_user_token($user_token=null) {
+	public function adm_set_user_token($user_token=null) {
 		if (!$user_token)
 			return;
 		$this->user_token = $user_token;
@@ -158,7 +158,7 @@ class AdminStore {
 	 *
 	 * Useful for client-side manipulation such as sending cookies.
 	 */
-	public function get_expiration() {
+	public function adm_get_expiration() {
 		return $this->expiration;
 	}
 
@@ -168,7 +168,7 @@ class AdminStore {
 	 * Call this early on in every HTTP request once token
 	 * is available or use its shorthand is_logged_in().
 	 */
-	public function status() {
+	public function adm_status() {
 		if ($this->user_token === null)
 			return null;
 		if ($this->user_data !== null)
@@ -194,7 +194,7 @@ class AdminStore {
 	 * @param array $args Unused. Keep it here to keep callback
 	 *     pattern consistent.
 	 */
-	public function get_safe_user_data($args=null) {
+	public function adm_get_safe_user_data($args=null) {
 		if (!$this->is_logged_in())
 			return [1];
 		$data = $this->user_data;
@@ -293,7 +293,7 @@ class AdminStore {
 	 *
 	 * @param array $args Post data with keys: 'uname', 'upass'.
 	 */
-	public function login($args) {
+	public function adm_login($args) {
 		if ($this->is_logged_in())
 			return [1];
 
@@ -337,7 +337,7 @@ class AdminStore {
 
 	private function is_logged_in() {
 		if ($this->user_data === null)
-			$this->status();
+			$this->adm_status();
 		return $this->user_data;
 	}
 
@@ -360,7 +360,7 @@ class AdminStore {
 	 * @param array $args Unused. Retained for callback pattern consistency.
 	 * @note Using _GET is enough for this operation.
 	 */
-	public function logout($args=null) {
+	public function adm_logout($args=null) {
 		if (!$this->is_logged_in())
 			return [1];
 		# this just close sessions with current sid, whether
@@ -382,7 +382,7 @@ class AdminStore {
 	 * @param bool $with_old_password Whether user should
 	 *     enter valid old password.
 	 */
-	public function change_password($args, $with_old_password=false) {
+	public function adm_change_password($args, $with_old_password=false) {
 		if (!$this->is_logged_in())
 			return [1];
 
@@ -434,7 +434,7 @@ class AdminStore {
 	 * @todo Change email, although this is more complicated if
 	 *     we also need to verify the email.
 	 */
-	public function change_bio($args) {
+	public function adm_change_bio($args) {
 		if (!$this->is_logged_in())
 			return [1];
 
@@ -461,7 +461,7 @@ class AdminStore {
 
 		# reset user data but not user token
 		$this->user_data = null;
-		$this->status();
+		$this->adm_status();
 
 		# ok
 		return [0];
@@ -481,7 +481,7 @@ class AdminStore {
 	 *     current user being root.
 	 * @param array $callback_param Parameter to pass to $callback_authz.
 	 */
-	public function add_user(
+	public function adm_add_user(
 		$args, $pass_twice=false, $allow_self_register=false,
 		$email_required=false, $callback_authz=null, $callback_param=null
 	) {
@@ -585,12 +585,13 @@ class AdminStore {
 	 * @param bool $email_required Whether an email address must be
 	 *     provided.
 	 */
-	public function self_add_user(
+	public function adm_self_add_user(
 		$args, $pass_twice=false, $email_required=false
 	) {
 		if ($this->is_logged_in())
 			return [1];
-		return $this->add_user($args, $pass_twice, true, $email_required);
+		return $this->adm_add_user(
+			$args, $pass_twice, true, $email_required);
 	}
 
 	/**
@@ -607,7 +608,7 @@ class AdminStore {
 	 *     array with keys: 'uname' and 'uservice'. This can be added
 	 *     to $args parameter of route handlers.
 	 */
-	public function self_add_user_passwordless($args) {
+	public function adm_self_add_user_passwordless($args) {
 		if ($this->is_logged_in())
 			return [1];
 
@@ -670,7 +671,7 @@ class AdminStore {
 	 *     user being root, or non-root self-deletion.
 	 * @param array $callback_param Parameter to pass to $callback_authz.
 	 */
-	public function delete_user(
+	public function adm_delete_user(
 		$args, $callback_authz=null, $callback_param=null
 	) {
 		if (!$this->is_logged_in())
@@ -729,7 +730,7 @@ class AdminStore {
 	 *     $callback_args to allow listing. Default to current user being root.
 	 * @param array $callback_param Parameter to pass to $callback_authz.
 	 */
-	public function list_user(
+	public function adm_list_user(
 		$args, $callback_authz=null, $callback_param=null
 	) {
 		if (!$callback_authz) {

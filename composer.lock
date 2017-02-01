@@ -12,7 +12,7 @@
             "source": {
                 "type": "git",
                 "url": "git@bfinews.com:bfin/zapcore.git",
-                "reference": "2afe5a68a2a9b9cb53d837918ff510f120986765"
+                "reference": "ba013f68e1b6aad2b5a02ba49c1e57ab5c0b1941"
             },
             "require": {
                 "ext-curl": "*",
@@ -39,7 +39,7 @@
                 }
             ],
             "description": "A very simple router and other utils.",
-            "time": "2017-01-31 17:25:19"
+            "time": "2017-02-01 00:24:43"
         },
         {
             "name": "bfitech/zapstore",

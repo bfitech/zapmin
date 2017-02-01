@@ -21,14 +21,7 @@ class AdminRoute extends AdminStore {
 	 */
 	public static $store = null;
 
-	/** Path prefix. */
-	protected $prefix = null;
-	/** Collection of routes. */
-	protected $routes = [];
-
-	/** Marker whether routes have been processed. */
-	protected $routes_processed = false;
-
+	private $prefix = null;
 	private $token_name = null;
 	private $token_value = null;
 
@@ -97,6 +90,8 @@ class AdminRoute extends AdminStore {
 	 * Wrap self::$core->route().
 	 */
 	public function route($path, $callback, $method='GET') {
+		if ($this->prefix)
+			$path = $this->prefix . $path;
 		self::$core->route($path, function($args) use($callback){
 			# set token if available
 			if (isset($args['cookie'][$this->token_name])) {

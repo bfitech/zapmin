@@ -134,7 +134,7 @@ class AdminRouteDefaultTest extends TestCase {
 	public function test_chpasswd() {
 		$post = ['pass1' => '123'];
 		$this->GET('/chpasswd', $post);
-		$this->assertEquals($this->code, 501);
+		$this->assertEquals($this->code, 404);
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
 		$this->assertEquals($this->body->errno, 1);

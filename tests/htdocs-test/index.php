@@ -17,7 +17,7 @@ $dbargs = [
 	'dbtype' => 'sqlite3',
 	'dbname' => $dbname,
 ];
-$adm = new za\AdminRoute(null, null, $dbargs);
+$adm = new za\AdminRoute(null, null, true, $dbargs);
 
 $adm->route('/',         [$adm, 'route_home'],     'GET');
 $adm->route('/status',   [$adm, 'route_status'],   'GET');

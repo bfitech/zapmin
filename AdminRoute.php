@@ -30,6 +30,7 @@ class AdminRoute extends AdminStore {
 	 *
 	 * @param string $home Core home.
 	 * @param string $host Core host.
+	 * @param string $shutdown Core shutdown function switch.
 	 * @param array $dbargs Database connection parameter.
 	 * @param int $expiration Expiration interval.
 	 * @param bool $force_create_table Whether overwriting tables is allowed.
@@ -52,11 +53,11 @@ class AdminRoute extends AdminStore {
 	 * # run it with `php -S 0.0.0.0:8000`
 	 */
 	public function __construct(
-		$home=null, $host=null,
+		$home=null, $host=null, $shutdown=true,
 		$dbargs=[], $expiration=null, $force_create_table=false,
 		$token_name=null, $route_prefix=null
 	) {
-		self::$core = new zc\Router($home, $host);
+		self::$core = new zc\Router($home, $host, $shutdown);
 		self::$store = new zs\SQL($dbargs);
 		self::$store->open();
 		parent::__construct(self::$store, $expiration, $force_create_table);

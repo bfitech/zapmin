@@ -28,6 +28,8 @@ class AdminRoute extends AdminStore {
 	/**
 	 * Constructor.
 	 *
+	 * To use a patched core, use $core_instance parameter.
+	 *
 	 * @param string $home_or_kwargs Core home or kwargs.
 	 * @param string $host Core host.
 	 * @param string $shutdown Core shutdown function switch.
@@ -37,6 +39,10 @@ class AdminRoute extends AdminStore {
 	 * @param string $token_name Name of authorization token. Defaults
 	 *     to 'zapmin'.
 	 * @param string $route_prefix Route prefix.
+	 * @param object $core_instance Use this core instance instead of
+	 *     instantiating a new one.
+	 * @param object $store_instance Use this store instance instead of
+	 *     instantiating a new one.
 	 *
 	 * ## Example:
 	 * ~~~~.php
@@ -58,7 +64,8 @@ class AdminRoute extends AdminStore {
 	public function __construct(
 		$home_or_kwargs=null, $host=null, $shutdown=true,
 		$dbargs=[], $expiration=null, $force_create_table=false,
-		$token_name=null, $route_prefix=null
+		$token_name=null, $route_prefix=null,
+		$core_instance=null, $store_instance=null
 	) {
 		if (is_array($home_or_kwargs)) {
 			extract(zc\Common::extract_kwargs($home_or_kwargs, [
@@ -70,18 +77,32 @@ class AdminRoute extends AdminStore {
 				'force_create_table' => false,
 				'token_name' => null,
 				'route_prefix' => null,
+				'core_instance' => null,
+				'store_instance' => null,
 			]));
 		} else {
 			$home = $home_or_kwargs;
 		}
-		self::$core = new zc\Router($home, $host, $shutdown);
-		self::$store = new zs\SQL($dbargs);
-		self::$store->open();
+
+		# no null-coalesce operator
+		if ($core_instance)
+			self::$core = $core_instance;
+		else
+			self::$core = new zc\Router($home, $host, $shutdown);
+
+		if ($store_instance) {
+			self::$store = $store_instance;
+		} else {
+			self::$store = new zs\SQL($dbargs);
+			self::$store->open();
+		}
+
 		parent::__construct(self::$store, $expiration, $force_create_table);
 
 		if (!$token_name)
 			$token_name = 'zapmin';
 		$this->token_name = $token_name;
+
 		$this->prefix = $this->verify_prefix($route_prefix);
 	}
 

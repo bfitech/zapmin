@@ -26,25 +26,6 @@ class AdminRoute extends AdminStore {
 	private $token_value = null;
 
 	/**
-	 * Initiate a kwargs array for safe extraction.
-	 *
-	 * @param array $input_array Input array, typically first
-	 *     parameter in a method.
-	 * @param array $init_array Fallback array when input array
-	 *     is not complete, of the form: `key => default value`.
-	 * @return array A complete array ready to be extract()ed.
-	 * @todo Move this to Common.
-	 */
-	public static function extract_kwargs($input_array, $init_array) {
-		foreach ($init_array as $key => $val) {
-			if (isset($input_array[$key]))
-				continue;
-			$input_array[$key] = $val;
-		}
-		return $input_array;
-	}
-
-	/**
 	 * Constructor.
 	 *
 	 * @param string $home_or_kwargs Core home or kwargs.
@@ -80,7 +61,7 @@ class AdminRoute extends AdminStore {
 		$token_name=null, $route_prefix=null
 	) {
 		if (is_array($home_or_kwargs)) {
-			extract(self::extract_kwargs($home_or_kwargs, [
+			extract(zc\Common::extract_kwargs($home_or_kwargs, [
 				'home' => null,
 				'host' => null,
 				'shutdown' => true,

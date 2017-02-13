@@ -4,6 +4,7 @@
 require('../../vendor/autoload.php');
 
 use BFITech\ZapAdmin as za;
+use BFITech\ZapCore as zc;
 
 # Change this to wherever, preferably in a tmpfs partition
 # to gain some speed.
@@ -13,11 +14,23 @@ $dbname = '/mnt/ramdisk/zapmin-test.sq3';
 if (isset($_GET['reloaddb']))
 	@unlink($dbname);
 
+# Use this router with its simplified abort.
+class ExtRouter extends zc\Router {
+	public function abort($code) {
+		$this->send_header(0, 0, 0, $code);
+		echo "ERROR: $code";
+	}
+}
+$ext = new ExtRouter();
+
 $dbargs = [
 	'dbtype' => 'sqlite3',
 	'dbname' => $dbname,
 ];
-$adm = new za\AdminRoute(['dbargs' => $dbargs]);
+$adm = new za\AdminRoute([
+	'dbargs' => $dbargs,
+	'core_instance' => $ext,
+]);
 
 $adm->route('/',         [$adm, 'route_home'],     'GET');
 $adm->route('/status',   [$adm, 'route_status'],   'GET');

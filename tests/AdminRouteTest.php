@@ -402,5 +402,15 @@ class AdminRouteDefaultTest extends TestCase {
 		$this->assertEquals($this->body->errno, 2);
 		# end mock
 	}
+
+	public function test_patched_abort() {
+		$url = self::$base_uri . '/notfound';
+		$response = zc\Common::http_client([
+			'method' => 'GET',
+			'url' => $url,
+		]);
+		$this->assertEquals($response[0], 404);
+		$this->assertEquals($response[1], 'ERROR: 404');
+	}
 }
 

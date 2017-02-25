@@ -4,10 +4,10 @@
 namespace BFITech\ZapAdmin;
 
 use BFITech\ZapCore as zc;
+use BFITech\ZapStore as zs;
 
 
-# must move to storage
-class AdminStoreError extends \PDOException {}
+class AdminStoreError extends \Exception {}
 
 class AdminStore {
 
@@ -35,6 +35,10 @@ class AdminStore {
 		$sql_params = $this->sql->get_connection_params();
 		if (!$sql_params)
 			throw new AdminStoreError("Database not connected.");
+		if ($sql_params['dbtype'] == 'mysql')
+			# @fixme: MySQL needs extra effort due to it unable to
+			# use parameterized defaults. Let's skip it for now.
+			throw new AdminStoreError("Database not supported.");
 
 		if ($expiration) {
 			$expiration = (int)$expiration;
@@ -56,14 +60,12 @@ class AdminStore {
 
 		$sql = $this->sql;
 
-		# @fixme There's no generic way to check this across databases.
-		# Just use 'udata' since it must never be empty. Also, every
-		# request calls this. Whatevs.
 		try {
-			$test = $sql->query("SELECT uid FROM udata LIMIT 1");
+			# check if table is already there
+			$test = $sql->query("SELECT 1 FROM udata LIMIT 1");
 			if (!$force_create_table)
 				return;
-		} catch (\PDOException $e) {}
+		} catch (zs\SQLError $e) {}
 
 		$index = $sql->stmt_fragment('index');
 		$engine = $sql->stmt_fragment('engine');
@@ -76,9 +78,12 @@ class AdminStore {
 			"DROP TABLE IF EXISTS usess;",
 			"DROP TABLE IF EXISTS udata;",
 		] as $drop) {
-			if (!$sql->query_raw($drop))
+			try {
+				$sql->query_raw($drop);
+			} catch(zs\SQLError $e) {
 				throw new AdminStoreError(
-					"Cannot drop data:" . $sql->errmsg);
+					"Cannot drop data:" . $e->getMessage());
+			}
 		}
 
 		# @note
@@ -100,9 +105,12 @@ class AdminStore {
 			") %s;"
 		);
 		$user_table = sprintf($user_table, $index, $dtnow, $engine);
-		if (!$sql->query_raw($user_table))
+		try {
+			$sql->query_raw($user_table);
+		} catch(zs\SQLError $e) {
 			throw new AdminStoreError(
-				"Cannot create udata table:" . $sql->errmsg);
+				"Cannot create udata table:" . $e->getMessage());
+		}
 		$root_salt = $this->generate_secret('root', null, 16);
 		$root_pass = $this->hash_password('root', 'admin', $root_salt);
 		$sql->insert('udata', [
@@ -122,9 +130,12 @@ class AdminStore {
 		);
 		$session_table = sprintf(
 			$session_table, $index, $expire, $engine);
-		if (!$sql->query_raw($session_table))
+		try {
+			$sql->query_raw($session_table);
+		} catch(zs\SQLError $e) {
 			throw new AdminStoreError(
-				"Cannot create usess table:" . $sql->errmsg);
+				"Cannot create usess table:" . $e->getMessage());
+		}
 
 		$user_session_view = (
 			"CREATE VIEW v_usess AS" .
@@ -137,9 +148,12 @@ class AdminStore {
 			"  WHERE" .
 			"    udata.uid=usess.uid;"
 		);
-		if (!$sql->query_raw($user_session_view))
+		try {
+			$sql->query_raw($user_session_view);
+		} catch(zs\SQLError $e) {
 			throw new AdminStoreError(
-				"Cannot create v_usess view:" . $sql->errmsg);
+				"Cannot create v_usess view:" . $e->getMessage());
+		}
 	}
 
 	/**
@@ -563,9 +577,10 @@ class AdminStore {
 		];
 		if ($email_required)
 			$udata['email'] = $email;
-		if (!$this->sql->insert('udata', $udata, 'uid')) {
+		try {
+			$this->sql->insert('udata', $udata, 'uid');
+		} catch(zs\SQLError $e) {
 			# user exists
-			# FIXME: Relying on PDO exception seems fishy.
 			return [7];
 		}
 

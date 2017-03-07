@@ -104,10 +104,11 @@ WARN_LOGFILE           =
 INPUT                  =
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.php
-RECURSIVE              = NO
+RECURSIVE              = YES
 EXCLUDE                =
 EXCLUDE_SYMLINKS       = NO
-EXCLUDE_PATTERNS       =
+EXCLUDE_PATTERNS       = */vendor/* \
+                         */tests/*
 EXCLUDE_SYMBOLS        =
 EXAMPLE_PATH           =
 EXAMPLE_PATTERNS       =

@@ -8,6 +8,9 @@ use BFITech\ZapCore as zc;
 use BFITech\ZapStore as zs;
 
 
+/**
+ * AdminRoute class.
+ */
 class AdminRoute extends AdminStore {
 
 	/**

@@ -9,6 +9,10 @@ use BFITech\ZapStore as zs;
 
 class AdminStoreError extends \Exception {}
 
+
+/**
+ * AdminStore class.
+ */
 class AdminStore {
 
 	private $sql = null;

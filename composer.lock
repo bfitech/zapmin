@@ -4,15 +4,15 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "47f926c56b07094f8ebe465f1b1da00e",
+    "content-hash": "f474eb6d9458440ea421250159b2f417",
     "packages": [
         {
             "name": "bfitech/zapcore",
-            "version": "dev-master",
+            "version": "1.0.0",
             "source": {
                 "type": "git",
                 "url": "git@bfinews.com:bfin/zapcore.git",
-                "reference": "d0f7247d5253e47ccda1d9cc7ff0e190b96e38ee"
+                "reference": "e700b816898ceb7cf6b0f23b2872c8a78d75c5f0"
             },
             "require": {
                 "ext-curl": "*",
@@ -21,12 +21,12 @@
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "BFITech\\ZapCore\\": ""
+                    "BFITech\\ZapCore\\": "src"
                 }
             },
             "autoload-dev": {
                 "psr-4": {
-                    "BFITech\\ZapCoreDev\\": ""
+                    "BFITech\\ZapCoreDev\\": "src"
                 }
             },
             "license": [
@@ -39,15 +39,15 @@
                 }
             ],
             "description": "A very simple router and other utils.",
-            "time": "2017-02-08 19:52:08"
+            "time": "2017-03-07T18:22:05+00:00"
         },
         {
             "name": "bfitech/zapstore",
-            "version": "dev-master",
+            "version": "1.0.0",
             "source": {
                 "type": "git",
                 "url": "git@bfinews.com:bfin/zapstore.git",
-                "reference": "7d469ccccca9b83d451e8185326407b5c621967e"
+                "reference": "90c0c4b3cab56e636b3e17e4f3e0b8a5ad8a59e1"
             },
             "require": {
                 "php": ">=5.4.0"
@@ -55,7 +55,7 @@
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "BFITech\\ZapStore\\": ""
+                    "BFITech\\ZapStore\\": "src"
                 }
             },
             "license": [
@@ -68,16 +68,13 @@
                 }
             ],
             "description": "A simple SQL connection wrapper.",
-            "time": "2017-02-25 12:06:48"
+            "time": "2017-03-07T18:58:33+00:00"
         }
     ],
     "packages-dev": [],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "bfitech/zapcore": 20,
-        "bfitech/zapstore": 20
-    },
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

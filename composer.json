@@ -1,42 +1,42 @@
 {
-    "name": "bfitech/zapmin",
-    "description": "A simple authentication manager.",
-    "type": "library",
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Rendra Suroso",
-            "email": "rs@cogsci.bandungfe.net"
-        }
-    ],
-	"repositories": [
-	  {
-		"type": "vcs",
-		"url": "git@bfinews.com:bfin/zapcore.git",
-		"minimum-stability": "dev"
-	  },
-	  {
-		"type": "vcs",
-		"url": "git@bfinews.com:bfin/zapstore.git",
-		"minimum-stability": "dev"
-	  }
-	],
-    "require": {
-	  "php": ">=5.4.0",
-	  "bfitech/zapcore": "dev-master",
-	  "bfitech/zapstore": "dev-master"
-	},
-	"require-dev": {
-	  "ext-curl": "*"
-	},
-	"autoload": {
-	  "psr-4": {
-		"BFITech\\ZapAdmin\\": ""
-	  }
-	},
-	"autoload-dev": {
-	  "psr-4": {
-		"BFITech\\ZapCoreDev\\": ""
-	  }
-	}
+  "name": "bfitech/zapmin",
+  "description": "A simple authentication manager.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Rendra Suroso",
+      "email": "rs@cogsci.bandungfe.net"
+    }
+  ],
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "git@bfinews.com:bfin/zapcore.git",
+      "minimum-stability": "dev"
+    },
+    {
+      "type": "vcs",
+      "url": "git@bfinews.com:bfin/zapstore.git",
+      "minimum-stability": "dev"
+    }
+  ],
+  "require": {
+    "php": ">=5.4.0",
+    "bfitech/zapcore": "1.0.*",
+    "bfitech/zapstore": "1.0.*"
+  },
+  "require-dev": {
+    "ext-curl": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "BFITech\\ZapAdmin\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "BFITech\\ZapCoreDev\\": ""
+    }
+  }
 }

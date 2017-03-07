@@ -5,7 +5,7 @@
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "ZapAdmin"
-PROJECT_NUMBER         = "1.0.00-alpha"
+PROJECT_NUMBER         = "1.0.0"
 PROJECT_BRIEF          = "An authentication manager."
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       = ./docs
@@ -234,3 +234,7 @@ DOT_TRANSPARENT        = NO
 DOT_MULTI_TARGETS      = NO
 GENERATE_LEGEND        = YES
 DOT_CLEANUP            = YES
+#---------------------------------------------------------------------------
+# No LaTeX
+#---------------------------------------------------------------------------
+GENERATE_LATEX         = NO

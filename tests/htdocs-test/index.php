@@ -2,13 +2,14 @@
 
 
 require('../../vendor/autoload.php');
+require(__DIR__ . '/config.php');
 
 use BFITech\ZapAdmin as za;
 use BFITech\ZapCore as zc;
 
 # Change this to wherever, preferably in a tmpfs partition
 # to gain some speed.
-$dbname = '/mnt/ramdisk/zapmin-test.sq3';
+$dbname = TMPDIR . '/zapmin-test.sq3';
 
 # Remote test database. Use this on teardown.
 if (isset($_GET['reloaddb']))

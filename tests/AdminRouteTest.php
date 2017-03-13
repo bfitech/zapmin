@@ -5,10 +5,26 @@ use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore as zc;
 use BFITech\ZapCoreDev as zd;
 
+$config_file = __DIR__ . '/htdocs-test/config.php';
+if (!is_file($config_file))
+	die(sprintf(
+		"ERROR: Configuration file '%s' doesn't exist.\n",
+		$config_file));
+require($config_file);
+foreach (['TMPDIR'] as $dir) {
+	if (!defined($dir))
+		die(sprintf(
+			"ERROR: '%s' not set defined configuration file.\n",
+			$dir));
+}
+if (!is_dir(TMPDIR) && !@mkdir(TMPDIR, 0755))
+	die(sprintf(
+		"ERROR: Cannot create temporary directory '%s'.\n",
+		TMPDIR));
 
 class AdminRouteDefaultTest extends TestCase {
 
-	public static $cookiefile = '/tmp/zapmin-cookie.txt';
+	public static $cookiefile = TMPDIR . '/zapmin-cookie.txt';
 	public static $base_uri = 'http://localhost:9999';
 
 	public static $server_pid;

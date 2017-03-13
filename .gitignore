@@ -4,7 +4,8 @@
 *.log
 *.conf
 *.ini
+*.bak
 
-/vendor/
 /docs/
-
+/vendor/
+/tests/htdocs-test/config.php

@@ -1,0 +1,4 @@
+<?php
+
+define('TMPDIR', '/mnt/ramdisk');
+

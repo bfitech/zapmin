@@ -47,9 +47,8 @@ class AdminRoute extends AdminStore {
 	 * @param object $store_instance Use this store instance instead of
 	 *     instantiating a new one.
 	 *
-	 * ## Example:
-	 * ~~~~.php
-	 *
+	 * ### Example:
+	 * @code
 	 * # index.php
 	 *
 	 * use BFITech\ZapAdmin as za;
@@ -62,7 +61,7 @@ class AdminRoute extends AdminStore {
 	 * $adm->route('/status', [$adm, 'route_status'], 'GET');
 	 *
 	 * # run it with `php -S 0.0.0.0:8000`
-	 * ~~~~
+	 * @endcode
 	 */
 	public function __construct(
 		$home_or_kwargs=null, $host=null, $shutdown=true,

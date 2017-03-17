@@ -4,8 +4,9 @@
 namespace BFITech\ZapAdmin;
 
 
-use BFITech\ZapCore as zc;
-use BFITech\ZapStore as zs;
+use BFITech\ZapCore\Common as Common;
+use BFITech\ZapCore\Router as Router;
+use BFITech\ZapStore\SQL as SQL;
 
 
 /**
@@ -70,7 +71,7 @@ class AdminRoute extends AdminStore {
 		$core_instance=null, $store_instance=null
 	) {
 		if (is_array($home_or_kwargs)) {
-			extract(zc\Common::extract_kwargs($home_or_kwargs, [
+			extract(Common::extract_kwargs($home_or_kwargs, [
 				'home' => null,
 				'host' => null,
 				'shutdown' => true,
@@ -86,18 +87,11 @@ class AdminRoute extends AdminStore {
 			$home = $home_or_kwargs;
 		}
 
-		# no null-coalesce operator
-		if ($core_instance)
-			self::$core = $core_instance;
-		else
-			self::$core = new zc\Router($home, $host, $shutdown);
+		self::$core = $core_instance
+			? $core_instance : new Router($home, $host, $shutdown);
 
-		if ($store_instance) {
-			self::$store = $store_instance;
-		} else {
-			self::$store = new zs\SQL($dbargs);
-			self::$store->open();
-		}
+		self::$store = $store_instance
+			? $store_instance : new SQL($dbargs);
 
 		parent::__construct(self::$store, $expiration, $force_create_table);
 

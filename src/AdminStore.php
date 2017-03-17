@@ -3,8 +3,8 @@
 
 namespace BFITech\ZapAdmin;
 
-use BFITech\ZapCore as zc;
-use BFITech\ZapStore as zs;
+use BFITech\ZapCore\Common as Common;
+use BFITech\ZapStore\SQLError as SQLError;
 
 
 class AdminStoreError extends \Exception {}
@@ -69,7 +69,7 @@ class AdminStore {
 			$test = $sql->query("SELECT 1 FROM udata LIMIT 1");
 			if (!$force_create_table)
 				return;
-		} catch (zs\SQLError $e) {}
+		} catch (SQLError $e) {}
 
 		$index = $sql->stmt_fragment('index');
 		$engine = $sql->stmt_fragment('engine');
@@ -84,7 +84,7 @@ class AdminStore {
 		] as $drop) {
 			try {
 				$sql->query_raw($drop);
-			} catch(zs\SQLError $e) {
+			} catch(SQLError $e) {
 				throw new AdminStoreError(
 					"Cannot drop data:" . $e->getMessage());
 			}
@@ -111,7 +111,7 @@ class AdminStore {
 		$user_table = sprintf($user_table, $index, $dtnow, $engine);
 		try {
 			$sql->query_raw($user_table);
-		} catch(zs\SQLError $e) {
+		} catch(SQLError $e) {
 			throw new AdminStoreError(
 				"Cannot create udata table:" . $e->getMessage());
 		}
@@ -136,7 +136,7 @@ class AdminStore {
 			$session_table, $index, $expire, $engine);
 		try {
 			$sql->query_raw($session_table);
-		} catch(zs\SQLError $e) {
+		} catch(SQLError $e) {
 			throw new AdminStoreError(
 				"Cannot create usess table:" . $e->getMessage());
 		}
@@ -154,7 +154,7 @@ class AdminStore {
 		);
 		try {
 			$sql->query_raw($user_session_view);
-		} catch(zs\SQLError $e) {
+		} catch(SQLError $e) {
 			throw new AdminStoreError(
 				"Cannot create v_usess view:" . $e->getMessage());
 		}
@@ -317,7 +317,7 @@ class AdminStore {
 
 		if (!isset($args['post']))
 			return [2];
-		if (!zc\Common::check_dict($args['post'], ['uname', 'upass']))
+		if (!Common::check_dict($args['post'], ['uname', 'upass']))
 			return [3];
 		extract($args['post'], EXTR_SKIP);
 
@@ -416,7 +416,7 @@ class AdminStore {
 
 		if (!isset($args['post']))
 			return [3];
-		$post = zc\Common::check_dict($args['post'], $keys);
+		$post = Common::check_dict($args['post'], $keys);
 		if (!$post)
 			return [4];
 		extract($post, EXTR_SKIP);
@@ -535,7 +535,7 @@ class AdminStore {
 			$keys[] = 'addpass2';
 		if ($email_required)
 			$keys[] = 'email';
-		$post = zc\Common::check_dict($args['post'], $keys);
+		$post = Common::check_dict($args['post'], $keys);
 		if (!$post)
 			return [3, 1];
 		extract($post, EXTR_SKIP);
@@ -583,7 +583,7 @@ class AdminStore {
 			$udata['email'] = $email;
 		try {
 			$this->sql->insert('udata', $udata, 'uid');
-		} catch(zs\SQLError $e) {
+		} catch(SQLError $e) {
 			# user exists
 			return [7];
 		}
@@ -634,7 +634,7 @@ class AdminStore {
 		# check vars
 		if (!isset($args['service']))
 			return [2, 0];
-		$service = zc\Common::check_dict($args['service'], ['uname', 'uservice']);
+		$service = Common::check_dict($args['service'], ['uname', 'uservice']);
 		if (!$service)
 			return [2, 1];
 		extract($service, EXTR_SKIP);
@@ -699,7 +699,7 @@ class AdminStore {
 
 		if (!isset($args['post']))
 			return [2];
-		if (!zc\Common::check_dict($args['post'], ['uid']))
+		if (!Common::check_dict($args['post'], ['uid']))
 			return [2];
 		extract($args['post'], EXTR_SKIP);
 

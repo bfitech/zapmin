@@ -5,26 +5,11 @@ use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore as zc;
 use BFITech\ZapCoreDev as zd;
 
-$config_file = __DIR__ . '/htdocs-test/config.php';
-if (!is_file($config_file))
-	die(sprintf(
-		"ERROR: Configuration file '%s' doesn't exist.\n",
-		$config_file));
-require($config_file);
-foreach (['TMPDIR'] as $dir) {
-	if (!defined($dir))
-		die(sprintf(
-			"ERROR: '%s' not set defined configuration file.\n",
-			$dir));
-}
-if (!is_dir(TMPDIR) && !@mkdir(TMPDIR, 0755))
-	die(sprintf(
-		"ERROR: Cannot create temporary directory '%s'.\n",
-		TMPDIR));
 
 class AdminRouteDefaultTest extends TestCase {
 
-	public static $cookiefile = TMPDIR . '/zapmin-cookie.txt';
+	public static $cookiefile;
+	public static $logfile;
 	public static $base_uri = 'http://localhost:9999';
 
 	public static $server_pid;
@@ -70,10 +55,14 @@ class AdminRouteDefaultTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
+		self::$cookiefile = __DIR__ . '/htdocs-test/zapmin-cookie.log';
+		self::$logfile = __DIR__ . '/htdoces-test/zapmin.log';
 		self::$server_pid = zd\CoreDev::server_up(
 			__DIR__ . '/htdocs-test');
-		if (file_exists(self::$cookiefile))
-			unlink(self::$cookiefile);
+		foreach ([self::$cookiefile, self::$logfile] as $fl) {
+			if (file_exists($fl))
+				unlink($fl);
+		}
 	}
 
 	public static function tearDownAfterClass() {

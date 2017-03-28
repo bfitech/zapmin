@@ -2,6 +2,7 @@
 
 
 use PHPUnit\Framework\TestCase;
+use BFITech\ZapCore as zc;
 use BFITech\ZapStore as zs;
 use BFITech\ZapAdmin as za;
 
@@ -28,11 +29,12 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
+		$logger = new zc\Logger(
+			zc\Logger::DEBUG, __DIR__ . '/htdocs-test/zapmin.log');
 		self::$sql = new zs\SQL([
 			'dbtype' => 'sqlite3',
 			'dbname' => ':memory:'
-		]);
-		self::$sql->open();
+		], $logger);
 		self::$store= new za\AdminStore(self::$sql, 600);
 	}
 

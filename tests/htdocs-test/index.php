@@ -2,35 +2,37 @@
 
 
 require('../../vendor/autoload.php');
-require(__DIR__ . '/config.php');
 
-use BFITech\ZapAdmin as za;
 use BFITech\ZapCore as zc;
+use BFITech\ZapStore as zs;
+use BFITech\ZapAdmin as za;
 
-# Change this to wherever, preferably in a tmpfs partition
-# to gain some speed.
-$dbname = TMPDIR . '/zapmin-test.sq3';
+$dbname = __DIR__ . '/zapmin-test.sq3';
+$logfile = __DIR__ . '/zapmin.log';
 
 # Remote test database. Use this on teardown.
 if (isset($_GET['reloaddb']))
 	@unlink($dbname);
 
+$logger = new zc\Logger(zc\Logger::DEBUG, $logfile);
+
 # Use this router with its simplified abort.
-class ExtRouter extends zc\Router {
-	public function abort($code) {
+class Router extends zc\Router {
+	public function abort_custom($code) {
 		$this->send_header(0, 0, 0, $code);
 		echo "ERROR: $code";
 	}
 }
-$ext = new ExtRouter();
+$core = new Router(null, null, true, $logger);
 
-$dbargs = [
+$store = new zs\SQL([
 	'dbtype' => 'sqlite3',
 	'dbname' => $dbname,
-];
+], $logger);
+
 $adm = new za\AdminRoute([
-	'dbargs' => $dbargs,
-	'core_instance' => $ext,
+	'core_instance' => $core,
+	'store_instance' => $store,
 ]);
 
 $adm->route('/',         [$adm, 'route_home'],     'GET');

@@ -5,7 +5,8 @@
 *.conf
 *.ini
 *.bak
+*.sq3
 
 /docs/
 /vendor/
-/tests/htdocs-test/config.php
+

@@ -9,25 +9,13 @@
       "email": "rs@cogsci.bandungfe.net"
     }
   ],
-  "repositories": [
-    {
-      "type": "vcs",
-      "url": "git@bfinews.com:bfin/zapcore.git",
-      "minimum-stability": "dev"
-    },
-    {
-      "type": "vcs",
-      "url": "git@bfinews.com:bfin/zapstore.git",
-      "minimum-stability": "dev"
-    }
-  ],
   "require": {
-    "php": ">=5.4.0",
-    "bfitech/zapcore": "1.0.*",
-    "bfitech/zapstore": "1.0.*"
+    "php": ">=5.5 || ~7.0",
+    "bfitech/zapcore": "~1.1",
+    "bfitech/zapstore": "~1.1"
   },
   "require-dev": {
-    "ext-curl": "*"
+    "phpunit/phpunit": "4.8.*"
   },
   "autoload": {
     "psr-4": {

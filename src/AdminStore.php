@@ -20,7 +20,7 @@ class AdminStore {
 	private $user_token = null;
 	private $user_data = null;
 
-	private $expiration = 3600 * 2;
+	private $expiration;
 
 	/**
 	 * Constructor.
@@ -48,8 +48,10 @@ class AdminStore {
 			$expiration = (int)$expiration;
 			if ($expiration < 600)
 				$expiration = 600;
-			$this->expiration = $expiration;
+		} else {
+			$expiration = 3600 * 2;
 		}
+		$this->expiration = $expiration;
 
 		$this->check_tables($force_create_table);
 	}

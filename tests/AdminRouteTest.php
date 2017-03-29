@@ -157,8 +157,7 @@ class AdminRouteDefaultTest extends TestCase {
 		$post['pass0'] = ['xxx'];
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		# json_decode fails, causing null body
-		$this->assertEquals($this->body, null);
+		$this->assertEquals($this->body->errno, 4);
 
 		$post['pass0'] = 'xxx';
 		$this->POST('/chpasswd', $post);

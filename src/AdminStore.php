@@ -260,27 +260,6 @@ class AdminStore {
 	}
 
 	/**
-	 * Check dict of 'immutables'.
-	 *
-	 * Common::check_dict() with addition condition: all values
-	 * must be string or numeric. Especially useful when request
-	 * data is not string, causing various string operations
-	 * depending on Common::check_dict fails.
-	 *
-	 * @todo: Move this to core.
-	 */
-	private function check_dict($data, $keys) {
-		$data = Common::check_dict($data, $keys);
-		if (!$data)
-			return false;
-		foreach ($data as $val) {
-			if (!is_string($val) && !is_numeric($val))
-				return false;
-		}
-		return $data;
-	}
-
-	/**
 	 * Match password and return user data on success.
 	 *
 	 * @param string $uname Username.
@@ -370,7 +349,7 @@ class AdminStore {
 
 		if (!isset($args['post']))
 			return [2];
-		if (!$this->check_dict($args['post'], ['uname', 'upass']))
+		if (!Common::check_idict($args['post'], ['uname', 'upass']))
 			return [3];
 		extract($args['post'], EXTR_SKIP);
 
@@ -478,7 +457,7 @@ class AdminStore {
 
 		if (!isset($args['post']))
 			return [3];
-		$post = $this->check_dict($args['post'], $keys);
+		$post = Common::check_idict($args['post'], $keys);
 		if (!$post)
 			return [4];
 		extract($post, EXTR_SKIP);
@@ -609,7 +588,7 @@ class AdminStore {
 			$keys[] = 'addpass2';
 		if ($email_required)
 			$keys[] = 'email';
-		$post = $this->check_dict($args['post'], $keys);
+		$post = Common::check_idict($args['post'], $keys);
 		if (!$post)
 			return [3, 1];
 		extract($post, EXTR_SKIP);
@@ -730,7 +709,7 @@ class AdminStore {
 		# check vars
 		if (!isset($args['service']))
 			return [2, 0];
-		$service = $this->check_dict($args['service'],
+		$service = Common::check_idict($args['service'],
 			['uname', 'uservice']);
 		if (!$service)
 			return [2, 1];
@@ -797,7 +776,7 @@ class AdminStore {
 
 		if (!isset($args['post']))
 			return [2];
-		if (!$this->check_dict($args['post'], ['uid']))
+		if (!Common::check_idict($args['post'], ['uid']))
 			return [2];
 		extract($args['post'], EXTR_SKIP);
 

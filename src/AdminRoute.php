@@ -95,7 +95,7 @@ class AdminRoute extends AdminStore {
 			$logger_instance = new Logger();
 		self::$core = $core_instance instanceof Router
 			? $core_instance
-			: new Router($home, $host, $shutdown, $logger);
+			: new Router($home, $host, $shutdown, $logger_instance);
 		self::$store = $store_instance instanceof SQL
 			? $store_instance
 			: new SQL($dbargs, $logger_instance);

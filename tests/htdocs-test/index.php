@@ -33,6 +33,7 @@ $store = new zs\SQL([
 $adm = new za\AdminRoute([
 	'core_instance' => $core,
 	'store_instance' => $store,
+	'logger_instance' => $logger,
 ]);
 
 $adm->route('/',         [$adm, 'route_home'],     'GET');

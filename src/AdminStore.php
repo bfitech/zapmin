@@ -4,6 +4,8 @@
 namespace BFITech\ZapAdmin;
 
 use BFITech\ZapCore\Common as Common;
+use BFITech\ZapCore\Logger as Logger;
+use BFITech\ZapStore\SQL as SQL;
 use BFITech\ZapStore\SQLError as SQLError;
 
 
@@ -22,27 +24,49 @@ class AdminStore {
 
 	private $expiration;
 
+	/** Logging service. */
+	public static $logger;
+
 	/**
 	 * Constructor.
 	 *
-	 * @param object $sql An instance of ZapStore\\SQL.
+	 * @param SQL $sql An instance of BFITech\\ZapStore\\SQL.
 	 * @param int $expiration Session expiration interval in seconds.
 	 *     Defaults to 2 hours.
 	 * @param bool $force_create_table Whether tables are to be created
 	 *     regardless current installation.
+	 * @param Logger $logger Logger instance.
 	 */
 	public function __construct(
-		$sql, $expiration=null, $force_create_table=false
+		SQL $sql, $expiration=null, $force_create_table=false,
+		Logger $logger=null
 	) {
 
-		$this->sql = $sql;
+		self::$logger = $logger instanceof Logger
+			? $logger : new Logger();
+		$logger = self::$logger;
+
+		if ($sql instanceof SQL) {
+			$this->sql = $sql;
+		} else {
+			$msg = "Invalid SQL connection.";
+			$logger->error("Zapmin: sql error: " . $msg);
+			throw new AdminStoreError($msg);
+		}
+
 		$sql_params = $this->sql->get_connection_params();
-		if (!$sql_params)
-			throw new AdminStoreError("Database not connected.");
-		if ($sql_params['dbtype'] == 'mysql')
+		if (!$sql_params) {
+			$msg = "Database not connected.";
+			$logger->error("Zapmin: sql error: " . $msg);
+			throw new AdminStoreError($msg);
+		}
+		if ($sql_params['dbtype'] == 'mysql') {
 			# @fixme: MySQL needs extra effort due to it unable to
 			# use parameterized defaults. Let's skip it for now.
-			throw new AdminStoreError("Database not supported.");
+			$msg = "MySQL not supported.";
+			$logger->error("Zapmin: sql error: " . $msg);
+			throw new AdminStoreError($msg);
+		}
 
 		if ($expiration) {
 			$expiration = (int)$expiration;
@@ -87,8 +111,9 @@ class AdminStore {
 			try {
 				$sql->query_raw($drop);
 			} catch(SQLError $e) {
-				throw new AdminStoreError(
-					"Cannot drop data:" . $e->getMessage());
+				$msg = "Cannot drop data:" . $e->getMessage();
+				self::$logger->error("Zapmin: sql error: $msg");
+				throw new AdminStoreError($msg);
 			}
 		}
 
@@ -114,8 +139,9 @@ class AdminStore {
 		try {
 			$sql->query_raw($user_table);
 		} catch(SQLError $e) {
-			throw new AdminStoreError(
-				"Cannot create udata table:" . $e->getMessage());
+			$msg = "Cannot create udata table:" . $e->getMessage();
+			self::$logger->error("Zapmin: sql error: $msg");
+			throw new AdminStoreError($msg);
 		}
 		$root_salt = $this->generate_secret('root', null, 16);
 		$root_pass = $this->hash_password('root', 'admin', $root_salt);
@@ -139,8 +165,9 @@ class AdminStore {
 		try {
 			$sql->query_raw($session_table);
 		} catch(SQLError $e) {
-			throw new AdminStoreError(
-				"Cannot create usess table:" . $e->getMessage());
+			$msg = "Cannot create usess table:" . $e->getMessage();
+			self::$logger->error("Zapmin: sql error: $msg");
+			throw new AdminStoreError($msg);
 		}
 
 		$user_session_view = (
@@ -157,8 +184,9 @@ class AdminStore {
 		try {
 			$sql->query_raw($user_session_view);
 		} catch(SQLError $e) {
-			throw new AdminStoreError(
-				"Cannot create v_usess view:" . $e->getMessage());
+			$msg = "Cannot create v_usess view:" . $e->getMessage();
+			self::$logger->error("Zapmin: sql error: $msg");
+			throw new AdminStoreError($msg);
 		}
 	}
 
@@ -335,6 +363,8 @@ class AdminStore {
 	 * @param array $args Post data with keys: 'uname', 'upass'.
 	 */
 	public function adm_login($args) {
+		$logger = self::$logger;
+
 		if ($this->is_logged_in())
 			return [1];
 
@@ -353,9 +383,11 @@ class AdminStore {
 		$usalt = $usalt['usalt'];
 
 		$udata = $this->match_password($uname, $upass, $usalt);
-		if (!$udata)
+		if (!$udata) {
 			# wrong password
+			$logger->warning("Zapmin: login: wrong password: '$uname'.");
 			return [5];
+		}
 
 		// generate token
 		$token = $this->generate_secret(
@@ -369,6 +401,7 @@ class AdminStore {
 		// token must be used by the router; this is a subset
 		// of return value of get_safe_user_data() so it needs
 		// a re-request after signing in
+		$logger->info("Zapmin: login: OK: '$uname'.");
 		return [0, [
 			'uid' => $udata['uid'],
 			'uname' => $udata['uname'],
@@ -404,6 +437,10 @@ class AdminStore {
 	public function adm_logout($args=null) {
 		if (!$this->is_logged_in())
 			return [1];
+		self::$logger->info(sprintf(
+			"Zapmin: logout: OK: '%s'.",
+			$this->user_data['uname']
+		));
 		# this just close sessions with current sid, whether
 		# it exists or not, possibly deleted by account
 		# self-delete
@@ -429,6 +466,8 @@ class AdminStore {
 
 		extract($this->user_data, EXTR_SKIP);
 
+		$logger = self::$logger;
+
 		if (!$usalt)
 			# passwordless has no salt
 			return [2];
@@ -450,12 +489,17 @@ class AdminStore {
 			$with_old_password &&
 			!$this->match_password($uname, $pass0, $usalt)
 		) {
+			$logger->warning(
+				"Zapmin: chpasswd: old passwd invalid: '$uname'.");
 			return [5];
 		}
 
 		$verify_password = $this->verify_password($pass1, $pass2);
-		if ($verify_password !== 0)
+		if ($verify_password !== 0) {
+			$logger->warning(
+				"Zapmin: chpasswd: new passwd invalid: '$uname'.");
 			return [6, $verify_password];
+		}
 
 		# update
 		$this->sql->update('udata', [
@@ -465,6 +509,7 @@ class AdminStore {
 		]);
 
 		# success
+		$logger->info("Zapmin: chpasswd: OK: '$uname'.");
 		return [0];
 	}
 
@@ -505,6 +550,10 @@ class AdminStore {
 		$this->adm_status();
 
 		# ok
+		self::$logger->info(sprintf(
+			"Zapmin: chbio: OK: '%s'.",
+			$this->user_data['uname']
+		));
 		return [0];
 	}
 
@@ -526,6 +575,8 @@ class AdminStore {
 		$args, $pass_twice=false, $allow_self_register=false,
 		$email_required=false, $callback_authz=null, $callback_param=null
 	) {
+		$logger = self::$logger;
+
 		if ($this->is_logged_in()) {
 			if (!$callback_authz) {
 				# default callback
@@ -546,8 +597,8 @@ class AdminStore {
 			if (!$allow_self_register)
 				# self-registration not allowed
 				return [2];
-			# NOTE: Other constraint such as captcha happens outside
-			# of this class.
+			# @note Other constraint such as captcha happens outside
+			#     of this class.
 		}
 
 		# check vars
@@ -564,33 +615,53 @@ class AdminStore {
 		extract($post, EXTR_SKIP);
 
 		# check name, allow unicode but not whitespace
-		if (strlen($addname) > 64)
+		if (strlen($addname) > 64) {
 			# max 64 chars
+			$logger->warning(
+				"Zapmin: usradd: name invalid: '$addname'.");
 			return [4, 0];
+		}
 		foreach([" ", "\n", "\r", "\t"] as $white) {
 			# never allow whitespace in the middle
-			if (strpos($addname, $white) !== false)
+			if (strpos($addname, $white) !== false) {
+				$logger->warning(
+					"Zapmin: usradd: name invalid: '$addname'.");
 				return [4, 1];
+			}
 		}
-		if ($addname[0] == '+')
+		if ($addname[0] == '+') {
 			# leading '+' is reserved for passwordless accounts
+			$logger->warning(
+				"Zapmin: usradd: name invalid: '$addname'.");
 			return [4, 2];
+		}
 
 		if ($email_required) {
-			if (!self::verify_email_address($email))
+			if (!self::verify_email_address($email)) {
+				$logger->warning(sprintf(
+					"Zapmin: usradd: email invalid: '%s' <- '%s'.",
+					$addname, $email));
 				return [5, 0];
+			}
 			if ($this->sql->query(
 				"SELECT uid FROM udata WHERE email=? LIMIT 1",
 				[$email])
-			)
+			) {
+				$logger->warning(sprintf(
+					"Zapmin: usradd: email exists: '%s' <- '%s'.",
+					$addname, $email));
 				return [5, 1];
+			}
 		}
 
 		if (!$pass_twice)
 			$addpass2 = $addpass1;
 		$verify_password = $this->verify_password($addpass1, $addpass2);
-		if ($verify_password !== 0)
+		if ($verify_password !== 0) {
+			$logger->warning(
+				"Zapmin: usradd: passwd invalid: '$addname'.");
 			return [6, $verify_password];
+		}
 
 		# hashes generation
 		$usalt = $this->generate_secret($addname . $addpass1, null, 16);
@@ -608,10 +679,12 @@ class AdminStore {
 			$this->sql->insert('udata', $udata, 'uid');
 		} catch(SQLError $e) {
 			# user exists
+			$logger->info("Zapmin: usradd: user exists: '$addname'.");
 			return [7];
 		}
 
 		# success
+		$logger->info("Zapmin: usradd: OK: '$addname'.");
 		return [0];
 	}
 
@@ -697,6 +770,7 @@ class AdminStore {
 		], 'sid');
 
 		# use token for next request
+		self::$logger->info("Zapmin: usradd: OK : '$dbuname'.");
 		return [0, [
 			'uid' => $uid,
 			'uname' => $dbuname,
@@ -751,9 +825,15 @@ class AdminStore {
 
 		if (!$this->sql->query(
 			"SELECT uid FROM udata WHERE uid=? LIMIT 1",
-			[$uid]))
+			[$uid])
+		) {
 			# user does not exist
+			self::$logger->warning(sprintf(
+				"Zapmin: usrdel: not found: uid=%s.",
+				$uid
+			));
 			return [5];
+		}
 
 		# delete user data and its related session history via
 		# foreign key constraint
@@ -761,6 +841,10 @@ class AdminStore {
 
 		# in case of self-delete, router must send redirect header
 		# or location.reload from the client side
+		self::$logger->info(sprintf(
+			"Zapmin: usrdel successful: uid=%s.",
+			$uid
+		));
 		return [0];
 	}
 

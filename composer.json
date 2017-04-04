@@ -11,8 +11,8 @@
   ],
   "require": {
     "php": ">=5.5 || ~7.0",
-    "bfitech/zapcore": "~1.1",
-    "bfitech/zapstore": "~1.1"
+    "bfitech/zapcore": "dev-master as 1.1.x-dev",
+    "bfitech/zapstore": "dev-master as 1.1.x-dev"
   },
   "require-dev": {
     "phpunit/phpunit": "4.8.*"

@@ -5,6 +5,7 @@ namespace BFITech\ZapAdmin;
 
 
 use BFITech\ZapCore\Common as Common;
+use BFITech\ZapCore\Logger as Logger;
 use BFITech\ZapCore\Router as Router;
 use BFITech\ZapStore\SQL as SQL;
 
@@ -43,10 +44,11 @@ class AdminRoute extends AdminStore {
 	 * @param string $token_name Name of authorization token. Defaults
 	 *     to 'zapmin'.
 	 * @param string $route_prefix Route prefix.
-	 * @param object $core_instance Use this core instance instead of
+	 * @param Router $core_instance Use this core instance instead of
 	 *     instantiating a new one.
-	 * @param object $store_instance Use this store instance instead of
+	 * @param SQL $store_instance Use this store instance instead of
 	 *     instantiating a new one.
+	 * @param Logger $logger_instance Logging service.
 	 *
 	 * ### Example:
 	 * @code
@@ -68,7 +70,8 @@ class AdminRoute extends AdminStore {
 		$home_or_kwargs=null, $host=null, $shutdown=true,
 		$dbargs=[], $expiration=null, $force_create_table=false,
 		$token_name=null, $route_prefix=null,
-		$core_instance=null, $store_instance=null
+		Router $core_instance=null, SQL $store_instance=null,
+		Logger $logger_instance=null
 	) {
 		if (is_array($home_or_kwargs)) {
 			extract(Common::extract_kwargs($home_or_kwargs, [
@@ -82,18 +85,23 @@ class AdminRoute extends AdminStore {
 				'route_prefix' => null,
 				'core_instance' => null,
 				'store_instance' => null,
+				'logger_instance' => null,
 			]));
 		} else {
 			$home = $home_or_kwargs;
 		}
 
-		self::$core = $core_instance
-			? $core_instance : new Router($home, $host, $shutdown);
+		if (!($logger_instance instanceof Logger))
+			$logger_instance = new Logger();
+		self::$core = $core_instance instanceof Router
+			? $core_instance
+			: new Router($home, $host, $shutdown, $logger);
+		self::$store = $store_instance instanceof SQL
+			? $store_instance
+			: new SQL($dbargs, $logger_instance);
 
-		self::$store = $store_instance
-			? $store_instance : new SQL($dbargs);
-
-		parent::__construct(self::$store, $expiration, $force_create_table);
+		parent::__construct(self::$store, $expiration,
+			$force_create_table, $logger_instance);
 
 		if (!$token_name)
 			$token_name = 'zapmin';

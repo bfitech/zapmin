@@ -56,7 +56,7 @@ class AdminRouteDefaultTest extends TestCase {
 
 	public static function setUpBeforeClass() {
 		self::$cookiefile = __DIR__ . '/htdocs-test/zapmin-cookie.log';
-		self::$logfile = __DIR__ . '/htdoces-test/zapmin.log';
+		self::$logfile = __DIR__ . '/htdocs-test/zapmin.log';
 		self::$server_pid = zd\CoreDev::server_up(
 			__DIR__ . '/htdocs-test');
 		foreach ([self::$cookiefile, self::$logfile] as $fl) {

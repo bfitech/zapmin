@@ -8,7 +8,7 @@ use BFITech\ZapStore as zs;
 use BFITech\ZapAdmin as za;
 
 $dbname = __DIR__ . '/zapmin-test.sq3';
-$logfile = __DIR__ . '/zapmin.log';
+$logfile = __DIR__ . '/zapmin-test.log';
 
 # Remote test database. Use this on teardown.
 if (isset($_GET['reloaddb']))
@@ -25,8 +25,7 @@ class Router extends zc\Router {
 }
 $core = new Router(null, null, true, $logger);
 
-$store = new zs\SQL([
-	'dbtype' => 'sqlite3',
+$store = new zs\SQLite3([
 	'dbname' => $dbname,
 ], $logger);
 

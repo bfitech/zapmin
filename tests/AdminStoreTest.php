@@ -30,9 +30,9 @@ class AdminStoreTest extends TestCase {
 
 	public static function setUpBeforeClass() {
 		$logger = new zc\Logger(
-			zc\Logger::DEBUG, __DIR__ . '/htdocs-test/zapmin.log');
-		self::$sql = new zs\SQL([
-			'dbtype' => 'sqlite3',
+			zc\Logger::DEBUG,
+			__DIR__ . '/htdocs-test/zapmin-test.log');
+		self::$sql = new zs\SQLite3([
 			'dbname' => ':memory:'
 		], $logger);
 		self::$store= new za\AdminStore(self::$sql, 600);
@@ -49,9 +49,8 @@ class AdminStoreTest extends TestCase {
 
 	public function test_constructor() {
 		$logger = new zc\Logger(zc\Logger::ERROR, '/dev/null');
-		$dbfile = __DIR__ . '/zapmin-constructor-test.sq3';
-		$sql = new zs\SQL([
-			'dbtype' => 'sqlite3',
+		$dbfile = __DIR__ . '/zapmin-test-constructor.sq3';
+		$sql = new zs\SQLite3([
 			'dbname' => $dbfile,
 		], $logger);
 
@@ -72,15 +71,10 @@ class AdminStoreTest extends TestCase {
 		unlink($dbfile);
 	}
 
-	public function test_connection() {
-		$this->assertEquals(
-			self::$sql->get_connection_params()['dbtype'], 'sqlite3');
-	}
-
 	public function test_table() {
-		$qr = self::$sql->query(
-			"SELECT uname FROM udata LIMIT 1");
-		$this->assertEquals($qr['uname'], 'root');
+		$uname = self::$sql->query(
+			"SELECT uname FROM udata LIMIT 1")['uname'];
+		$this->assertEquals($uname, 'root');
 	}
 
 	public function test_set_user_token() {

@@ -47,6 +47,31 @@ class AdminStoreTest extends TestCase {
 			self::$store->adm_logout();
 	}
 
+	public function test_constructor() {
+		$logger = new zc\Logger(zc\Logger::ERROR, '/dev/null');
+		$dbfile = __DIR__ . '/zapmin-constructor-test.sq3';
+		$sql = new zs\SQL([
+			'dbtype' => 'sqlite3',
+			'dbname' => $dbfile,
+		], $logger);
+
+		# minimum expiration
+		$store= new za\AdminStore($sql, 60);
+		$this->assertEquals($store->adm_get_expiration(), 600);
+
+		# default maximum expiration with forced table overwrite
+		$store= new za\AdminStore($sql, null, true, $logger);
+		$this->assertEquals($store->adm_get_expiration(), 3600 * 2);
+
+		# working on invalid connection
+		$sql->close();
+		try {
+			$store = new za\AdminStore($sql, null, true, $logger);
+		} catch(za\AdminStoreError $e) {}
+
+		unlink($dbfile);
+	}
+
 	public function test_connection() {
 		$this->assertEquals(
 			self::$sql->get_connection_params()['dbtype'], 'sqlite3');
@@ -326,6 +351,16 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals(
 			self::$store->adm_add_user(
 				$args, false, false, false, $cbf, $cbp)[0], 0);
+		# name contains white space
+		$args['post']['addname'] = 'john smith';
+		$this->assertEquals(
+			self::$store->adm_add_user(
+				$args, false, false, false, $cbf, $cbp), [4, 1]);
+		# name starts with plus sign
+		$args['post']['addname'] = '+jacqueline';
+		$this->assertEquals(
+			self::$store->adm_add_user(
+				$args, false, false, false, $cbf, $cbp), [4, 2]);
 		self::$store->adm_logout();
 
 		# try sign in as 'jonah', no exception thrown
@@ -336,7 +371,12 @@ class AdminStoreTest extends TestCase {
 	 * @depends test_register
 	 */
 	public function test_delete_user() {
+
 		$args = self::postFormatter(['uid' => '0']);
+
+		# cannot list user when not signed in
+		$this->assertEquals(
+			self::$store->adm_list_user($args)[1], 1);
 
 		self::loginOK();
 		$user_list = self::$store->adm_list_user($args)[1];

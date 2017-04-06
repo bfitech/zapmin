@@ -46,20 +46,9 @@ class AdminStore {
 			? $logger : new Logger();
 		$logger = self::$logger;
 
-		if ($sql instanceof SQL) {
-			$this->sql = $sql;
-		} else {
-			$msg = "Invalid SQL connection.";
-			$logger->error("Zapmin: sql error: " . $msg);
-			throw new AdminStoreError($msg);
-		}
+		$this->sql = $sql;
 
 		$sql_params = $this->sql->get_connection_params();
-		if (!$sql_params) {
-			$msg = "Database not connected.";
-			$logger->error("Zapmin: sql error: " . $msg);
-			throw new AdminStoreError($msg);
-		}
 		if ($sql_params['dbtype'] == 'mysql') {
 			# @fixme: MySQL needs extra effort due to it unable to
 			# use parameterized defaults. Let's skip it for now.
@@ -136,13 +125,8 @@ class AdminStore {
 			") %s;"
 		);
 		$user_table = sprintf($user_table, $index, $dtnow, $engine);
-		try {
-			$sql->query_raw($user_table);
-		} catch(SQLError $e) {
-			$msg = "Cannot create udata table:" . $e->getMessage();
-			self::$logger->error("Zapmin: sql error: $msg");
-			throw new AdminStoreError($msg);
-		}
+		$sql->query_raw($user_table);
+
 		$root_salt = $this->generate_secret('root', null, 16);
 		$root_pass = $this->hash_password('root', 'admin', $root_salt);
 		$sql->insert('udata', [
@@ -162,13 +146,7 @@ class AdminStore {
 		);
 		$session_table = sprintf(
 			$session_table, $index, $expire, $engine);
-		try {
-			$sql->query_raw($session_table);
-		} catch(SQLError $e) {
-			$msg = "Cannot create usess table:" . $e->getMessage();
-			self::$logger->error("Zapmin: sql error: $msg");
-			throw new AdminStoreError($msg);
-		}
+		$sql->query_raw($session_table);
 
 		$user_session_view = (
 			"CREATE VIEW v_usess AS" .
@@ -181,13 +159,7 @@ class AdminStore {
 			"  WHERE" .
 			"    udata.uid=usess.uid;"
 		);
-		try {
-			$sql->query_raw($user_session_view);
-		} catch(SQLError $e) {
-			$msg = "Cannot create v_usess view:" . $e->getMessage();
-			self::$logger->error("Zapmin: sql error: $msg");
-			throw new AdminStoreError($msg);
-		}
+		$sql->query_raw($user_session_view);
 	}
 
 	/**

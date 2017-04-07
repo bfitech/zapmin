@@ -16,7 +16,11 @@
     "bfitech/zapstore-sqlite3": "dev-master as 1.2.x-dev"
   },
   "require-dev": {
+    "bfitech/zapstore-pgsql": "dev-master as 1.2.x-dev",
     "phpunit/phpunit": "4.8.*"
+  },
+  "suggest": {
+    "bfitech/zapstore-pgsql": "Use PostgreSQL as database backend."
   },
   "autoload": {
     "psr-4": {

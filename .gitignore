@@ -6,6 +6,7 @@
 *.ini
 *.bak
 *.sq3
+zapmin-test*
 
 /docs/
 /vendor/

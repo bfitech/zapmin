@@ -18,6 +18,8 @@ class AdminStoreTest extends TestCase {
 	protected static $sql;
 	protected static $store;
 
+	protected static $pwdless_uid;
+
 	public static function postFormatter($args) {
 		return ['post' => $args];
 	}
@@ -32,8 +34,7 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
-
-		$logfile = HTDOCS . '/zapmin-test-store.log';
+		$logfile = HTDOCS . '/zapmin-test-sqlite3.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		$logger = new zc\Logger(zc\Logger::DEBUG, $logfile);
@@ -53,6 +54,10 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public function test_constructor() {
+		# test on sqlite3 only
+		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
+			return;
+
 		$logfile = HTDOCS . '/zapmin-test-constructor.log';
 		if (file_exists($logfile))
 			unlink($logfile);
@@ -454,7 +459,7 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($result[0], 2);
 		$this->assertEquals($result[1], 0);
 
-		# not enought args
+		# not enough args
 		$args['service'] = ['uname' => '1234'];
 		$result = self::$store->adm_self_add_user_passwordless($args);
 		$this->assertEquals($result[0], 2);
@@ -470,11 +475,13 @@ class AdminStoreTest extends TestCase {
 		$token = $result[1]['token'];
 		self::$store->adm_set_user_token($token);
 
-		# sign success
+		# signing in success
 		$result = self::$store->adm_get_safe_user_data();
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:github');
-		# generated uid is 6, continued in next test
+
+		# use this in dependent next test
+		self::$pwdless_uid = $result[1]['uid'];
 	}
 
 	/**
@@ -495,7 +502,8 @@ class AdminStoreTest extends TestCase {
 		$result = self::$store->adm_self_add_user_passwordless($args);
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:github');
-		$this->assertEquals($result[1]['uid'], 6);
+		$this->assertEquals($result[1]['uid'],
+			self::$pwdless_uid);
 
 		# set token
 		self::$store->adm_set_user_token($result[1]['token']);

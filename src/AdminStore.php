@@ -141,7 +141,7 @@ class AdminStore {
 			"  sid %s," .
 			"  uid INTEGER REFERENCES udata(uid) ON DELETE CASCADE," .
 			"  token VARCHAR(64)," .
-			"  expire DATE NOT NULL DEFAULT %s" .
+			"  expire TIMESTAMP NOT NULL DEFAULT %s" .
 			") %s;"
 		);
 		$session_table = sprintf(

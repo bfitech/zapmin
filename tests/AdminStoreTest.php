@@ -7,6 +7,9 @@ use BFITech\ZapStore as zs;
 use BFITech\ZapAdmin as za;
 
 
+if (!defined('HTDOCS'))
+	define('HTDOCS', __DIR__ . '/htdocs-test');
+
 /**
  * @todo Test session expiration.
  */
@@ -29,13 +32,15 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
-		$logger = new zc\Logger(
-			zc\Logger::DEBUG,
-			__DIR__ . '/htdocs-test/zapmin-test.log');
+
+		$logfile = HTDOCS . '/zapmin-test-store.log';
+		if (file_exists($logfile))
+			unlink($logfile);
+		$logger = new zc\Logger(zc\Logger::DEBUG, $logfile);
 		self::$sql = new zs\SQLite3([
 			'dbname' => ':memory:'
 		], $logger);
-		self::$store= new za\AdminStore(self::$sql, 600);
+		self::$store = new za\AdminStore(self::$sql, 600);
 	}
 
 	public static function tearDownAfterClass() {
@@ -48,8 +53,11 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public function test_constructor() {
-		$logger = new zc\Logger(zc\Logger::ERROR, '/dev/null');
-		$dbfile = __DIR__ . '/zapmin-test-constructor.sq3';
+		$logfile = HTDOCS . '/zapmin-test-constructor.log';
+		if (file_exists($logfile))
+			unlink($logfile);
+		$logger = new zc\Logger(zc\Logger::ERROR, $logfile);
+		$dbfile = HTDOCS . '/zapmin-test-constructor.sq3';
 		$sql = new zs\SQLite3([
 			'dbname' => $dbfile,
 		], $logger);

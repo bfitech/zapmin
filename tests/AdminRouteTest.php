@@ -6,10 +6,12 @@ use BFITech\ZapCore as zc;
 use BFITech\ZapCoreDev as zd;
 
 
+if (!defined('HTDOCS'))
+	define('HTDOCS', __DIR__ . '/htdocs-test');
+
 class AdminRouteDefaultTest extends TestCase {
 
 	public static $cookiefile;
-	public static $logfile;
 	public static $base_uri = 'http://localhost:9999';
 
 	public static $server_pid;
@@ -55,19 +57,15 @@ class AdminRouteDefaultTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
-		self::$cookiefile = __DIR__ . '/htdocs-test/zapmin-cookie.log';
-		self::$logfile = __DIR__ . '/htdocs-test/zapmin.log';
-		self::$server_pid = zd\CoreDev::server_up(
-			__DIR__ . '/htdocs-test');
-		foreach ([self::$cookiefile, self::$logfile] as $fl) {
-			if (file_exists($fl))
-				unlink($fl);
-		}
+		$logfile_http = HTDOCS . '/zapmin-test-http.log';
+		if (file_exists($logfile_http))
+			unlink($logfile_http);
+		self::$cookiefile = HTDOCS . '/zapmin-test-cookie.log';
+		self::$server_pid = zd\CoreDev::server_up(HTDOCS);
 	}
 
 	public static function tearDownAfterClass() {
-		if (file_exists(self::$cookiefile))
-			unlink(self::$cookiefile);
+		unlink(self::$cookiefile);
 		zc\Common::http_client([
 			'url' => self::$base_uri,
 			'method' => 'GET',

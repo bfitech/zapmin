@@ -7,14 +7,15 @@ use BFITech\ZapCore as zc;
 use BFITech\ZapStore as zs;
 use BFITech\ZapAdmin as za;
 
-$dbname = __DIR__ . '/zapmin-test.sq3';
-$logfile = __DIR__ . '/zapmin-test.log';
+$dbname = __DIR__ . '/zapmin-test-http.sq3';
+$logfile = __DIR__ . '/zapmin-test-http.log';
+$logger = new zc\Logger(zc\Logger::DEBUG, $logfile);
 
 # Remote test database. Use this on teardown.
-if (isset($_GET['reloaddb']))
-	@unlink($dbname);
-
-$logger = new zc\Logger(zc\Logger::DEBUG, $logfile);
+if (isset($_GET['reloaddb'])) {
+	unlink($dbname);
+	die();
+}
 
 # Use this router with its simplified abort.
 class Router extends zc\Router {

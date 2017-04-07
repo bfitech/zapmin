@@ -9,9 +9,11 @@
       "email": "rs@cogsci.bandungfe.net"
     }
   ],
+  "minimum-stability": "dev",
+  "prefer-stable": true,
   "require": {
     "php": ">=5.5 || ~7.0",
-    "bfitech/zapstore-sqlite3": "^1.2"
+    "bfitech/zapstore-sqlite3": "dev-master as 1.2.x-dev"
   },
   "require-dev": {
     "phpunit/phpunit": "4.8.*"

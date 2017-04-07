@@ -18,6 +18,7 @@ class AdminStoreError extends \Exception {}
 class AdminStore {
 
 	private $sql = null;
+	private $dbtype = null;
 
 	private $user_token = null;
 	private $user_data = null;
@@ -47,15 +48,7 @@ class AdminStore {
 		$logger = self::$logger;
 
 		$this->sql = $sql;
-
-		$sql_params = $this->sql->get_connection_params();
-		if ($sql_params['dbtype'] == 'mysql') {
-			# @fixme: MySQL needs extra effort due to it unable to
-			# use parameterized defaults. Let's skip it for now.
-			$msg = "MySQL not supported.";
-			$logger->error("Zapmin: sql error: " . $msg);
-			throw new AdminStoreError($msg);
-		}
+		$this->dbtype = $sql->get_connection_params()['dbtype'];
 
 		if ($expiration) {
 			$expiration = (int)$expiration;
@@ -90,7 +83,9 @@ class AdminStore {
 		$engine = $sql->stmt_fragment('engine');
 		$dtnow = $sql->stmt_fragment('datetime');
 		$expire = $sql->stmt_fragment(
-			'datetime', ['delta' => $this->expiration]);
+				'datetime', ['delta' => $this->expiration]);
+		if ($this->dbtype == 'mysql')
+			$dtnow = $expire = 'CURRENT_TIMESTAMP';
 
 		foreach([
 			"DROP VIEW IF EXISTS v_usess;",
@@ -117,7 +112,7 @@ class AdminStore {
 			"  uname VARCHAR(64) UNIQUE," .
 			"  upass VARCHAR(64)," .
 			"  usalt VARCHAR(16)," .
-			"  since DATE NOT NULL DEFAULT %s," .
+			"  since TIMESTAMP NOT NULL DEFAULT %s," .
 			"  email VARCHAR(64)," .
 			"  email_verified INT NOT NULL DEFAULT 0," .
 			"  fname VARCHAR(128)," .
@@ -193,12 +188,17 @@ class AdminStore {
 			return null;
 		if ($this->user_data !== null)
 			return $this->user_data;
+		$expire = $this->sql->stmt_fragment('datetime');
+		// @fixme Change now() to utc_timestamp() on zapstore
+		if ($this->dbtype == 'mysql')
+			$expire = str_replace('now()', 'utc_timestamp()',
+				$expire);
 		$session = $this->sql->query(
 			sprintf(
 				"SELECT * FROM v_usess " .
 				"WHERE token=? AND expire>%s " .
 				"LIMIT 1",
-				$this->sql->stmt_fragment('datetime')
+				$expire
 			), [$this->user_token]);
 		if (!$session) {
 			# session not found or expired
@@ -344,10 +344,22 @@ class AdminStore {
 		$token = $this->generate_secret(
 			$upass . $usalt . time(), $usalt);
 
-		$this->sql->insert('usess', [
+		$sid = $this->sql->insert('usess', [
 			'uid'   => $udata['uid'],
 			'token' => $token,
-		]);
+		], 'sid');
+		if ($this->dbtype == 'mysql') {
+			// mysql has no parametrized default values, and can't
+			// invoke trigger on currently inserted table
+			$newval = $this->sql->stmt_fragment('datetime', [
+				'delta' => $this->expiration,
+			]);
+			// @fixme Change now() to utc_timestamp() on zapstore
+			$newval = str_replace('now()', 'utc_timestamp()', $newval);
+			$this->sql->query_raw(sprintf(
+				"UPDATE usess SET expire=(%s) WHERE sid='%s'",
+				$newval, $sid));
+		}
 
 		// token must be used by the router; this is a subset
 		// of return value of get_safe_user_data() so it needs
@@ -367,16 +379,15 @@ class AdminStore {
 	}
 
 	private function close_session($sid) {
-		$now = $this->sql->query(
-			sprintf(
-				"SELECT %s AS now",
-				$this->sql->stmt_fragment('datetime')
-			), [], false);
-		$this->sql->update('usess', [
-			'expire' => $now['now'],
-		], [
-			'sid' => $sid
-		]);
+		$now = $this->sql->stmt_fragment('datetime');
+		// @fixme Change now() to utc_timestamp() on zapstore
+		if ($this->dbtype == 'mysql') {
+			$now = str_replace('now()', 'utc_timestamp()',
+				$now);
+		}
+		$this->sql->query_raw(sprintf(
+			"UPDATE usess SET expire=(%s) WHERE sid='%s'",
+			$now, $sid));
 	}
 
 	/**
@@ -842,12 +853,14 @@ class AdminStore {
 		if (!isset($order) || !in_array($order, ['ASC', 'DESC']))
 			$order = '';
 
+		// @note MySQL doesn't support '?' placeholder for limit and
+		// offset.
 		$sql = sprintf(
 			"SELECT uid, uname, fname, site, since " .
-			"FROM udata ORDER BY uid %s LIMIT ? OFFSET ?",
-			$order);
+			"FROM udata ORDER BY uid %s LIMIT %s OFFSET %s",
+		$order, $limit, $offset);
 
-		return [0, $this->sql->query($sql, [$limit, $offset], true)];
+		return [0, $this->sql->query($sql, [], true)];
 	}
 }
 

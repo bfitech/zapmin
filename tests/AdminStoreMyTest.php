@@ -8,19 +8,19 @@ use BFITech\ZapAdmin\AdminStore;
 use BFITech\ZapStore as zs;
 
 
-class AdminStorePgTest extends AdminStoreTest {
+class AdminStoreMyTest extends AdminStoreTest {
 
 	public static function setUpBeforeClass() {
-		$logfile = HTDOCS . '/zapmin-test-pgsql.log';
+		$logfile = HTDOCS . '/zapmin-test-mysql.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 
-		$dbconfig = HTDOCS . '/zapmin-test-pgsql.json';
+		$dbconfig = HTDOCS . '/zapmin-test-mysql.json';
 		if (!file_exists($dbconfig)) {
 			$dbargs = [
-				'dbhost' => 'localhost',
+				'dbhost' => '127.0.0.1',
 				'dbname' => 'zapstore_test_db',
-				'dbuser' => 'postgres',
+				'dbuser' => 'root',
 				'dbpass' => '',
 			];
 			file_put_contents($dbconfig,
@@ -32,11 +32,11 @@ class AdminStorePgTest extends AdminStoreTest {
 
 		$logger = new Logger(Logger::DEBUG, $logfile);
 		try {
-			self::$sql = new zs\PgSQL($dbargs, $logger);
+			self::$sql = new zs\MySQL($dbargs, $logger);
 		} catch(zs\SQLError $e) {
 			printf(
 				"\n" .
-				"ERROR: Cannot connect to pgsql test database.\n" .
+				"ERROR: Cannot connect to mysql test database.\n" .
 				"       Please check configuration: '%s'.\n\n" .
 				"CURRENT CONFIGURATION:\n\n%s\n\n",
 				$dbconfig,
@@ -45,6 +45,5 @@ class AdminStorePgTest extends AdminStoreTest {
 		}
 		self::$store = new AdminStore(self::$sql, 600, true, $logger);
 	}
-
 }
 

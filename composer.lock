@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "66e4a7bd49e27c567f02973df9c8a176",
+    "content-hash": "6949aa97784b43fd4636e85c3bca3090",
     "packages": [
         {
             "name": "bfitech/zapcore",
@@ -136,6 +136,48 @@
         }
     ],
     "packages-dev": [
+        {
+            "name": "bfitech/zapstore-mysql",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/bfitech/zapstore-mysql.git",
+                "reference": "2d0a2d0d727fdcb24104205aa04cb59030b7195e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/bfitech/zapstore-mysql/zipball/2d0a2d0d727fdcb24104205aa04cb59030b7195e",
+                "reference": "2d0a2d0d727fdcb24104205aa04cb59030b7195e",
+                "shasum": ""
+            },
+            "require": {
+                "bfitech/zapstore": "dev-master as 1.2.x-dev",
+                "ext-mysqlnd": "*",
+                "ext-pdo_mysql": "*",
+                "php": ">=5.5 || ~7.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "~4.8"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "BFITech\\ZapStore\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Rendra Suroso",
+                    "email": "rs@cogsci.bandungfe.net"
+                }
+            ],
+            "description": "MySQL support for zapstore.",
+            "time": "2017-04-07 08:45:14"
+        },
         {
             "name": "bfitech/zapstore-pgsql",
             "version": "dev-master",
@@ -1306,12 +1348,19 @@
             "alias": "1.2.x-dev",
             "alias_normalized": "1.2.9999999.9999999-dev",
             "version": "9999999-dev",
+            "package": "bfitech/zapstore-mysql"
+        },
+        {
+            "alias": "1.2.x-dev",
+            "alias_normalized": "1.2.9999999.9999999-dev",
+            "version": "9999999-dev",
             "package": "bfitech/zapstore-pgsql"
         }
     ],
     "minimum-stability": "dev",
     "stability-flags": {
         "bfitech/zapstore-sqlite3": 20,
+        "bfitech/zapstore-mysql": 20,
         "bfitech/zapstore-pgsql": 20
     },
     "prefer-stable": true,

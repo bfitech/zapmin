@@ -10,9 +10,7 @@ use BFITech\ZapAdmin as za;
 if (!defined('HTDOCS'))
 	define('HTDOCS', __DIR__ . '/htdocs-test');
 
-/**
- * @todo Test session expiration.
- */
+
 class AdminStoreTest extends TestCase {
 
 	protected static $sql;
@@ -145,6 +143,54 @@ class AdminStoreTest extends TestCase {
 		# re-login will fail
 		$this->assertEquals(
 			self::$store->adm_login($args)[0], 1);
+	}
+
+	private function _test_session_expiration_sequence(
+		$callback=null
+	) {
+		$login_data = self::$store->adm_login([
+			'post' => [
+				'uname' => 'root',
+				'upass' => 'admin',
+			],
+		]);
+		$this->assertEquals($login_data[0], 0);
+		$token = $login_data[1]['token'];
+
+		# callback to mess up with session data
+		if ($callback)
+			$callback($token);
+
+		self::$store->adm_set_user_token($token);
+		self::$store->adm_status();
+	}
+
+	public function test_session_expiration() {
+		# normal login
+		$this->_test_session_expiration_sequence();
+		$this->assertEquals(
+			self::$store->adm_get_safe_user_data()[0], 0);
+		$this->assertEquals(self::$store->adm_logout()[0], 0);
+
+		# simulate expired session
+		$fake_expire_callback = function($token) {
+			self::$sql->query_raw(sprintf(
+				"UPDATE usess SET expire=%s WHERE token='%s'",
+				self::$sql->stmt_fragment(
+					'datetime', ['delta' => -3600]),
+				$token));
+		};
+		$this->_test_session_expiration_sequence(
+			$fake_expire_callback);
+		$this->assertEquals(
+			self::$store->adm_get_safe_user_data()[0], 1);
+		$this->assertEquals(self::$store->adm_logout()[0], 1);
+
+		# normal login again
+		$this->_test_session_expiration_sequence();
+		$this->assertEquals(
+			self::$store->adm_get_safe_user_data()[0], 0);
+		$this->assertEquals(self::$store->adm_logout()[0], 0);
 	}
 
 	public function test_logout() {

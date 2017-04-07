@@ -52,12 +52,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/bfitech/zapstore.git",
-                "reference": "0c2ed028ea1b983e19c03639975963dc55e8b7e2"
+                "reference": "daa606d9ac01eeeeb2c886e11cd0f3eb8a794ab7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bfitech/zapstore/zipball/0c2ed028ea1b983e19c03639975963dc55e8b7e2",
-                "reference": "0c2ed028ea1b983e19c03639975963dc55e8b7e2",
+                "url": "https://api.github.com/repos/bfitech/zapstore/zipball/daa606d9ac01eeeeb2c886e11cd0f3eb8a794ab7",
+                "reference": "daa606d9ac01eeeeb2c886e11cd0f3eb8a794ab7",
                 "shasum": ""
             },
             "require": {
@@ -90,7 +90,7 @@
                 }
             ],
             "description": "A simple SQL connection wrapper.",
-            "time": "2017-04-07 06:47:50"
+            "time": "2017-04-07 22:50:04"
         },
         {
             "name": "bfitech/zapstore-sqlite3",

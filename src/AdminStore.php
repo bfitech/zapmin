@@ -189,10 +189,6 @@ class AdminStore {
 		if ($this->user_data !== null)
 			return $this->user_data;
 		$expire = $this->sql->stmt_fragment('datetime');
-		// @fixme Change now() to utc_timestamp() on zapstore
-		if ($this->dbtype == 'mysql')
-			$expire = str_replace('now()', 'utc_timestamp()',
-				$expire);
 		$session = $this->sql->query(
 			sprintf(
 				"SELECT * FROM v_usess " .
@@ -351,14 +347,12 @@ class AdminStore {
 		if ($this->dbtype == 'mysql') {
 			// mysql has no parametrized default values, and can't
 			// invoke trigger on currently inserted table
-			$newval = $this->sql->stmt_fragment('datetime', [
+			$expire_at = $this->sql->stmt_fragment('datetime', [
 				'delta' => $this->expiration,
 			]);
-			// @fixme Change now() to utc_timestamp() on zapstore
-			$newval = str_replace('now()', 'utc_timestamp()', $newval);
 			$this->sql->query_raw(sprintf(
 				"UPDATE usess SET expire=(%s) WHERE sid='%s'",
-				$newval, $sid));
+				$expire_at, $sid));
 		}
 
 		// token must be used by the router; this is a subset
@@ -380,11 +374,6 @@ class AdminStore {
 
 	private function close_session($sid) {
 		$now = $this->sql->stmt_fragment('datetime');
-		// @fixme Change now() to utc_timestamp() on zapstore
-		if ($this->dbtype == 'mysql') {
-			$now = str_replace('now()', 'utc_timestamp()',
-				$now);
-		}
 		$this->sql->query_raw(sprintf(
 			"UPDATE usess SET expire=(%s) WHERE sid='%s'",
 			$now, $sid));

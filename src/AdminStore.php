@@ -43,8 +43,7 @@ class AdminStore {
 		Logger $logger=null
 	) {
 
-		self::$logger = $logger instanceof Logger
-			? $logger : new Logger();
+		self::$logger = $logger ? $logger : new Logger();
 		$logger = self::$logger;
 
 		$this->sql = $sql;
@@ -77,6 +76,7 @@ class AdminStore {
 			$test = $sql->query("SELECT 1 FROM udata LIMIT 1");
 			if (!$force_create_table)
 				return;
+			self::$logger->info("Zapmin: Recreating tables.");
 		} catch (SQLError $e) {}
 
 		$index = $sql->stmt_fragment('index');

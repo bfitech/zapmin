@@ -9,7 +9,7 @@ use BFITech\ZapCoreDev as zd;
 if (!defined('HTDOCS'))
 	define('HTDOCS', __DIR__ . '/htdocs-test');
 
-class AdminRouteDefaultTest extends TestCase {
+class AdminRouteHTTPTest extends TestCase {
 
 	public static $cookiefile;
 	public static $base_uri = 'http://localhost:9999';

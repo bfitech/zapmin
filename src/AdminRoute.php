@@ -26,6 +26,8 @@ class AdminRoute extends AdminStore {
 	 */
 	public static $store = null;
 
+	public static $logger = null;
+
 	private $prefix = null;
 	private $token_name = null;
 	private $token_value = null;
@@ -91,13 +93,11 @@ class AdminRoute extends AdminStore {
 			$home = $home_or_kwargs;
 		}
 
-		if (!($logger_instance instanceof Logger))
+		if (!$logger_instance)
 			$logger_instance = new Logger();
-		self::$core = $core_instance instanceof Router
-			? $core_instance
+		self::$core = $core_instance ? $core_instance
 			: new Router($home, $host, $shutdown, $logger_instance);
-		self::$store = $store_instance instanceof SQL
-			? $store_instance
+		self::$store = $store_instance ? $store_instance
 			: new SQL($dbargs, $logger_instance);
 
 		parent::__construct(self::$store, $expiration,
@@ -142,7 +142,10 @@ class AdminRoute extends AdminStore {
 	public function route($path, $callback, $method='GET') {
 		if ($this->prefix)
 			$path = $this->prefix . $path;
-		self::$core->route($path, function($args) use($callback){
+		$core = self::$core;
+		$core->route($path, function($args) use($callback, $core){
+			#$core::$logger->info("QQQ: $path");
+
 			# set token if available
 			if (isset($args['cookie'][$this->token_name])) {
 				$this->adm_set_user_token(

@@ -9,15 +9,13 @@
       "email": "rs@cogsci.bandungfe.net"
     }
   ],
-  "minimum-stability": "dev",
-  "prefer-stable": true,
   "require": {
     "php": ">=5.5 || ~7.0",
-    "bfitech/zapstore-sqlite3": "dev-master as 1.2.x-dev"
+    "bfitech/zapstore-sqlite3": "^1.3"
   },
   "require-dev": {
-    "bfitech/zapstore-mysql": "dev-master as 1.2.x-dev",
-    "bfitech/zapstore-pgsql": "dev-master as 1.2.x-dev",
+    "bfitech/zapstore-mysql": "^1.3",
+    "bfitech/zapstore-pgsql": "^1.3",
     "phpunit/phpunit": "4.8.*"
   },
   "suggest": {

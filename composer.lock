@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "6949aa97784b43fd4636e85c3bca3090",
+    "content-hash": "c89d148a30e1729deb91b74a6b44433c",
     "packages": [
         {
             "name": "bfitech/zapcore",
-            "version": "dev-master",
+            "version": "1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bfitech/zapcore.git",
-                "reference": "fef5060ed9f95cf81c41906ac80ae26d55a7310d"
+                "reference": "374747582a2f2476276ad5da1ddfbfdc87c60148"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bfitech/zapcore/zipball/fef5060ed9f95cf81c41906ac80ae26d55a7310d",
-                "reference": "fef5060ed9f95cf81c41906ac80ae26d55a7310d",
+                "url": "https://api.github.com/repos/bfitech/zapcore/zipball/374747582a2f2476276ad5da1ddfbfdc87c60148",
+                "reference": "374747582a2f2476276ad5da1ddfbfdc87c60148",
                 "shasum": ""
             },
             "require": {
@@ -44,24 +44,24 @@
                 }
             ],
             "description": "A very simple router and other utils.",
-            "time": "2017-04-07 06:26:53"
+            "time": "2017-04-09T02:19:21+00:00"
         },
         {
             "name": "bfitech/zapstore",
-            "version": "dev-master",
+            "version": "1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bfitech/zapstore.git",
-                "reference": "daa606d9ac01eeeeb2c886e11cd0f3eb8a794ab7"
+                "reference": "7be1dfcdaa27538f5a68901e6b4b70011dda771a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bfitech/zapstore/zipball/daa606d9ac01eeeeb2c886e11cd0f3eb8a794ab7",
-                "reference": "daa606d9ac01eeeeb2c886e11cd0f3eb8a794ab7",
+                "url": "https://api.github.com/repos/bfitech/zapstore/zipball/7be1dfcdaa27538f5a68901e6b4b70011dda771a",
+                "reference": "7be1dfcdaa27538f5a68901e6b4b70011dda771a",
                 "shasum": ""
             },
             "require": {
-                "bfitech/zapcore": "dev-master as 1.2.x-dev",
+                "bfitech/zapcore": "^1.3",
                 "php": ">=5.5 || ~7.0"
             },
             "require-dev": {
@@ -90,24 +90,24 @@
                 }
             ],
             "description": "A simple SQL connection wrapper.",
-            "time": "2017-04-07 22:50:04"
+            "time": "2017-04-09T02:56:15+00:00"
         },
         {
             "name": "bfitech/zapstore-sqlite3",
-            "version": "dev-master",
+            "version": "1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bfitech/zapstore-sqlite3.git",
-                "reference": "afe2783bf1a3d8b873d5e9d3ac726109c77388fc"
+                "reference": "f8131495614d7c591eec097cdad1206cc3fe8ef8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bfitech/zapstore-sqlite3/zipball/afe2783bf1a3d8b873d5e9d3ac726109c77388fc",
-                "reference": "afe2783bf1a3d8b873d5e9d3ac726109c77388fc",
+                "url": "https://api.github.com/repos/bfitech/zapstore-sqlite3/zipball/f8131495614d7c591eec097cdad1206cc3fe8ef8",
+                "reference": "f8131495614d7c591eec097cdad1206cc3fe8ef8",
                 "shasum": ""
             },
             "require": {
-                "bfitech/zapstore": "dev-master as 1.2.x-dev",
+                "bfitech/zapstore": "^1.3",
                 "ext-pdo_sqlite": "*",
                 "ext-sqlite3": "*",
                 "php": ">=5.5 || ~7.0"
@@ -132,26 +132,26 @@
                 }
             ],
             "description": "SQLite3 support for zapstore.",
-            "time": "2017-04-07 07:01:20"
+            "time": "2017-04-09T03:02:15+00:00"
         }
     ],
     "packages-dev": [
         {
             "name": "bfitech/zapstore-mysql",
-            "version": "dev-master",
+            "version": "1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bfitech/zapstore-mysql.git",
-                "reference": "2d0a2d0d727fdcb24104205aa04cb59030b7195e"
+                "reference": "a75156d33d685ef047941aa770c85a687caf4921"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bfitech/zapstore-mysql/zipball/2d0a2d0d727fdcb24104205aa04cb59030b7195e",
-                "reference": "2d0a2d0d727fdcb24104205aa04cb59030b7195e",
+                "url": "https://api.github.com/repos/bfitech/zapstore-mysql/zipball/a75156d33d685ef047941aa770c85a687caf4921",
+                "reference": "a75156d33d685ef047941aa770c85a687caf4921",
                 "shasum": ""
             },
             "require": {
-                "bfitech/zapstore": "dev-master as 1.2.x-dev",
+                "bfitech/zapstore": "^1.3",
                 "ext-mysqlnd": "*",
                 "ext-pdo_mysql": "*",
                 "php": ">=5.5 || ~7.0"
@@ -176,24 +176,24 @@
                 }
             ],
             "description": "MySQL support for zapstore.",
-            "time": "2017-04-07 08:45:14"
+            "time": "2017-04-09T03:11:13+00:00"
         },
         {
             "name": "bfitech/zapstore-pgsql",
-            "version": "dev-master",
+            "version": "1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bfitech/zapstore-pgsql.git",
-                "reference": "aad2d939b11d5638d0f6fdac8c7dc032ae8318ae"
+                "reference": "57f59d6b5153330f031d5d2cf5bb0f3f725699b3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bfitech/zapstore-pgsql/zipball/aad2d939b11d5638d0f6fdac8c7dc032ae8318ae",
-                "reference": "aad2d939b11d5638d0f6fdac8c7dc032ae8318ae",
+                "url": "https://api.github.com/repos/bfitech/zapstore-pgsql/zipball/57f59d6b5153330f031d5d2cf5bb0f3f725699b3",
+                "reference": "57f59d6b5153330f031d5d2cf5bb0f3f725699b3",
                 "shasum": ""
             },
             "require": {
-                "bfitech/zapstore": "dev-master as 1.2.x-dev",
+                "bfitech/zapstore": "^1.3",
                 "ext-pdo_pgsql": "*",
                 "ext-pgsql": "*",
                 "php": ">=5.5 || ~7.0"
@@ -218,7 +218,7 @@
                 }
             ],
             "description": "PostgreSQL support for zapstore.",
-            "time": "2017-04-07 08:52:39"
+            "time": "2017-04-09T03:14:00+00:00"
         },
         {
             "name": "doctrine/instantiator",
@@ -1337,33 +1337,10 @@
             "time": "2016-11-23T20:04:58+00:00"
         }
     ],
-    "aliases": [
-        {
-            "alias": "1.2.x-dev",
-            "alias_normalized": "1.2.9999999.9999999-dev",
-            "version": "9999999-dev",
-            "package": "bfitech/zapstore-sqlite3"
-        },
-        {
-            "alias": "1.2.x-dev",
-            "alias_normalized": "1.2.9999999.9999999-dev",
-            "version": "9999999-dev",
-            "package": "bfitech/zapstore-mysql"
-        },
-        {
-            "alias": "1.2.x-dev",
-            "alias_normalized": "1.2.9999999.9999999-dev",
-            "version": "9999999-dev",
-            "package": "bfitech/zapstore-pgsql"
-        }
-    ],
-    "minimum-stability": "dev",
-    "stability-flags": {
-        "bfitech/zapstore-sqlite3": 20,
-        "bfitech/zapstore-mysql": 20,
-        "bfitech/zapstore-pgsql": 20
-    },
-    "prefer-stable": true,
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
         "php": ">=5.5 || ~7.0"

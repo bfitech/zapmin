@@ -32,30 +32,28 @@ class RouterPatched extends zc\Router {
 
 class AdminRouteTest extends TestCase {
 
-	public static $logfile;
 	public static $logger;
-	public static $dbfile;
-
-	public static $core;
-	public static $store;
 
 	public static function setUpBeforeClass() {
-		self::$logfile = HTDOCS . '/zapmin-test-route.log';
-		self::$dbfile = HTDOCS . '/zapmin-test-route.sq3';
-	
-		# reset database on each test
-		if (file_exists(self::$dbfile))
-			unlink(self::$dbfile);
+		$logfile = HTDOCS . '/zapmin-test-route.log';
+		if (file_exists($logfile))
+			unlink($logfile);
 
 		self::$logger = new zc\Logger(
-			zc\Logger::DEBUG, self::$logfile);
-		self::$logger->info("TEST STARTED.");
+			zc\Logger::DEBUG, $logfile);
 
 		$_SERVER['REQUEST_URI'] = '/';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 	}
 
 	public static function tearDownAfterClass() {
+	}
+
+	public function setUp() {
+		self::$logger->info("TEST STARTED.");
+	}
+
+	public function tearDown() {
 		self::$logger->info("TEST FINISHED.");
 	}
 
@@ -64,9 +62,10 @@ class AdminRouteTest extends TestCase {
 		# process it immediately upon instantiation
 		$_SERVER['REQUEST_URI'] = '/usr/test';
 
-		# must use this patched Router to silent output
-		$logfile = self::$logfile . 'constructor.log';
+		$logfile = HTDOCS . '/zapmin-test-route-constructor.log';
 		$logger = new zc\Logger(zc\Logger::ERROR, $logfile);
+
+		# must use this patched Router to silent output
 		$core = new RouterPatched(null, null, false, $logger);
 
 		# other fake HTTP variables can wait after Router
@@ -74,7 +73,7 @@ class AdminRouteTest extends TestCase {
 		$_COOKIE['hello_world'] = 'test';
 
 		# let's not use kwargs for a change, see 'prefix'
-		# parameter and matched with REQUEST_URI
+		# parameter and match it against REQUEST_URI
 		$adm = new za\AdminRoute('/ignored', null, false, [
 			'dbtype' => 'sqlite3',
 			'dbname' => ':memory:',
@@ -91,50 +90,32 @@ class AdminRouteTest extends TestCase {
 		}, 'GET');
 		$this->assertEquals('HELLO, FRIEND', ob_get_clean());
 
-		# there's a matched route, calling shutdown functions will
-		# take no effect
+		# since there's a matched route, calling shutdown functions
+		# will take no effect
 		$adm::$core->shutdown();
 
 		unlink($logfile);
 	}
 
-	private function make_router() {
+	private function make_router($store=null) {
+		if (!$store)
+			$store = new zs\SQLite3(
+				['dbname' => ':memory:'], self::$logger);
 		# use new instance on every matching mock HTTP request
 		$core = new RouterPatched(
 			null, null, false, self::$logger);
-		if (!self::$store) {
-			self::$store = new zs\SQLite3(
-				['dbname' => self::$dbfile], self::$logger);
-		}
 		return new za\AdminRoute([
 			'token_name' => 'test-zapmin',
 			'core_instance' => $core,
-			'store_instance' => self::$store,
+			'store_instance' => $store,
 			'logger_instance' => self::$logger,
 		]);
 	}
 
 	/**
-	 * @runInSeparateProcess
 	 * @depends test_constructor
-	 *
-	 * @note
-	 * - We don't use setcookie() wrapper yet, so let's run
-	 *   every test that's invoked in separate process.
-	 * - Because tests are run in separate processes, they are run
-	 *   in parallel, causing each test to call setUpBeforeClass().
-	 *   setUp() becomes no different from setUpBeforeClass().
-	 *   This will mess up with class-level operation such as
-	 *   initialization and cleaning up logs.
-	 * - Hence, let's clean existing log here and reinit logger
-	 *   before every core instantiation.
-	 * - Methods must also be run with 'depends' directive.
-	 *   Otherwise, generated log entry won't come sequentially.
 	 */
 	public function test_home() {
-		if (file_exists(self::$logfile))
-			unlink(self::$logfile);
-
 		$_SERVER['REQUEST_URI'] = '/';
 		$adm = $this->make_router();
 
@@ -149,14 +130,23 @@ class AdminRouteTest extends TestCase {
 			strpos(strtolower($rv), 'it wurks'), false);
 	}
 
-	private function login_sequence() {
+	private function login_cleanup() {
+		$_SERVER['REQUEST_URI'] = '/';
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		if (isset($_SERVER['HTTP_AUTHORIZATION']))
+			unset($_SERVER['HTTP_AUTHORIZATION']);
+		$_GET = $_POST = $_COOKIE = [];
+	}
+
+	private function login_sequence($store=null) {
 		$this->login_cleanup();
+
 		$_SERVER['REQUEST_URI'] = '/login';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$_POST['uname'] = 'root';
 		$_POST['upass'] = 'admin';
 
-		$adm = $this->make_router();
+		$adm = $this->make_router($store);
 
 		ob_start();
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
@@ -169,16 +159,7 @@ class AdminRouteTest extends TestCase {
 		$_GET = $_POST = $_COOKIE = [];
 	}
 
-	private function login_cleanup() {
-		$_SERVER['REQUEST_URI'] = '/';
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-		if (isset($_SERVER['HTTP_AUTHORIZATION']))
-			unset($_SERVER['HTTP_AUTHORIZATION']);
-		$_GET = $_POST = $_COOKIE = [];
-	}
-
 	/**
-	 * @runInSeparateProcess
 	 * @depends test_home
 	 */
 	public function test_status() {
@@ -195,13 +176,13 @@ class AdminRouteTest extends TestCase {
 
 		###
 
-		$this->login_sequence();
+		$this->login_sequence($adm::$store);
 
 		###
 
 		$_SERVER['REQUEST_URI'] = '/status';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/status', [$adm, 'route_status']);
@@ -211,7 +192,6 @@ class AdminRouteTest extends TestCase {
 	}
 
 	/**
-	 * @runInSeparateProcess
 	 * @depends test_status
 	 */
 	public function test_login_logout() {
@@ -229,13 +209,13 @@ class AdminRouteTest extends TestCase {
 
 		###
 
-		$this->login_sequence();
+		$this->login_sequence($adm::$store);
 
 		###
 
 		$_SERVER['REQUEST_URI'] = '/logout';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/logout', [$adm, 'route_logout']);
@@ -245,17 +225,17 @@ class AdminRouteTest extends TestCase {
 	}
 
 	/**
-	 * @runInSeparateProcess
 	 * @depends test_login_logout
 	 */
 	public function test_chpasswd() {
-		$this->login_sequence();
+		$adm = $this->make_router();
+		$this->login_sequence($adm::$store);
 
 		###
 
 		$_SERVER['REQUEST_URI'] = '/chpasswd';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
@@ -268,7 +248,7 @@ class AdminRouteTest extends TestCase {
 		$_POST['pass0'] = 'admin';
 		$_POST['pass1'] = 'admin1';
 		$_POST['pass2'] = 'admin1';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
@@ -279,18 +259,18 @@ class AdminRouteTest extends TestCase {
 	}
 
 	/**
-	 * @runInSeparateProcess
 	 * @depends test_chpasswd
 	 */
 	public function test_chbio() {
-		$this->login_sequence();
+		$adm = $this->make_router();
+		$this->login_sequence($adm::$store);
 
 		###
 
 		$_SERVER['REQUEST_URI'] = '/chbio';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$_POST['fname'] = 'The Handyman';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
@@ -302,7 +282,7 @@ class AdminRouteTest extends TestCase {
 
 		$_SERVER['REQUEST_URI'] = '/status';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/status', [$adm, 'route_status']);
@@ -312,7 +292,6 @@ class AdminRouteTest extends TestCase {
 	}
 
 	/**
-	 * @runInSeparateProcess
 	 * @depends test_chbio
 	 */
 	public function test_register() {
@@ -336,7 +315,7 @@ class AdminRouteTest extends TestCase {
 			'addpass2' => '123456',
 			'email' => 'here@exampe.org',
 		];
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
@@ -346,18 +325,18 @@ class AdminRouteTest extends TestCase {
 	}
 
 	/**
-	 * @runInSeparateProcess
 	 * @depends test_register
 	 */
 	public function test_useradd() {
-		$this->login_sequence();
+		$adm = $this->make_router();
+		$this->login_sequence($adm::$store);
 
 		###
 
 		$_POST['x'] = '';
 		$_SERVER['REQUEST_URI'] = '/useradd';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
@@ -374,7 +353,7 @@ class AdminRouteTest extends TestCase {
 		];
 		$_SERVER['REQUEST_URI'] = '/useradd';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
@@ -384,7 +363,7 @@ class AdminRouteTest extends TestCase {
 
 		###
 
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
@@ -395,18 +374,18 @@ class AdminRouteTest extends TestCase {
 	}
 
 	/**
-	 * @runInSeparateProcess
 	 * @depends test_useradd
 	 */
 	public function test_userdel() {
-		$this->login_sequence();
+		$adm = $this->make_router();
+		$this->login_sequence($adm::$store);
 
 		###
 
 		$_POST['x'] = '';
 		$_SERVER['REQUEST_URI'] = '/userdel';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
@@ -423,7 +402,7 @@ class AdminRouteTest extends TestCase {
 		];
 		$_SERVER['REQUEST_URI'] = '/useradd';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
@@ -433,7 +412,7 @@ class AdminRouteTest extends TestCase {
 
 		###
 
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
@@ -444,17 +423,17 @@ class AdminRouteTest extends TestCase {
 	}
 
 	/**
-	 * @runInSeparateProcess
 	 * @depends test_userdel
 	 */
 	public function test_userlist() {
-		$this->login_sequence();
+		$adm = $this->make_router();
+		$this->login_sequence($adm::$store);
 
 		###
 
 		$_SERVER['REQUEST_URI'] = '/userlist';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/userlist', [$adm, 'route_userlist'], 'POST');
@@ -465,7 +444,6 @@ class AdminRouteTest extends TestCase {
 	}
 
 	/**
-	 * @runInSeparateProcess
 	 * @depends test_userdel
 	 * @fixme
 	 *   The underlying adm_self_add_user_passwordless() doesn't
@@ -494,7 +472,7 @@ class AdminRouteTest extends TestCase {
 			'uname' => 'someone',
 			'uservice' => 'github',
 		];
-		$adm = $this->make_router();
+		$adm = $this->make_router($adm::$store);
 
 		ob_start();
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
@@ -502,7 +480,6 @@ class AdminRouteTest extends TestCase {
 
 		$this->assertEquals($errno, 0);
 		$this->assertEquals($data['uname'], '+someone:github');
-
 	}
 }
 

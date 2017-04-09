@@ -17,9 +17,16 @@ class RouterPatched extends zc\Router {
 		// total silence
 		return;
 	}
-	public static function header_halt($str=null) {
+	public static function halt($str=null) {
 		if ($str)
 			echo $str;
+	}
+	public static function send_cookie(
+		$name, $value='', $expire=0, $path='', $domain='',
+		$secure=false, $httponly=false
+	) {
+		// do nothing
+		return;
 	}
 }
 
@@ -112,9 +119,9 @@ class AdminRouteTest extends TestCase {
 	 * @depends test_constructor
 	 *
 	 * @note
-	 * - We don't have wrapped setcookie() yet, so let's run
-	 *   every test that invokes it in separate process.
-	 * - Because tests are run in separate process, they are run
+	 * - We don't use setcookie() wrapper yet, so let's run
+	 *   every test that's invoked in separate process.
+	 * - Because tests are run in separate processes, they are run
 	 *   in parallel, causing each test to call setUpBeforeClass().
 	 *   setUp() becomes no different from setUpBeforeClass().
 	 *   This will mess up with class-level operation such as

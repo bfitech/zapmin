@@ -20,7 +20,7 @@ if (isset($_GET['reloaddb'])) {
 # Use this router with its simplified abort.
 class Router extends zc\Router {
 	public function abort_custom($code) {
-		$this->send_header(0, 0, 0, $code);
+		self::start_header($code);
 		echo "ERROR: $code";
 	}
 }

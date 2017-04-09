@@ -26,8 +26,6 @@ class AdminRoute extends AdminStore {
 	 */
 	public static $store = null;
 
-	public static $logger = null;
-
 	private $prefix = null;
 	private $token_name = null;
 	private $token_value = null;
@@ -65,7 +63,7 @@ class AdminRoute extends AdminStore {
 	 * ]);
 	 * $adm->route('/status', [$adm, 'route_status'], 'GET');
 	 *
-	 * # run it with `php -S 0.0.0.0:8000`
+	 * # run it with something like `php -S 0.0.0.0:8000`
 	 * @endcode
 	 */
 	public function __construct(
@@ -144,8 +142,6 @@ class AdminRoute extends AdminStore {
 			$path = $this->prefix . $path;
 		$core = self::$core;
 		$core->route($path, function($args) use($callback, $core){
-			#$core::$logger->info("QQQ: $path");
-
 			# set token if available
 			if (isset($args['cookie'][$this->token_name])) {
 				$this->adm_set_user_token(
@@ -178,7 +174,7 @@ class AdminRoute extends AdminStore {
 	public function route_login($args) {
 		$retval = $this->adm_login($args);
 		if ($retval[0] === 0)
-			setcookie(
+			self::$core->send_cookie(
 				$this->adm_get_token_name(), $retval[1]['token'],
 				time() + $this->adm_get_expiration(), '/');
 		return self::$core->pj($retval);
@@ -188,7 +184,7 @@ class AdminRoute extends AdminStore {
 	public function route_logout($args) {
 		$retval = $this->adm_logout($args);
 		if ($retval[0] === 0)
-			setcookie(
+			self::$core->send_cookie(
 				$this->adm_get_token_name(), '',
 				time() - (3600 * 48), '/');
 		return self::$core->pj($retval);
@@ -214,7 +210,7 @@ class AdminRoute extends AdminStore {
 		$args['post']['uname'] = $args['post']['addname'];
 		$args['post']['upass'] = $args['post']['addpass1'];
 		$retval = $this->adm_login($args);
-		setcookie(
+		self::$core->send_cookie(
 			$this->adm_get_token_name(), $retval[1]['token'],
 			time() + $this->adm_get_expiration(), '/');
 		return self::$core->pj($retval);
@@ -259,7 +255,7 @@ class AdminRoute extends AdminStore {
 		# alway autologin on success
 		$token = $retval[1]['token'];
 		$this->adm_set_user_token($token);
-		setcookie(
+		self::$core->send_cookie(
 			$this->adm_get_token_name(), $token,
 			time() + (3600 * 24 * 7), '/');
 		return self::$core->pj($retval);

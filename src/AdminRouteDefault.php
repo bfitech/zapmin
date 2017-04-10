@@ -106,11 +106,9 @@ class AdminRouteDefault extends AdminRoute {
 	 * `GET|POST: /byway`
 	 *
 	 * @note
-	 * - This is a mock method. Real method must manipulate `$args`
-	 *   into containing `service` key that is not sent by client,
-	 *   but by 3rd-party.
-	 * - Move hardcoded expiration to an attribute retriavable by
-	 *   a getter like adm_get_expiration().
+	 *     This is a mock method. Real method must manipulate `$args`
+	 *     into containing `service` key that is not sent by client,
+	 *     but by 3rd-party.
 	 */
 	public function route_byway($args) {
 		### start mock

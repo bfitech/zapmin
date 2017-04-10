@@ -25,6 +25,7 @@ class AdminStore {
 	private $user_data = null;
 
 	private $expiration;
+	private $byway_expiration;
 
 	/** Logging service. */
 	public static $logger;
@@ -45,22 +46,37 @@ class AdminStore {
 	) {
 
 		self::$logger = $logger ? $logger : new Logger();
-		$logger = self::$logger;
 
 		$this->sql = $sql;
 		$this->dbtype = $sql->get_connection_params()['dbtype'];
 
-		if ($expiration) {
-			$expiration = (int)$expiration;
-			if ($expiration < 600)
-				$expiration = 600;
-		} else {
+		if ($expiration)
+			$expiration = $this->check_expiration($expiration);
+		else
 			$expiration = 3600 * 2;
-		}
 		$this->expiration = $expiration;
+
+		$this->byway_expiration = 360 * 24 * 7;
 
 		$this->check_tables($force_create_table);
 	}
+
+
+	/**
+	 * Verify expiration.
+	 *
+	 * Do not allow session that's too short. That would annoy users.
+	 *
+	 * @param int $expiration Session expiration, in seconds. This can
+	 *     be used for standard or byway session.
+	 */
+	private function check_expiration($expiration) {
+		$expiration = (int)$expiration;
+		if ($expiration < 600)
+			$expiration = 600;
+		return $expiration;
+	}
+
 
 	/**
 	 * Check if tables exist.
@@ -170,7 +186,7 @@ class AdminStore {
 	}
 
 	/**
-	 * Get expiration interval.
+	 * Getter for expiration.
 	 *
 	 * Useful for client-side manipulation such as sending cookies.
 	 */
@@ -179,10 +195,31 @@ class AdminStore {
 	}
 
 	/**
+	 * Setter for byway expiration.
+	 *
+	 * Byway expiration is typically much longer than the standard
+	 * one. It also must be easily altered, allowing a subclass to
+	 * finetune the session specific to each 3rd-party provider it
+	 * authenticates against.
+	 *
+	 * @param int $expiration Byway expiration, in seconds.
+	 */
+	public function adm_set_byway_expiration($expiration) {
+		$this->byway_expiration = $this->check_expiration($expiration);
+	}
+
+	/**
+	 * Getter for byway expiration.
+	 */
+	public function adm_get_byway_expiration() {
+		return $this->byway_expiration;
+	}
+
+	/**
 	 * Populate session data.
 	 *
-	 * Call this early on in every HTTP request once token
-	 * is available or use its shorthand is_logged_in().
+	 * Call this early on in every HTTP request once session token
+	 * is available.
 	 */
 	public function adm_status() {
 		if ($this->user_token === null)
@@ -275,7 +312,8 @@ class AdminStore {
 	/**
 	 * Verify email address.
 	 *
-	 * See: https://archive.fo/W1X0O
+	 * @param string $email Email address.
+	 * @see https://archive.fo/W1X0O
 	 */
 	public static function verify_email_address($email) {
 		$email = trim($email);
@@ -308,7 +346,7 @@ class AdminStore {
 	/**
 	 * Sign in.
 	 *
-	 * @param array $args Post data with keys: 'uname', 'upass'.
+	 * @param array $args Dict with keys: `uname`, `upass`.
 	 */
 	public function adm_login($args) {
 		$logger = self::$logger;
@@ -383,7 +421,8 @@ class AdminStore {
 	/**
 	 * Sign out.
 	 *
-	 * @param array $args Unused. Retained for callback pattern consistency.
+	 * @param array $args Unused. Retained for callback pattern
+	 *     consistency.
 	 * @note Using _GET is enough for this operation.
 	 */
 	public function adm_logout($args=null) {
@@ -407,10 +446,10 @@ class AdminStore {
 	/**
 	 * Change password.
 	 *
-	 * @param array $args Post data with keys: 'pass1', 'pass2' and
-	 *     optionally 'pass0' if $with_old_password is set to true.
-	 * @param bool $with_old_password Whether user should
-	 *     enter valid old password.
+	 * @param array $args Dict with keys: `pass1`, `pass2` and
+	 *     optionally `pass0` if `$with_old_password` is set to true.
+	 * @param bool $with_old_password Whether user should provide
+	 *     valid old password.
 	 */
 	public function adm_change_password($args, $with_old_password=false) {
 		if (!$this->is_logged_in())
@@ -468,7 +507,7 @@ class AdminStore {
 	/**
 	 * Change user info.
 	 *
-	 * @param array $args Post data with keys: 'fname', 'site'.
+	 * @param array $args Dict with keys: `fname`, `site`.
 	 * @todo Change email, although this is more complicated if
 	 *     we also need to verify the email.
 	 */
@@ -512,8 +551,8 @@ class AdminStore {
 	/**
 	 * Register a new user.
 	 *
-	 * @param array $args Post data with keys: 'addname', 'addpass1',
-	 *     and optional 'addpass2' unless $pass_twice is set to true.
+	 * @param array $args Dict with keys: `addname`, `addpass1`,
+	 *     and optional `addpass2` unless `$pass_twice` is set to true.
 	 * @param bool $pass_twice Whether password must be entered twice.
 	 * @param bool $allow_self_register Whether self-registration is
 	 *     allowed.
@@ -521,7 +560,8 @@ class AdminStore {
 	 * @param function $callback_authz A function that takes one parameter
 	 *     $callback_param to allow registration to proceed. Default to
 	 *     current user being root.
-	 * @param array $callback_param Parameter to pass to $callback_authz.
+	 * @param array $callback_param Parameter to pass to
+	 *     `$callback_authz`.
 	 */
 	public function adm_add_user(
 		$args, $pass_twice=false, $allow_self_register=false,
@@ -643,11 +683,11 @@ class AdminStore {
 	/**
 	 * Self-register.
 	 *
-	 * @note This is just a special case of add_user() with additional
-	 * condition: user must not be authenticated.
+	 * @note This is just a special case of adm_add_user() with
+	 *     additional condition: user must not be authenticated.
 	 *
-	 * @param array $args Post data with keys: 'addname', 'addpass1',
-	 *     and optional 'addpass2' unless $pass_twice is set to true.
+	 * @param array $args Dict with keys: `addname`, `addpass1`,
+	 *     and optional `addpass2` unless `$pass_twice` is set to true.
 	 * @param bool $pass_twice Whether password must be entered twice.
 	 * @param bool $email_required Whether an email address must be
 	 *     provided.
@@ -664,16 +704,15 @@ class AdminStore {
 	/**
 	 * Passwordless self-registration.
 	 *
-	 * This doesn't differ sign in and sign up.
+	 * This byway registration doesn't differ sign in and sign up.
+	 * Use this with caution, e.g. with proper authentication via
+	 * OAuth*, SMTP or the like. Unlike add user with password, this
+	 * also returns `sid` to associate `session.sid` with a column
+	 * on different table.
 	 *
-	 * @note
-	 * - Use this with caution, e.g. with proper authentication
-	 *   via OAuth* or the like.
-	 * - Unlike add user with password, this also returns 'sid' to
-	 *   associate session.sid with another column in different table.
-	 * @param array $args Array with key 'service' containing another
-	 *     array with keys: 'uname' and 'uservice'. This can be added
-	 *     to $args parameter of route handlers.
+	 * @param array $args Array with key `service` containing another
+	 *     array with keys: `uname` and `uservice`. This can be added
+	 *     to `$args` parameter of route callback.
 	 */
 	public function adm_self_add_user_passwordless($args) {
 		if ($this->is_logged_in())
@@ -734,11 +773,13 @@ class AdminStore {
 	/**
 	 * Delete a user.
 	 *
-	 * @param array $args Post data with keys: 'uid'.
-	 * @param function $callback_authz A function that takes one parameter
-	 *     $callback_args to allow deletion to proceed. Default to current
-	 *     user being root, or non-root self-deletion.
-	 * @param array $callback_param Parameter to pass to $callback_authz.
+	 * @param array $args Dict with key: `uid`.
+	 * @param function $callback_authz A function that takes one
+	 *     parameter `$callback_args` to allow deletion to proceed.
+	 *     Default to current user being root, or self-deletion for
+	 *     non-root user.
+	 * @param array $callback_param Parameter to pass to
+	 *     `$callback_authz`.
 	 */
 	public function adm_delete_user(
 		$args, $callback_authz=null, $callback_param=null
@@ -803,11 +844,13 @@ class AdminStore {
 	/**
 	 * List all users.
 	 *
-	 * @param array $args Post data with keys: 'page', 'limit', 'order'
-	 *     where 'order' is 'ASC' or 'DESC'.
-	 * @param function $callback_authz A function that takes one parameter
-	 *     $callback_args to allow listing. Default to current user being root.
-	 * @param array $callback_param Parameter to pass to $callback_authz.
+	 * @param array $args Dict with keys: `page`, `limit`, `order`
+	 *     where `order` is `ASC` or `DESC`.
+	 * @param function $callback_authz A function that takes one
+	 *     parameter `$callback_param` to decide if listing is
+	 *     allowed. Defaults to current user being root.
+	 * @param array $callback_param Parameter to pass to
+	 *     `$callback_authz`.
 	 */
 	public function adm_list_user(
 		$args, $callback_authz=null, $callback_param=null

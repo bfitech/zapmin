@@ -12,6 +12,8 @@ use BFITech\ZapStore\SQL as SQL;
 
 /**
  * AdminRoute class.
+ *
+ * @see AdminRouteDefault for example.
  */
 class AdminRoute extends AdminStore {
 
@@ -118,7 +120,7 @@ class AdminRoute extends AdminStore {
 	 * Standard wrapper for self::$core->route().
 	 *
 	 * @param string $path Route path.
-	 * @param function $callback Route handler.
+	 * @param function $callback Route callback.
 	 * @param string|array $method Request method.
 	 */
 	public function route($path, $callback, $method='GET') {

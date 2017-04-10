@@ -127,7 +127,8 @@ class AdminRouteDefault extends AdminRoute {
 		$this->adm_set_user_token($token);
 		self::$core->send_cookie(
 			$this->adm_get_token_name(), $token,
-			time() + (3600 * 24 * 7), '/');
+			time() + $this->adm_get_byway_expiration(),
+			'/');
 		return self::$core->pj($retval);
 	}
 }

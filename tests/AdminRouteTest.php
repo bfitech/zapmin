@@ -468,6 +468,9 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/byway';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router();
+		$adm->adm_set_byway_expiration(10);
+		$this->assertEquals(
+			600, $adm->adm_get_byway_expiration());
 		$core = $adm::$core;
 
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');

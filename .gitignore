@@ -6,6 +6,7 @@
 *.ini
 *.bak
 *.sq3
+composer.lock
 zapmin-test*
 
 /docs/

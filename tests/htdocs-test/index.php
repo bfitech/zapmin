@@ -1,11 +1,12 @@
 <?php
 
 
-require('../../vendor/autoload.php');
+require __DIR__ .'/../../vendor/autoload.php';
 
 use BFITech\ZapCore as zc;
 use BFITech\ZapStore as zs;
 use BFITech\ZapAdmin as za;
+
 
 $dbname = __DIR__ . '/zapmin-test-http.sq3';
 $logfile = __DIR__ . '/zapmin-test-http.log';
@@ -30,7 +31,7 @@ $store = new zs\SQLite3([
 	'dbname' => $dbname,
 ], $logger);
 
-$adm = new za\AdminRoute([
+$adm = new za\AdminRouteDefault([
 	'core_instance' => $core,
 	'store_instance' => $store,
 	'logger_instance' => $logger,

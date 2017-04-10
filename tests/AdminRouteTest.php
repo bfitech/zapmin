@@ -2,16 +2,17 @@
 
 
 use PHPUnit\Framework\TestCase;
-use BFITech\ZapCore as zc;
-use BFITech\ZapStore as zs;
-use BFITech\ZapAdmin as za;
+use BFITech\ZapCore\Logger;
+use BFITech\ZapCore\Router;
+use BFITech\ZapStore\SQLite3;
+use BFITech\ZapAdmin\AdminRouteDefault;
 
 
 if (!defined('HTDOCS'))
 	define('HTDOCS', __DIR__ . '/htdocs-test');
 
 
-class RouterPatched extends zc\Router {
+class RouterPatched extends Router {
 
 	public static $code = 200;
 	public static $head = [];
@@ -21,7 +22,6 @@ class RouterPatched extends zc\Router {
 		if (strpos($header_string, 'HTTP/1') === 0)
 			self::$code = intval(explode(" ", $header_string)[1]);
 		self::$head[] = $header_string;
-		return;
 	}
 	public static function halt($str=null) {
 		if ($str)
@@ -32,7 +32,6 @@ class RouterPatched extends zc\Router {
 		$secure=false, $httponly=false
 	) {
 		// do nothing
-		return;
 	}
 	public function wrap_callback($callback, $args=[]) {
 		ob_start();
@@ -50,8 +49,8 @@ class AdminRouteTest extends TestCase {
 		if (file_exists($logfile))
 			unlink($logfile);
 
-		self::$logger = new zc\Logger(
-			zc\Logger::DEBUG, $logfile);
+		self::$logger = new Logger(
+			Logger::DEBUG, $logfile);
 
 		$_SERVER['REQUEST_URI'] = '/';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
@@ -74,7 +73,7 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/usr/test';
 
 		$logfile = HTDOCS . '/zapmin-test-route-constructor.log';
-		$logger = new zc\Logger(zc\Logger::ERROR, $logfile);
+		$logger = new Logger(Logger::ERROR, $logfile);
 
 		# must use this patched Router to silent output
 		$core = new RouterPatched(null, null, false, $logger);
@@ -85,7 +84,7 @@ class AdminRouteTest extends TestCase {
 
 		# let's not use kwargs for a change, see 'prefix'
 		# parameter and match it against REQUEST_URI
-		$adm = new za\AdminRoute('/ignored', null, false, [
+		$adm = new AdminRouteDefault('/ignored', null, false, [
 			'dbtype' => 'sqlite3',
 			'dbname' => ':memory:',
 			], 3600, false, 'hello_world', '/usr',
@@ -109,12 +108,12 @@ class AdminRouteTest extends TestCase {
 
 	private function make_router($store=null) {
 		if (!$store)
-			$store = new zs\SQLite3(
+			$store = new SQLite3(
 				['dbname' => ':memory:'], self::$logger);
 		# use new instance on every matching mock HTTP request
 		$core = new RouterPatched(
 			null, null, false, self::$logger);
-		return new za\AdminRoute([
+		return new AdminRouteDefault([
 			'token_name' => 'test-zapmin',
 			'core_instance' => $core,
 			'store_instance' => $store,

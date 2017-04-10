@@ -13,8 +13,14 @@ if (!defined('HTDOCS'))
 
 class RouterPatched extends zc\Router {
 
+	public static $code = 200;
+	public static $head = [];
+	public static $body = null;
+
 	public static function header($header_string, $replace=false) {
-		// total silence
+		if (strpos($header_string, 'HTTP/1') === 0)
+			self::$code = intval(explode(" ", $header_string)[1]);
+		self::$head[] = $header_string;
 		return;
 	}
 	public static function halt($str=null) {
@@ -27,6 +33,11 @@ class RouterPatched extends zc\Router {
 	) {
 		// do nothing
 		return;
+	}
+	public function wrap_callback($callback, $args=[]) {
+		ob_start();
+		$callback($args);
+		self::$body = ob_get_clean();
 	}
 }
 
@@ -82,13 +93,12 @@ class AdminRouteTest extends TestCase {
 
 		$this->assertEquals($adm->adm_get_token_name(), 'hello_world');
 
-		ob_start();
 		$adm->route('/test', function($args) use($adm){
 			$this->assertEquals(
 				$args['cookie']['hello_world'], 'test');
 			echo "HELLO, FRIEND";
 		}, 'GET');
-		$this->assertEquals('HELLO, FRIEND', ob_get_clean());
+		$this->assertEquals('HELLO, FRIEND', $core::$body);
 
 		# since there's a matched route, calling shutdown functions
 		# will take no effect
@@ -118,24 +128,27 @@ class AdminRouteTest extends TestCase {
 	public function test_home() {
 		$_SERVER['REQUEST_URI'] = '/';
 		$adm = $this->make_router();
+		$core = $adm::$core;
 
 		$token_name = $adm->adm_get_token_name();
 		$this->assertEquals($token_name, 'test-zapmin');
 
-		ob_start();
 		$adm->route('/', [$adm, 'route_home']);
-		$rv = ob_get_clean();
-
-		$this->assertNotEquals(
-			strpos(strtolower($rv), 'it wurks'), false);
+		$this->assertTrue(
+			strpos(strtolower($core::$body), 'it wurks') > 0);
 	}
 
-	private function login_cleanup() {
+	private function login_cleanup($core=null) {
 		$_SERVER['REQUEST_URI'] = '/';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		if (isset($_SERVER['HTTP_AUTHORIZATION']))
 			unset($_SERVER['HTTP_AUTHORIZATION']);
 		$_GET = $_POST = $_COOKIE = [];
+		if ($core) {
+			$core::$code = 200;
+			$core::$head = [];
+			$core::$body = null;
+		}
 	}
 
 	private function login_sequence($store=null) {
@@ -147,10 +160,11 @@ class AdminRouteTest extends TestCase {
 		$_POST['upass'] = 'admin';
 
 		$adm = $this->make_router($store);
+		$core = $adm::$core;
 
-		ob_start();
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
+		extract(json_decode($core::$body, true));
+		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($errno, 0);
 		$this->assertEquals($data['uid'], 1);
 		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
@@ -167,11 +181,12 @@ class AdminRouteTest extends TestCase {
 
 		$_SERVER['REQUEST_URI'] = '/status';
 		$adm = $this->make_router();
+		$core = $adm::$core;
 
-		ob_start();
 		$adm->route('/status', [$adm, 'route_status']);
-		extract(json_decode(ob_get_clean(), true));
+		extract(json_decode($core::$body, true));
 
+		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($errno, 1);
 
 		###
@@ -183,10 +198,10 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/status';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$adm = $this->make_router($adm::$store);
+		$core = $adm::$core;
 
-		ob_start();
 		$adm->route('/status', [$adm, 'route_status']);
-		extract(json_decode(ob_get_clean(), true));
+		extract(json_decode($core::$body, true));
 
 		$this->assertEquals($errno, 0);
 	}
@@ -200,11 +215,11 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/login';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router();
+		$core = $adm::$core;
 
-		ob_start();
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
+		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($errno, 3);
 
 		###
@@ -217,10 +232,8 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/logout', [$adm, 'route_logout']);
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
 		$this->assertEquals($errno, 0);
 	}
 
@@ -230,6 +243,7 @@ class AdminRouteTest extends TestCase {
 	public function test_chpasswd() {
 		$adm = $this->make_router();
 		$this->login_sequence($adm::$store);
+		$core = $adm::$core;
 
 		###
 
@@ -237,10 +251,9 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
+		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($errno, 4);
 
 		###
@@ -250,10 +263,9 @@ class AdminRouteTest extends TestCase {
 		$_POST['pass2'] = 'admin1';
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
+		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($errno, 0);
 
 	}
@@ -263,6 +275,7 @@ class AdminRouteTest extends TestCase {
 	 */
 	public function test_chbio() {
 		$adm = $this->make_router();
+		$core = $adm::$core;
 		$this->login_sequence($adm::$store);
 
 		###
@@ -272,10 +285,9 @@ class AdminRouteTest extends TestCase {
 		$_POST['fname'] = 'The Handyman';
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
+		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($errno, 0);
 
 		###
@@ -284,10 +296,8 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/status', [$adm, 'route_status']);
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
 		$this->assertEquals($data['fname'], 'The Handyman');
 	}
 
@@ -300,11 +310,11 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/register';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router();
+		$core = $adm::$core;
 
-		ob_start();
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
+		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($errno, 3);
 
 		###
@@ -317,10 +327,8 @@ class AdminRouteTest extends TestCase {
 		];
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
 		$this->assertEquals($errno, 0);
 	}
 
@@ -329,6 +337,7 @@ class AdminRouteTest extends TestCase {
 	 */
 	public function test_useradd() {
 		$adm = $this->make_router();
+		$core = $adm::$core;
 		$this->login_sequence($adm::$store);
 
 		###
@@ -338,10 +347,9 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
+		$this->assertEquals($core::$code, 403);
 		$this->assertEquals($errno, 3);
 
 		###
@@ -355,21 +363,18 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
 		$this->assertEquals($errno, 0);
 
 		###
 
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
 		# cannot reuse email
+		$this->assertEquals($core::$code, 403);
 		$this->assertEquals($errno, 5);
 	}
 
@@ -378,6 +383,7 @@ class AdminRouteTest extends TestCase {
 	 */
 	public function test_userdel() {
 		$adm = $this->make_router();
+		$core = $adm::$core;
 		$this->login_sequence($adm::$store);
 
 		###
@@ -387,10 +393,9 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
+		$this->assertEquals($core::$code, 403);
 		$this->assertEquals($errno, 2);
 
 		###
@@ -404,21 +409,27 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
 		$this->assertEquals($errno, 0);
 
 		###
 
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
 		# cannot reuse email
+		$this->assertEquals($errno, 5);
+
+		###
+
+		$_POST['addname'] = 'jimmy';
+		$adm = $this->make_router($adm::$store);
+
+		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
+		extract(json_decode($core::$body, true));
+		# cannot reuse uname
 		$this->assertEquals($errno, 5);
 	}
 
@@ -427,6 +438,7 @@ class AdminRouteTest extends TestCase {
 	 */
 	public function test_userlist() {
 		$adm = $this->make_router();
+		$core = $adm::$core;
 		$this->login_sequence($adm::$store);
 
 		###
@@ -435,10 +447,8 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/userlist', [$adm, 'route_userlist'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
 		$this->assertEquals($errno, 0);
 		$this->assertEquals($data[0]['uname'], 'root');
 	}
@@ -459,11 +469,10 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/byway';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router();
+		$core = $adm::$core;
 
-		ob_start();
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
 		$this->assertEquals($errno, 2);
 
 		###
@@ -474,10 +483,8 @@ class AdminRouteTest extends TestCase {
 		];
 		$adm = $this->make_router($adm::$store);
 
-		ob_start();
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
-		extract(json_decode(ob_get_clean(), true));
-
+		extract(json_decode($core::$body, true));
 		$this->assertEquals($errno, 0);
 		$this->assertEquals($data['uname'], '+someone:github');
 	}

@@ -347,6 +347,17 @@ class AdminStore {
 	 * Sign in.
 	 *
 	 * @param array $args Dict with keys: `uname`, `upass`.
+	 * @return array An array of the form:
+	 *     @code
+	 *     (array)[
+	 *       (int errno),
+	 *       (dict){
+	 *         'uid': (int uid),
+	 *         'uname': (string uname),
+	 *         'token': (string token)
+	 *       }
+	 *     ]
+	 *     @endcode
 	 */
 	public function adm_login($args) {
 		$logger = self::$logger;
@@ -713,6 +724,18 @@ class AdminStore {
 	 * @param array $args Array with key `service` containing another
 	 *     array with keys: `uname` and `uservice`. This can be added
 	 *     to `$args` parameter of route callback.
+	 * @return array An array of the form:
+	 *     @code
+	 *     (array)[
+	 *       (int errno),
+	 *       (dict){
+	 *         'uid': (int uid),
+	 *         'uname': (string uname),
+	 *         'token': (string token)
+	 *         'sid': (int sid),
+	 *       }
+	 *     ]
+	 *     @endcode
 	 */
 	public function adm_self_add_user_passwordless($args) {
 		if ($this->is_logged_in())
@@ -743,20 +766,21 @@ class AdminStore {
 		$token = $this->generate_secret(
 			$dbuname . time(), $uname);
 
-		# expiration is much longer, 7 days
-		$expire = 3600 * 24 * 7;
+		# explicitly use byway expiration, default column value
+		# is strictly for standard expiration
 		$date_expire = $this->sql->query(
 			sprintf(
 				"SELECT %s AS date_expire",
 				$this->sql->stmt_fragment(
-					'datetime', ['delta' => $expire])
+					'datetime',
+					['delta' => $this->byway_expiration])
 				)
 			)['date_expire'];
 
 		# insert
 		$sid = $this->sql->insert('usess', [
-			'uid'    => $uid,
-			'token'  => $token,
+			'uid' => $uid,
+			'token' => $token,
 			'expire' => $date_expire,
 		], 'sid');
 

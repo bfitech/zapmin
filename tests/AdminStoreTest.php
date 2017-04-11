@@ -52,7 +52,7 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public function test_constructor() {
-		# test on sqlite3 only
+		# run test on sqlite3 only
 		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
 			return;
 
@@ -534,31 +534,58 @@ class AdminStoreTest extends TestCase {
 	 * @depends test_self_register_passwordless
 	 */
 	public function test_login_passwordless() {
+		$sql = self::$sql;
+		$store = self::$store;
+
 		$args = ['service' => [
 			'uname' => '1234',
 			'uservice' => 'google',
 		]];
-		$result = self::$store->adm_self_add_user_passwordless($args);
+		$result = $store->adm_self_add_user_passwordless($args);
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:google');
 		$this->assertEquals(isset($result[1]['sid']), true);
 
+		# change expiration to 20 minutes
+		$test_expire = 1200;
+
 		# uid doesn't increment
 		$args['service']['uservice'] = 'github';
-		$result = self::$store->adm_self_add_user_passwordless($args);
+		## set expiration to 20 minutes
+		$store->adm_set_byway_expiration($test_expire);
+		$result = $store->adm_self_add_user_passwordless($args);
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:github');
 		$this->assertEquals($result[1]['uid'],
 			self::$pwdless_uid);
+		$token = $result[1]['token'];
 
 		# set token
-		self::$store->adm_set_user_token($result[1]['token']);
-		self::$store->adm_status();
+		$store->adm_set_user_token($token);
+		$store->adm_status();
 
 		# passwordless login can't change password
 		$args['post']['pass1'] = $args['post']['pass2'] = 'blablabla';
 		$this->assertEquals(
-			self::$store->adm_change_password($args)[0], 2);
+			$store->adm_change_password($args)[0], 2);
+
+		# check expiration
+		$tnow = $sql->query(sprintf(
+			"SELECT (%s) AS now",
+			$sql->stmt_fragment('datetime')
+		))['now'];
+		$dtnow = strtotime($tnow);
+		$texp = $sql->query(
+			"SELECT expire FROM usess " .
+			"WHERE token=? ORDER BY sid DESC " .
+			"LIMIT 1",
+			[$token]
+		)['expire'];
+		$dtexp = strtotime($texp);
+
+		# difference must be small, say, 2 seconds at most
+		$diff = abs((abs($dtexp - $dtnow) - $test_expire));
+		$this->assertTrue($diff <= 2);
 	}
 }
 

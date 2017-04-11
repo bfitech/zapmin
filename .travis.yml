@@ -16,7 +16,7 @@ before_script:
     - composer install -no --prefer-dist
 
 script:
-    - php ./vendor/bin/phpunit --bootstrap ./vendor/autoload.php tests
+    - php ./vendor/bin/phpunit -c phpunit.xml
 
 after_success:
     - curl -s https://codecov.io/bash | bash

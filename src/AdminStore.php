@@ -4,10 +4,10 @@
 namespace BFITech\ZapAdmin;
 
 
-use BFITech\ZapCore\Common as Common;
-use BFITech\ZapCore\Logger as Logger;
-use BFITech\ZapStore\SQL as SQL;
-use BFITech\ZapStore\SQLError as SQLError;
+use BFITech\ZapCore\Common;
+use BFITech\ZapCore\Logger;
+use BFITech\ZapStore\SQL;
+use BFITech\ZapStore\SQLError;
 
 
 class AdminStoreError extends \Exception {}
@@ -15,10 +15,12 @@ class AdminStoreError extends \Exception {}
 
 /**
  * AdminStore class.
+ *
+ * Router-expose public methods must be prefixed with adm_* in this
+ * class or in its subclasses for clarity.
  */
-class AdminStore {
+abstract class AdminStore {
 
-	private $sql = null;
 	private $dbtype = null;
 
 	private $user_token = null;
@@ -27,28 +29,40 @@ class AdminStore {
 	private $expiration;
 	private $byway_expiration;
 
-	/** Logging service. */
-	public static $logger;
+	/**
+	 * SQL instance.
+	 *
+	 * This is no longer static for to allow user to use different
+	 * databases in subclasses.
+	 */
+	public $store;
+	/**
+	 * Logging service.
+	 *
+	 * This is no longer static to allow user to use different
+	 * logging in subclasses.
+	 */
+	public $logger;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param SQL $sql An instance of BFITech\\ZapStore\\SQL.
+	 * @param SQL $store An instance of BFITech\\ZapStore\\SQL.
 	 * @param int $expiration Session expiration interval in seconds.
 	 *     Defaults to 2 hours.
-	 * @param bool $force_create_table Whether tables are to be created
-	 *     regardless current installation.
+	 * @param bool $force_create_table If true, tables are recreated
+	 *     whether they currently exist or not.
 	 * @param Logger $logger Logger instance.
 	 */
 	public function __construct(
-		SQL $sql, $expiration=null, $force_create_table=false,
+		SQL $store, $expiration=null, $force_create_table=null,
 		Logger $logger=null
 	) {
 
-		self::$logger = $logger ? $logger : new Logger();
+		$this->logger = $logger ? $logger : new Logger();
 
-		$this->sql = $sql;
-		$this->dbtype = $sql->get_connection_params()['dbtype'];
+		$this->store = $store;
+		$this->dbtype = $store->get_connection_params()['dbtype'];
 
 		if ($expiration)
 			$expiration = $this->check_expiration($expiration);
@@ -84,16 +98,16 @@ class AdminStore {
 	 * @param bool $force_create_table When set to true, new table
 	 *     will be created despite the old one.
 	 */
-	private function check_tables($force_create_table=false) {
+	private function check_tables($force_create_table=null) {
 
-		$sql = $this->sql;
+		$sql = $this->store;
 
 		try {
 			# check if table is already there
 			$test = $sql->query("SELECT 1 FROM udata LIMIT 1");
 			if (!$force_create_table)
 				return;
-			self::$logger->info("Zapmin: Recreating tables.");
+			$this->logger->info("Zapmin: Recreating tables.");
 		} catch (SQLError $e) {}
 
 		$index = $sql->stmt_fragment('index');
@@ -113,7 +127,7 @@ class AdminStore {
 				$sql->query_raw($drop);
 			} catch(SQLError $e) {
 				$msg = "Cannot drop data:" . $e->getMessage();
-				self::$logger->error("Zapmin: sql error: $msg");
+				$this->logger->error("Zapmin: sql error: $msg");
 				throw new AdminStoreError($msg);
 			}
 		}
@@ -226,8 +240,8 @@ class AdminStore {
 			return null;
 		if ($this->user_data !== null)
 			return $this->user_data;
-		$expire = $this->sql->stmt_fragment('datetime');
-		$session = $this->sql->query(
+		$expire = $this->store->stmt_fragment('datetime');
+		$session = $this->store->query(
 			sprintf(
 				"SELECT * FROM v_usess " .
 				"WHERE token=? AND expire>%s " .
@@ -276,7 +290,7 @@ class AdminStore {
 	 *     those returned by get_safe_user_data().
 	 */
 	private function match_password($uname, $upass, $usalt) {
-		$udata = $this->sql->query(
+		$udata = $this->store->query(
 			"SELECT uid, uname " .
 				"FROM udata WHERE upass=? LIMIT 1",
 			[$this->hash_password($uname, $upass, $usalt)]);
@@ -360,7 +374,7 @@ class AdminStore {
 	 *     @endcode
 	 */
 	public function adm_login($args) {
-		$logger = self::$logger;
+		$logger = $this->logger;
 
 		if ($this->is_logged_in())
 			return [1];
@@ -371,7 +385,7 @@ class AdminStore {
 			return [3];
 		extract($args['post'], EXTR_SKIP);
 
-		$usalt = $this->sql->query(
+		$usalt = $this->store->query(
 			"SELECT usalt FROM udata WHERE uname=? LIMIT 1",
 			[$uname]);
 		if (!$usalt)
@@ -390,17 +404,17 @@ class AdminStore {
 		$token = $this->generate_secret(
 			$upass . $usalt . time(), $usalt);
 
-		$sid = $this->sql->insert('usess', [
+		$sid = $this->store->insert('usess', [
 			'uid'   => $udata['uid'],
 			'token' => $token,
 		], 'sid');
 		if ($this->dbtype == 'mysql') {
 			// mysql has no parametrized default values, and can't
 			// invoke trigger on currently inserted table
-			$expire_at = $this->sql->stmt_fragment('datetime', [
+			$expire_at = $this->store->stmt_fragment('datetime', [
 				'delta' => $this->expiration,
 			]);
-			$this->sql->query_raw(sprintf(
+			$this->store->query_raw(sprintf(
 				"UPDATE usess SET expire=(%s) WHERE sid='%s'",
 				$expire_at, $sid));
 		}
@@ -423,8 +437,8 @@ class AdminStore {
 	}
 
 	private function close_session($sid) {
-		$now = $this->sql->stmt_fragment('datetime');
-		$this->sql->query_raw(sprintf(
+		$now = $this->store->stmt_fragment('datetime');
+		$this->store->query_raw(sprintf(
 			"UPDATE usess SET expire=(%s) WHERE sid='%s'",
 			$now, $sid));
 	}
@@ -439,7 +453,7 @@ class AdminStore {
 	public function adm_logout($args=null) {
 		if (!$this->is_logged_in())
 			return [1];
-		self::$logger->info(sprintf(
+		$this->logger->info(sprintf(
 			"Zapmin: logout: OK: '%s'.",
 			$this->user_data['uname']
 		));
@@ -468,7 +482,7 @@ class AdminStore {
 
 		extract($this->user_data, EXTR_SKIP);
 
-		$logger = self::$logger;
+		$logger = $this->logger;
 
 		if (!$usalt)
 			# passwordless has no salt
@@ -504,7 +518,7 @@ class AdminStore {
 		}
 
 		# update
-		$this->sql->update('udata', [
+		$this->store->update('udata', [
 			'upass' => $this->hash_password($uname, $pass1, $usalt),
 		], [
 			'uid' => $uid,
@@ -543,7 +557,7 @@ class AdminStore {
 			# no change
 			return [0];
 
-		$this->sql->update('udata', $vars, [
+		$this->store->update('udata', $vars, [
 			'uid' => $this->user_data['uid']
 		]);
 
@@ -552,7 +566,7 @@ class AdminStore {
 		$this->adm_status();
 
 		# ok
-		self::$logger->info(sprintf(
+		$this->logger->info(sprintf(
 			"Zapmin: chbio: OK: '%s'.",
 			$this->user_data['uname']
 		));
@@ -578,7 +592,7 @@ class AdminStore {
 		$args, $pass_twice=false, $allow_self_register=false,
 		$email_required=false, $callback_authz=null, $callback_param=null
 	) {
-		$logger = self::$logger;
+		$logger = $this->logger;
 
 		if ($this->is_logged_in()) {
 			if (!$callback_authz) {
@@ -646,7 +660,7 @@ class AdminStore {
 					$addname, $email));
 				return [5, 0];
 			}
-			if ($this->sql->query(
+			if ($this->store->query(
 				"SELECT uid FROM udata WHERE email=? LIMIT 1",
 				[$email])
 			) {
@@ -679,7 +693,7 @@ class AdminStore {
 		if ($email_required)
 			$udata['email'] = $email;
 		try {
-			$this->sql->insert('udata', $udata, 'uid');
+			$this->store->insert('udata', $udata, 'uid');
 		} catch(SQLError $e) {
 			# user exists
 			$logger->info("Zapmin: usradd: user exists: '$addname'.");
@@ -751,11 +765,11 @@ class AdminStore {
 		extract($service, EXTR_SKIP);
 
 		$dbuname = '+' . $uname . ':' . $uservice;
-		$check = $this->sql->query(
+		$check = $this->store->query(
 			"SELECT uid FROM udata WHERE uname=? LIMIT 1",
 			[$dbuname]);
 		if (!$check) {
-			$uid = $this->sql->insert("udata", [
+			$uid = $this->store->insert("udata", [
 				'uname' => $dbuname,
 			], 'uid');
 		} else {
@@ -768,24 +782,24 @@ class AdminStore {
 
 		# explicitly use byway expiration, default column value
 		# is strictly for standard expiration
-		$date_expire = $this->sql->query(
+		$date_expire = $this->store->query(
 			sprintf(
 				"SELECT %s AS date_expire",
-				$this->sql->stmt_fragment(
+				$this->store->stmt_fragment(
 					'datetime',
 					['delta' => $this->byway_expiration])
 				)
 			)['date_expire'];
 
 		# insert
-		$sid = $this->sql->insert('usess', [
+		$sid = $this->store->insert('usess', [
 			'uid' => $uid,
 			'token' => $token,
 			'expire' => $date_expire,
 		], 'sid');
 
 		# use token for next request
-		self::$logger->info("Zapmin: usradd: OK : '$dbuname'.");
+		$this->logger->info("Zapmin: usradd: OK : '$dbuname'.");
 		return [0, [
 			'uid' => $uid,
 			'uname' => $dbuname,
@@ -840,12 +854,12 @@ class AdminStore {
 		if ($uid == 1)
 			return [4];
 
-		if (!$this->sql->query(
+		if (!$this->store->query(
 			"SELECT uid FROM udata WHERE uid=? LIMIT 1",
 			[$uid])
 		) {
 			# user does not exist
-			self::$logger->warning(sprintf(
+			$this->logger->warning(sprintf(
 				"Zapmin: usrdel: not found: uid=%s.",
 				$uid
 			));
@@ -854,11 +868,11 @@ class AdminStore {
 
 		# delete user data and its related session history via
 		# foreign key constraint
-		$this->sql->delete('udata', ['uid' => $uid]);
+		$this->store->delete('udata', ['uid' => $uid]);
 
 		# in case of self-delete, router must send redirect header
 		# or location.reload from the client side
-		self::$logger->info(sprintf(
+		$this->logger->info(sprintf(
 			"Zapmin: usrdel successful: uid=%s.",
 			$uid
 		));
@@ -912,12 +926,12 @@ class AdminStore {
 
 		// @note MySQL doesn't support '?' placeholder for limit and
 		// offset.
-		$sql = sprintf(
+		$stmt = sprintf(
 			"SELECT uid, uname, fname, site, since " .
 			"FROM udata ORDER BY uid %s LIMIT %s OFFSET %s",
 		$order, $limit, $offset);
 
-		return [0, $this->sql->query($sql, [], true)];
+		return [0, $this->store->query($stmt, [], true)];
 	}
 }
 

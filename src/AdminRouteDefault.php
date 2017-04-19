@@ -4,9 +4,6 @@
 namespace BFITech\ZapAdmin;
 
 
-use BFITech\ZapAdmin\AdminRoute;
-
-
 /**
  * Default routes.
  *
@@ -37,37 +34,37 @@ class AdminRouteDefault extends AdminRoute {
 
 	/** `GET: /status` */
 	public function route_status($args) {
-		return self::$core->pj($this->adm_get_safe_user_data());
+		return $this->core->pj($this->adm_get_safe_user_data());
 	}
 
 	/** `POST: /login` */
 	public function route_login($args) {
 		$retval = $this->adm_login($args);
 		if ($retval[0] === 0)
-			self::$core->send_cookie(
+			$this->core->send_cookie(
 				$this->adm_get_token_name(), $retval[1]['token'],
 				time() + $this->adm_get_expiration(), '/');
-		return self::$core->pj($retval);
+		return $this->core->pj($retval);
 	}
 
 	/** `GET|POST: /logout` */
 	public function route_logout($args) {
 		$retval = $this->adm_logout($args);
 		if ($retval[0] === 0)
-			self::$core->send_cookie(
+			$this->core->send_cookie(
 				$this->adm_get_token_name(), '',
 				time() - (3600 * 48), '/');
-		return self::$core->pj($retval);
+		return $this->core->pj($retval);
 	}
 
 	/** `POST: /chpasswd` */
 	public function route_chpasswd($args) {
-		return self::$core->pj($this->adm_change_password($args, true));
+		return $this->core->pj($this->adm_change_password($args, true));
 	}
 
 	/** `POST: /chbio` */
 	public function route_chbio($args) {
-		return self::$core->pj($this->adm_change_bio($args));
+		return $this->core->pj($this->adm_change_bio($args));
 	}
 
 	/** `POST: /register` */
@@ -75,31 +72,31 @@ class AdminRouteDefault extends AdminRoute {
 		$retval = $this->adm_self_add_user($args, true, true);
 		if ($retval[0] !== 0)
 			# fail
-			return self::$core->pj($retval);
+			return $this->core->pj($retval);
 		# success, autologin
 		$args['post']['uname'] = $args['post']['addname'];
 		$args['post']['upass'] = $args['post']['addpass1'];
 		$retval = $this->adm_login($args);
-		self::$core->send_cookie(
+		$this->core->send_cookie(
 			$this->adm_get_token_name(), $retval[1]['token'],
 			time() + $this->adm_get_expiration(), '/');
-		return self::$core->pj($retval);
+		return $this->core->pj($retval);
 	}
 
 	/** `POST: /useradd` */
 	public function route_useradd($args) {
-		return self::$core->pj(
+		return $this->core->pj(
 			$this->adm_add_user($args, false, true, true), 403);
 	}
 
 	/** `POST: /userdel` */
 	public function route_userdel($args) {
-		return self::$core->pj($this->adm_delete_user($args), 403);
+		return $this->core->pj($this->adm_delete_user($args), 403);
 	}
 
 	/** `POST: /userlist` */
 	public function route_userlist($args) {
-		return self::$core->pj($this->adm_list_user($args), 403);
+		return $this->core->pj($this->adm_list_user($args), 403);
 	}
 
 	/**
@@ -117,17 +114,17 @@ class AdminRouteDefault extends AdminRoute {
 		### end mock
 		$retval = $this->adm_self_add_user_passwordless($args);
 		if ($retval[0] !== 0)
-			return self::$core->pj($retval, 403);
+			return $this->core->pj($retval, 403);
 		if (!isset($retval[1]) || !isset($retval[1]['token']))
-			return self::$core->pj($retval, 403);
+			return $this->core->pj($retval, 403);
 		# alway autologin on success
 		$token = $retval[1]['token'];
 		$this->adm_set_user_token($token);
-		self::$core->send_cookie(
+		$this->core->send_cookie(
 			$this->adm_get_token_name(), $token,
-			time() + $this->adm_get_byway_expiration(),
-			'/');
-		return self::$core->pj($retval);
+			time() + $this->adm_get_byway_expiration(), '/'
+		);
+		return $this->core->pj($retval);
 	}
 }
 

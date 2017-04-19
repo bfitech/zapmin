@@ -101,7 +101,7 @@ class AdminRouteTest extends TestCase {
 
 		# since there's a matched route, calling shutdown functions
 		# will take no effect
-		$adm::$core->shutdown();
+		$adm->core->shutdown();
 
 		unlink($logfile);
 	}
@@ -127,7 +127,7 @@ class AdminRouteTest extends TestCase {
 	public function test_home() {
 		$_SERVER['REQUEST_URI'] = '/';
 		$adm = $this->make_router();
-		$core = $adm::$core;
+		$core = $adm->core;
 
 		$token_name = $adm->adm_get_token_name();
 		$this->assertEquals($token_name, 'test-zapmin');
@@ -159,7 +159,7 @@ class AdminRouteTest extends TestCase {
 		$_POST['upass'] = 'admin';
 
 		$adm = $this->make_router($store);
-		$core = $adm::$core;
+		$core = $adm->core;
 
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -180,7 +180,7 @@ class AdminRouteTest extends TestCase {
 
 		$_SERVER['REQUEST_URI'] = '/status';
 		$adm = $this->make_router();
-		$core = $adm::$core;
+		$core = $adm->core;
 
 		$adm->route('/status', [$adm, 'route_status']);
 		extract(json_decode($core::$body, true));
@@ -190,14 +190,14 @@ class AdminRouteTest extends TestCase {
 
 		###
 
-		$this->login_sequence($adm::$store);
+		$this->login_sequence($adm->store);
 
 		###
 
 		$_SERVER['REQUEST_URI'] = '/status';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$adm = $this->make_router($adm::$store);
-		$core = $adm::$core;
+		$adm = $this->make_router($adm->store);
+		$core = $adm->core;
 
 		$adm->route('/status', [$adm, 'route_status']);
 		extract(json_decode($core::$body, true));
@@ -214,7 +214,7 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/login';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router();
-		$core = $adm::$core;
+		$core = $adm->core;
 
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -223,13 +223,13 @@ class AdminRouteTest extends TestCase {
 
 		###
 
-		$this->login_sequence($adm::$store);
+		$this->login_sequence($adm->store);
 
 		###
 
 		$_SERVER['REQUEST_URI'] = '/logout';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/logout', [$adm, 'route_logout']);
 		extract(json_decode($core::$body, true));
@@ -241,14 +241,14 @@ class AdminRouteTest extends TestCase {
 	 */
 	public function test_chpasswd() {
 		$adm = $this->make_router();
-		$this->login_sequence($adm::$store);
-		$core = $adm::$core;
+		$this->login_sequence($adm->store);
+		$core = $adm->core;
 
 		###
 
 		$_SERVER['REQUEST_URI'] = '/chpasswd';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -260,7 +260,7 @@ class AdminRouteTest extends TestCase {
 		$_POST['pass0'] = 'admin';
 		$_POST['pass1'] = 'admin1';
 		$_POST['pass2'] = 'admin1';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -274,15 +274,15 @@ class AdminRouteTest extends TestCase {
 	 */
 	public function test_chbio() {
 		$adm = $this->make_router();
-		$core = $adm::$core;
-		$this->login_sequence($adm::$store);
+		$core = $adm->core;
+		$this->login_sequence($adm->store);
 
 		###
 
 		$_SERVER['REQUEST_URI'] = '/chbio';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$_POST['fname'] = 'The Handyman';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -293,7 +293,7 @@ class AdminRouteTest extends TestCase {
 
 		$_SERVER['REQUEST_URI'] = '/status';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/status', [$adm, 'route_status']);
 		extract(json_decode($core::$body, true));
@@ -309,7 +309,7 @@ class AdminRouteTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/register';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router();
-		$core = $adm::$core;
+		$core = $adm->core;
 
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -324,7 +324,7 @@ class AdminRouteTest extends TestCase {
 			'addpass2' => '123456',
 			'email' => 'here@exampe.org',
 		];
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -336,15 +336,15 @@ class AdminRouteTest extends TestCase {
 	 */
 	public function test_useradd() {
 		$adm = $this->make_router();
-		$core = $adm::$core;
-		$this->login_sequence($adm::$store);
+		$core = $adm->core;
+		$this->login_sequence($adm->store);
 
 		###
 
 		$_POST['x'] = '';
 		$_SERVER['REQUEST_URI'] = '/useradd';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -360,7 +360,7 @@ class AdminRouteTest extends TestCase {
 		];
 		$_SERVER['REQUEST_URI'] = '/useradd';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -368,7 +368,7 @@ class AdminRouteTest extends TestCase {
 
 		###
 
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -382,15 +382,15 @@ class AdminRouteTest extends TestCase {
 	 */
 	public function test_userdel() {
 		$adm = $this->make_router();
-		$core = $adm::$core;
-		$this->login_sequence($adm::$store);
+		$core = $adm->core;
+		$this->login_sequence($adm->store);
 
 		###
 
 		$_POST['x'] = '';
 		$_SERVER['REQUEST_URI'] = '/userdel';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -406,7 +406,7 @@ class AdminRouteTest extends TestCase {
 		];
 		$_SERVER['REQUEST_URI'] = '/useradd';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -414,7 +414,7 @@ class AdminRouteTest extends TestCase {
 
 		###
 
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -424,7 +424,7 @@ class AdminRouteTest extends TestCase {
 		###
 
 		$_POST['addname'] = 'jimmy';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -437,14 +437,14 @@ class AdminRouteTest extends TestCase {
 	 */
 	public function test_userlist() {
 		$adm = $this->make_router();
-		$core = $adm::$core;
-		$this->login_sequence($adm::$store);
+		$core = $adm->core;
+		$this->login_sequence($adm->store);
 
 		###
 
 		$_SERVER['REQUEST_URI'] = '/userlist';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/userlist', [$adm, 'route_userlist'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -471,7 +471,7 @@ class AdminRouteTest extends TestCase {
 		$adm->adm_set_byway_expiration(10);
 		$this->assertEquals(
 			600, $adm->adm_get_byway_expiration());
-		$core = $adm::$core;
+		$core = $adm->core;
 
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
 		extract(json_decode($core::$body, true));
@@ -483,7 +483,7 @@ class AdminRouteTest extends TestCase {
 			'uname' => 'someone',
 			'uservice' => 'github',
 		];
-		$adm = $this->make_router($adm::$store);
+		$adm = $this->make_router($adm->store);
 
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
 		extract(json_decode($core::$body, true));

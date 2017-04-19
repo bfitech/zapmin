@@ -2,8 +2,8 @@
 
 
 use PHPUnit\Framework\TestCase;
-use BFITech\ZapCore as zc;
-use BFITech\ZapCoreDev as zd;
+use BFITech\ZapCore\Common;
+use BFITech\ZapCoreDev\CoreDev;
 
 
 if (!defined('HTDOCS'))
@@ -30,7 +30,7 @@ class AdminRouteHTTPTest extends TestCase {
 
 	private function GET($path, $get=[], $expect_json=true) {
 		$url = self::$base_uri . $path;
-		$response = zc\Common::http_client([
+		$response = Common::http_client([
 			'url' => $url,
 			'method' => 'GET',
 			'get' => $get,
@@ -44,7 +44,7 @@ class AdminRouteHTTPTest extends TestCase {
 
 	private function POST($path, $post=[], $expect_json=true) {
 		$url = self::$base_uri . $path;
-		$response = zc\Common::http_client([
+		$response = Common::http_client([
 			'url' => $url,
 			'method' => 'POST',
 			'post' => $post,
@@ -61,18 +61,18 @@ class AdminRouteHTTPTest extends TestCase {
 		if (file_exists($logfile_http))
 			unlink($logfile_http);
 		self::$cookiefile = HTDOCS . '/zapmin-test-cookie.log';
-		self::$server_pid = zd\CoreDev::server_up(HTDOCS);
+		self::$server_pid = CoreDev::server_up(HTDOCS);
 	}
 
 	public static function tearDownAfterClass() {
 		unlink(self::$cookiefile);
-		zc\Common::http_client([
+		Common::http_client([
 			'url' => self::$base_uri,
 			'method' => 'GET',
 			'get' => ['reloaddb' => 1]
 		]);
 		if (self::$server_pid)
-			zd\CoreDev::server_down(self::$server_pid);
+			CoreDev::server_down(self::$server_pid);
 	}
 
 	public function tearDown() {
@@ -407,7 +407,7 @@ class AdminRouteHTTPTest extends TestCase {
 
 	public function test_patched_abort() {
 		$url = self::$base_uri . '/notfound';
-		$response = zc\Common::http_client([
+		$response = Common::http_client([
 			'method' => 'GET',
 			'url' => $url,
 		]);

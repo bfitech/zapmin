@@ -4,29 +4,30 @@
 namespace BFITech\ZapAdmin;
 
 
-use BFITech\ZapCore\Common as Common;
-use BFITech\ZapCore\Logger as Logger;
-use BFITech\ZapCore\Router as Router;
-use BFITech\ZapStore\SQL as SQL;
+use BFITech\ZapCore\Common;
+use BFITech\ZapCore\Logger;
+use BFITech\ZapCore\Router;
+use BFITech\ZapStore\SQL;
 
 
 /**
  * AdminRoute class.
  *
- * @see AdminRouteDefault for example.
+ * This is a thin layer than glues router and storage together.
+ * Subclassess extends from this instead of abstract AdminStore.
+ *
+ * @see AdminRouteDefault for limited example.
  */
 class AdminRoute extends AdminStore {
 
 	/**
-	 * Core instance. Subclasses are expected to collect HTTP variables
-	 * with this.
+	 * Core instance.
+	 *
+	 * Subclasses are expected to collect HTTP variables with this. This
+	 * is no longer static to allow user to easily change different
+	 * router in subclasses.
 	 */
-	public static $core = null;
-	/**
-	 * Storage instance. Subclasses are expected to manipulate tables
-	 * with this.
-	 */
-	public static $store = null;
+	public $core = null;
 
 	private $prefix = null;
 	private $token_name = null;
@@ -51,6 +52,8 @@ class AdminRoute extends AdminStore {
 	 * @param SQL $store_instance Use this store instance instead of
 	 *     instantiating a new one.
 	 * @param Logger $logger_instance Logging service.
+	 *
+	 * @todo Simplify parameters in upcoming minor release.
 	 */
 	public function __construct(
 		$home_or_kwargs=null, $host=null, $shutdown=true,
@@ -79,12 +82,12 @@ class AdminRoute extends AdminStore {
 
 		if (!$logger_instance)
 			$logger_instance = new Logger();
-		self::$core = $core_instance ? $core_instance
+		$this->core = $core_instance ? $core_instance
 			: new Router($home, $host, $shutdown, $logger_instance);
-		self::$store = $store_instance ? $store_instance
+		$store = $store_instance ? $store_instance
 			: new SQL($dbargs, $logger_instance);
 
-		parent::__construct(self::$store, $expiration,
+		parent::__construct($store, $expiration,
 			$force_create_table, $logger_instance);
 
 		if (!$token_name)
@@ -109,30 +112,31 @@ class AdminRoute extends AdminStore {
 	 * Useful for e.g. setting cookie name or HTTP request header
 	 * on the client side.
 	 *
-	 * @note This doesn't belong in AdminStore which only cares
-	 *     about token value.
+	 * @note This doesn't belong in AdminStore which cares about
+	 *     token value but not token name.
 	 */
 	public function adm_get_token_name() {
 		return $this->token_name;
 	}
 
 	/**
-	 * Standard wrapper for self::$core->route().
+	 * Standard wrapper for Route::route().
 	 *
-	 * @param string $path Route path.
-	 * @param function $callback Route callback.
-	 * @param string|array $method Request method.
+	 * @param string $path Router path.
+	 * @param callable $callback Router callback.
+	 * @param string|array $method Router request method.
 	 */
 	public function route($path, $callback, $method='GET') {
 		if ($this->prefix)
 			$path = $this->prefix . $path;
-		$core = self::$core;
-		$core->route($path, function($args) use($callback, $core){
+		$this->core->route($path, function($args) use($callback){
 			# set token if available
 			if (isset($args['cookie'][$this->token_name])) {
+				# via cookie
 				$this->adm_set_user_token(
 					$args['cookie'][$this->token_name]);
 			} elseif (isset($args['header']['authorization'])) {
+				# via request header
 				$auth = explode(' ', $args['header']['authorization']);
 				if ($auth[0] == $this->token_name) {
 					$this->adm_set_user_token($auth[1]);

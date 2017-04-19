@@ -4,7 +4,6 @@
 require_once(__DIR__ . '/AdminStoreTest.php');
 
 use BFITech\ZapCore\Logger;
-use BFITech\ZapAdmin\AdminStore;
 use BFITech\ZapStore as zs;
 
 
@@ -43,7 +42,7 @@ class AdminStoreMyTest extends AdminStoreTest {
 				json_encode($dbargs, JSON_PRETTY_PRINT));
 			exit(1);
 		}
-		self::$store = new AdminStore(self::$sql, 600, true, $logger);
+		self::$adm = new AdminStore(self::$sql, 600, true, $logger);
 	}
 }
 

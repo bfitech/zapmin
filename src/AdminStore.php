@@ -75,7 +75,6 @@ abstract class AdminStore {
 		$this->check_tables($force_create_table);
 	}
 
-
 	/**
 	 * Verify expiration.
 	 *
@@ -102,13 +101,15 @@ abstract class AdminStore {
 
 		$sql = $this->store;
 
+		$sql::$logger->deactivate();
 		try {
-			# check if table is already there
 			$test = $sql->query("SELECT 1 FROM udata LIMIT 1");
+			$sql::$logger->activate();
 			if (!$force_create_table)
 				return;
 			$this->logger->info("Zapmin: Recreating tables.");
 		} catch (SQLError $e) {}
+		$sql::$logger->activate();
 
 		$index = $sql->stmt_fragment('index');
 		$engine = $sql->stmt_fragment('engine');

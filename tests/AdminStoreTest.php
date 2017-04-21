@@ -75,6 +75,10 @@ class AdminStoreTest extends TestCase {
 		$adm = new AdminStore($sql, null, true, $logger);
 		$this->assertEquals($adm->adm_get_expiration(), 3600 * 2);
 
+		# table check statement should not be logged
+		$this->assertFalse(strpos(
+			file_get_contents($logfile), "SELECT 1 FROM udata"));
+
 		# working on invalid connection
 		$sql->close();
 		try {

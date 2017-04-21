@@ -3,7 +3,7 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
-use BFITech\ZapCore\Router;
+use BFITech\ZapCoreDev\RouterDev;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapAdmin\AdminRouteDefault;
 
@@ -12,31 +12,14 @@ if (!defined('HTDOCS'))
 	define('HTDOCS', __DIR__ . '/htdocs-test');
 
 
-class RouterPatched extends Router {
+class Router extends RouterDev {
 
-	public static $code = 200;
-	public static $head = [];
-	public static $body = null;
-
-	public static function header($header_string, $replace=false) {
-		if (strpos($header_string, 'HTTP/1') === 0)
-			self::$code = intval(explode(" ", $header_string)[1]);
-		self::$head[] = $header_string;
-	}
-	public static function halt($str=null) {
-		if ($str)
-			echo $str;
-	}
+	// this mock is not yet available in latest release of zapcore
 	public static function send_cookie(
 		$name, $value='', $expire=0, $path='', $domain='',
 		$secure=false, $httponly=false
 	) {
-		// do nothing
-	}
-	public function wrap_callback($callback, $args=[]) {
-		ob_start();
-		$callback($args);
-		self::$body = ob_get_clean();
+		// noop
 	}
 }
 
@@ -76,7 +59,7 @@ class AdminRouteTest extends TestCase {
 		$logger = new Logger(Logger::ERROR, $logfile);
 
 		# must use this patched Router to silent output
-		$core = new RouterPatched(null, null, false, $logger);
+		$core = new Router(null, null, false, $logger);
 
 		# other fake HTTP variables can wait after Router
 		# instantiation
@@ -97,7 +80,7 @@ class AdminRouteTest extends TestCase {
 				$args['cookie']['hello_world'], 'test');
 			echo "HELLO, FRIEND";
 		}, 'GET');
-		$this->assertEquals('HELLO, FRIEND', $core::$body);
+		$this->assertEquals('HELLO, FRIEND', $core::$body_raw);
 
 		# since there's a matched route, calling shutdown functions
 		# will take no effect
@@ -111,8 +94,7 @@ class AdminRouteTest extends TestCase {
 			$store = new SQLite3(
 				['dbname' => ':memory:'], self::$logger);
 		# use new instance on every matching mock HTTP request
-		$core = new RouterPatched(
-			null, null, false, self::$logger);
+		$core = new Router(null, null, false, self::$logger);
 		return new AdminRouteDefault([
 			'token_name' => 'test-zapmin',
 			'core_instance' => $core,
@@ -134,7 +116,7 @@ class AdminRouteTest extends TestCase {
 
 		$adm->route('/', [$adm, 'route_home']);
 		$this->assertTrue(
-			strpos(strtolower($core::$body), 'it wurks') > 0);
+			strpos(strtolower($core::$body_raw), 'it wurks') > 0);
 	}
 
 	private function login_cleanup($core=null) {
@@ -162,7 +144,7 @@ class AdminRouteTest extends TestCase {
 		$core = $adm->core;
 
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($errno, 0);
 		$this->assertEquals($data['uid'], 1);
@@ -183,7 +165,7 @@ class AdminRouteTest extends TestCase {
 		$core = $adm->core;
 
 		$adm->route('/status', [$adm, 'route_status']);
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 
 		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($errno, 1);
@@ -200,8 +182,7 @@ class AdminRouteTest extends TestCase {
 		$core = $adm->core;
 
 		$adm->route('/status', [$adm, 'route_status']);
-		extract(json_decode($core::$body, true));
-
+		extract($core::$body);
 		$this->assertEquals($errno, 0);
 	}
 
@@ -217,7 +198,7 @@ class AdminRouteTest extends TestCase {
 		$core = $adm->core;
 
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($errno, 3);
 
@@ -232,7 +213,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/logout', [$adm, 'route_logout']);
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($errno, 0);
 	}
 
@@ -251,7 +232,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($errno, 4);
 
@@ -263,7 +244,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($errno, 0);
 
@@ -285,7 +266,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($errno, 0);
 
@@ -296,7 +277,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/status', [$adm, 'route_status']);
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($data['fname'], 'The Handyman');
 	}
 
@@ -312,7 +293,7 @@ class AdminRouteTest extends TestCase {
 		$core = $adm->core;
 
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($errno, 3);
 
@@ -327,7 +308,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($errno, 0);
 	}
 
@@ -347,7 +328,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($core::$code, 403);
 		$this->assertEquals($errno, 3);
 
@@ -363,7 +344,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($errno, 0);
 
 		###
@@ -371,7 +352,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		# cannot reuse email
 		$this->assertEquals($core::$code, 403);
 		$this->assertEquals($errno, 5);
@@ -393,7 +374,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($core::$code, 403);
 		$this->assertEquals($errno, 2);
 
@@ -409,7 +390,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($errno, 0);
 
 		###
@@ -417,7 +398,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		# cannot reuse email
 		$this->assertEquals($errno, 5);
 
@@ -427,7 +408,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		# cannot reuse uname
 		$this->assertEquals($errno, 5);
 	}
@@ -447,7 +428,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/userlist', [$adm, 'route_userlist'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($errno, 0);
 		$this->assertEquals($data[0]['uname'], 'root');
 	}
@@ -474,7 +455,7 @@ class AdminRouteTest extends TestCase {
 		$core = $adm->core;
 
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($errno, 2);
 
 		###
@@ -486,7 +467,7 @@ class AdminRouteTest extends TestCase {
 		$adm = $this->make_router($adm->store);
 
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
-		extract(json_decode($core::$body, true));
+		extract($core::$body);
 		$this->assertEquals($errno, 0);
 		$this->assertEquals($data['uname'], '+someone:github');
 	}

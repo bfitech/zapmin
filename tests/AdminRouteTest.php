@@ -3,7 +3,7 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
-use BFITech\ZapCoreDev\RouterDev;
+use BFITech\ZapCoreDev\RouterDev as Router;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapAdmin\AdminRouteDefault;
 
@@ -11,17 +11,6 @@ use BFITech\ZapAdmin\AdminRouteDefault;
 if (!defined('HTDOCS'))
 	define('HTDOCS', __DIR__ . '/htdocs-test');
 
-
-class Router extends RouterDev {
-
-	// this mock is not yet available in latest release of zapcore
-	public static function send_cookie(
-		$name, $value='', $expire=0, $path='', $domain='',
-		$secure=false, $httponly=false
-	) {
-		// noop
-	}
-}
 
 class AdminRouteTest extends TestCase {
 

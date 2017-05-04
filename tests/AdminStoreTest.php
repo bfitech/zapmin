@@ -334,6 +334,10 @@ class AdminStoreTest extends TestCase {
 	public function test_self_register() {
 		$adm = self::$adm;
 
+		# missing post arguments
+		$this->assertEquals(
+			$adm->adm_add_user([], true, true)[0], 3);
+
 		$args = ['post' => [
 			'addname' => 'root',
 			'addpass1' => 'asdf',

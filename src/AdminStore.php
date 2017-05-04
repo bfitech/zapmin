@@ -301,8 +301,11 @@ abstract class AdminStore {
 	}
 
 	private function hash_password($uname, $upass, $usalt) {
-		if (strlen($usalt) > 16)
+		if (strlen($usalt) > 16) {
+			// @codeCoverageIgnoreStart
 			$usalt = substr($usalt, 0, 16);
+			// @codeCoverageIgnoreEnd
+		}
 		return $this->generate_secret($upass . $uname, $usalt);
 	}
 

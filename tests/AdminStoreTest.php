@@ -518,6 +518,9 @@ class AdminStoreTest extends TestCase {
 
 		# as 'jonah'
 		self::loginOK('jonah', 'asdfgh');
+		# missing post arguments
+		$this->assertEquals(
+			$adm->adm_delete_user([])[0], 2);
 		# with default callback, any user cannot delete another user 
 		# except root
 		$this->assertEquals(

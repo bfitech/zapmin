@@ -338,6 +338,19 @@ abstract class AdminStore {
 	}
 
 	/**
+	 * Verify site url
+	 *
+	 * @param string $url Site URL.
+	 * @see http://archive.fo/OzYSP
+	 */
+	public static function verify_site_url($url) {
+		$url = trim($url);
+		if (!$url || strlen($url) > 64)
+			return false;
+		return (filter_var($url, FILTER_VALIDATE_URL));
+	}
+
+	/**
 	 * Generate salt.
 	 *
 	 * @param string $data Input data.
@@ -549,6 +562,11 @@ abstract class AdminStore {
 			if (!$val)
 				continue;
 			$vars[$key] = $val;
+		}
+
+		# check if site url value is
+		if (isset($vars['site']) && !self::verify_site_url($vars['site'])) {
+			return [3];
 		}
 
 		if (!$vars)

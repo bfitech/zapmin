@@ -288,6 +288,15 @@ class AdminStoreTest extends TestCase {
 		$safe_data = $adm->adm_get_safe_user_data()[1];
 		$this->assertEquals($safe_data['site'], '');
 		$this->assertEquals($safe_data['fname'], 'The Administrator');
+
+		# change site url
+		$r = $adm->adm_change_bio([
+			'post' => [
+				'site' => 'http://www.bfinews.com']]);
+
+		$safe_data = $adm->adm_get_safe_user_data()[1];
+		$this->assertEquals($safe_data['site'], 'http://www.bfinews.com');
+		$this->assertEquals($safe_data['fname'], 'The Administrator');
 	}
 
 	public function test_self_register() {

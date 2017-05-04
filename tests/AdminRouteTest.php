@@ -261,6 +261,26 @@ class AdminRouteTest extends TestCase {
 
 		###
 
+		$_POST['site'] = 'Wrongurl';
+		$adm = $this->make_router($adm->store);
+
+		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
+		extract($core::$body);
+		$this->assertEquals($core::$code, 401);
+		$this->assertEquals($errno, 3);
+
+		###
+
+		$_POST['site'] = 'http://www.bfinews.com';
+		$adm = $this->make_router($adm->store);
+
+		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
+		extract($core::$body);
+		$this->assertEquals($core::$code, 200);
+		$this->assertEquals($errno, 0);
+
+		###
+
 		$_SERVER['REQUEST_URI'] = '/status';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$adm = $this->make_router($adm->store);

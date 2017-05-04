@@ -334,10 +334,7 @@ abstract class AdminStore {
 		$email = trim($email);
 		if (!$email || strlen($email) > 64)
 			return false;
-		$pat = '/^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\"))' .
-			   '@' .
-			   '(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i';
-		return preg_match($pat, $email);
+		return (filter_var($email, FILTER_VALIDATE_EMAIL));
 	}
 
 	/**

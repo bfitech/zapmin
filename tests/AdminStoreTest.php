@@ -289,6 +289,12 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($safe_data['site'], '');
 		$this->assertEquals($safe_data['fname'], 'The Administrator');
 
+		# site too long
+		$r = $adm->adm_change_bio([
+			'post' => [
+				'site' => 'http://' . str_repeat('jonathan', 12) . '.co']]);
+		$this->assertEquals($r[0], 3);
+
 		# change site url
 		$r = $adm->adm_change_bio([
 			'post' => [

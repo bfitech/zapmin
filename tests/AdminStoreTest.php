@@ -356,6 +356,10 @@ class AdminStoreTest extends TestCase {
 		self::loginOK('john', 'asdf');
 		$user_data = $adm->adm_status();
 		$this->assertEquals($user_data['uname'], 'john');
+
+		$result = $adm->adm_self_add_user($args, true, true);
+		$this->assertEquals($result[0], 1);
+
 		$adm->adm_logout();
 
 		# using shorthand, with email required

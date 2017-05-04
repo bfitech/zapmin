@@ -139,6 +139,10 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals(
 			$adm->adm_login($args)[0], 5);
 
+		# missing token
+		$this->assertEquals(
+			$adm->adm_set_user_token(false), null);
+
 		# success
 		$args['post']['upass'] = 'admin';
 		$login_data = $adm->adm_login($args);

@@ -276,7 +276,29 @@ class AdminStoreTest extends TestCase {
 	public function test_change_bio() {
 		$adm = self::$adm;
 
+		# not logged in
+		$r = $adm->adm_change_bio( [] );
+		$this->assertEquals($r[0], 1);
+
+		# begin process
+
 		self::loginOK();
+		$safe_data = $adm->adm_get_safe_user_data()[1];
+		$this->assertEquals($safe_data['fname'], '');
+
+		# missing arguments post
+		$r = $adm->adm_change_bio( [] );
+		$this->assertEquals($r[0], 2);
+
+		# no change
+		$r = $adm->adm_change_bio( ['post' => []] );
+		$this->assertEquals($r[0], 0);
+
+		# fname empty value
+		$r = $adm->adm_change_bio([
+			'post' => [
+				'fname' => '']]);
+
 		$safe_data = $adm->adm_get_safe_user_data()[1];
 		$this->assertEquals($safe_data['fname'], '');
 

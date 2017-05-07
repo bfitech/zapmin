@@ -281,7 +281,7 @@ class AdminStoreTest extends TestCase {
 		$adm = self::$adm;
 
 		# not logged in
-		$r = $adm->adm_change_bio( [] );
+		$r = $adm->adm_change_bio([]);
 		$this->assertEquals($r[0], 1);
 
 		# begin process
@@ -295,7 +295,7 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($r[0], 2);
 
 		# no change
-		$r = $adm->adm_change_bio( ['post' => []] );
+		$r = $adm->adm_change_bio(['post' => []]);
 		$this->assertEquals($r[0], 0);
 
 		# fname empty value
@@ -316,9 +316,10 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($safe_data['fname'], 'The Administrator');
 
 		# site too long
+		$test_site = 'http://' . str_repeat('jonathan', 12) . '.co';
 		$r = $adm->adm_change_bio([
 			'post' => [
-				'site' => 'http://' . str_repeat('jonathan', 12) . '.co']]);
+				'site' => $test_site]]);
 		$this->assertEquals($r[0], 3);
 
 		# change site url

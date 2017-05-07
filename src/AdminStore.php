@@ -331,26 +331,24 @@ abstract class AdminStore {
 	 * Verify email address.
 	 *
 	 * @param string $email Email address.
-	 * @see https://archive.fo/W1X0O
 	 */
 	public static function verify_email_address($email) {
 		$email = trim($email);
 		if (!$email || strlen($email) > 64)
 			return false;
-		return (filter_var($email, FILTER_VALIDATE_EMAIL));
+		return filter_var($email, FILTER_VALIDATE_EMAIL);
 	}
 
 	/**
 	 * Verify site url
 	 *
 	 * @param string $url Site URL.
-	 * @see http://archive.fo/OzYSP
 	 */
 	public static function verify_site_url($url) {
 		$url = trim($url);
 		if (!$url || strlen($url) > 64)
 			return false;
-		return (filter_var($url, FILTER_VALIDATE_URL));
+		return filter_var($url, FILTER_VALIDATE_URL);
 	}
 
 	/**
@@ -547,8 +545,6 @@ abstract class AdminStore {
 	 * Change user info.
 	 *
 	 * @param array $args Dict with keys: `fname`, `site`.
-	 * @todo Change email, although this is more complicated if
-	 *     we also need to verify the email.
 	 */
 	public function adm_change_bio($args) {
 		if (!$this->is_logged_in())
@@ -566,15 +562,18 @@ abstract class AdminStore {
 				continue;
 			$vars[$key] = $val;
 		}
-
-		# check if site url value is
-		if (isset($vars['site']) && !self::verify_site_url($vars['site'])) {
-			return [3];
-		}
-
 		if (!$vars)
 			# no change
 			return [0];
+
+		extract($vars);
+
+		# verify site url value
+		if (isset($site) && !self::verify_site_url($site)) {
+			$this->logger->warning(
+				"Zapmin: chbio: site URL invalid: '$site'.");
+			return [3];
+		}
 
 		$this->store->update('udata', $vars, [
 			'uid' => $this->user_data['uid']

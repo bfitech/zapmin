@@ -14,8 +14,6 @@ use BFITech\ZapStore\SQLError;
  */
 class AdminStoreError extends \Exception {
 
-	/** Cannot drop data/tables. */
-	const CANNOT_DROP_DATA = 0x01;
 	/** Cannot delete root. */
 	const CANNOT_DELETE_ROOT = 0x0100;
 
@@ -26,7 +24,7 @@ class AdminStoreError extends \Exception {
 	/** Password too short */
 	const PASSWORD_TOO_SHORT = 0x0202;
 	/** Old Password Invalid */
-	const OLD_PASSWORD_INVALID = 0x0203
+	const OLD_PASSWORD_INVALID = 0x0203;
 	/** Wrong password */
 	const WRONG_PASSWORD = 0x0204;
 
@@ -181,7 +179,7 @@ abstract class AdminStore {
 			} catch(SQLError $e) {
 				$msg = "Cannot drop data:" . $e->getMessage();
 				$this->logger->error("Zapmin: sql error: $msg");
-				throw new AdminStoreError::CANNOT_DROP_DATA;
+				throw new AdminStoreError($msg);
 			}
 		}
 

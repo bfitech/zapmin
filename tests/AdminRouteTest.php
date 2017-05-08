@@ -6,6 +6,7 @@ use BFITech\ZapCore\Logger;
 use BFITech\ZapCoreDev\RouterDev as Router;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapAdmin\AdminRouteDefault;
+use BFITech\ZapAdmin\AdminStoreError as Err;
 
 
 if (!defined('HTDOCS'))
@@ -157,7 +158,7 @@ class AdminRouteTest extends TestCase {
 		extract($core::$body);
 
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, 1);
+		$this->assertEquals($errno, Err::USERS_NOT_LOGGED_IN);
 
 		###
 
@@ -189,7 +190,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, 3);
+		$this->assertEquals($errno, Err::MISSING_DICT);
 
 		###
 
@@ -223,7 +224,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, 4);
+		$this->assertEquals($errno, Err::MISSING_DICT);
 
 		###
 
@@ -267,7 +268,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, 3);
+		$this->assertEquals($errno, Err::INVALID_SITE_URL);
 
 		###
 
@@ -304,7 +305,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, 3);
+		$this->assertEquals($errno, Err::MISSING_DICT);
 
 		###
 
@@ -339,7 +340,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($errno, 3);
+		$this->assertEquals($errno, Err::MISSING_DICT);
 
 		###
 
@@ -364,7 +365,7 @@ class AdminRouteTest extends TestCase {
 		extract($core::$body);
 		# cannot reuse email
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($errno, 5);
+		$this->assertEquals($errno, Err::EMAIL_EXISTS);
 	}
 
 	/**
@@ -385,7 +386,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($errno, 2);
+		$this->assertEquals($errno, Err::MISSING_DICT);
 
 		###
 
@@ -409,7 +410,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
 		extract($core::$body);
 		# cannot reuse email
-		$this->assertEquals($errno, 5);
+		$this->assertEquals($errno, Err::EMAIL_EXISTS);
 
 		###
 
@@ -419,7 +420,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
 		extract($core::$body);
 		# cannot reuse uname
-		$this->assertEquals($errno, 5);
+		$this->assertEquals($errno, Err::EMAIL_EXISTS);
 	}
 
 	/**
@@ -465,7 +466,7 @@ class AdminRouteTest extends TestCase {
 
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
 		extract($core::$body);
-		$this->assertEquals($errno, 2);
+		$this->assertEquals($errno, Err::MISSING_SERVICE_ARGS);
 
 		###
 

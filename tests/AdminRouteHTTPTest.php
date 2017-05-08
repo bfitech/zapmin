@@ -4,6 +4,7 @@
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Common;
 use BFITech\ZapCoreDev\CoreDev;
+use BFITech\ZapAdmin\AdminStoreError as Err;
 
 
 if (!defined('HTDOCS'))
@@ -89,7 +90,7 @@ class AdminRouteHTTPTest extends TestCase {
 	public function test_status() {
 		$this->GET('/status');
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 1);
+		$this->assertEquals($this->body->errno, Err::USERS_NOT_LOGGED_IN);
 		$this->assertEquals($this->body->data, []);
 	}
 
@@ -97,17 +98,17 @@ class AdminRouteHTTPTest extends TestCase {
 		$post = ['uname' => 'xoot', 'usass' => 'xxxx'];
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 3);
+		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
 
 		$post['upass'] = 'xxxx';
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 4);
+		$this->assertEquals($this->body->errno, Err::USERS_NOT_FOUND);
 
 		$post['uname'] = 'root';
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 5);
+		$this->assertEquals($this->body->errno, Err::WRONG_PASSWORD);
 
 		$post['upass'] = 'admin';
 		$this->POST('/login', $post);
@@ -116,14 +117,14 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 1);
+		$this->assertEquals($this->body->errno, Err::USERS_ALREADY_LOGGED_IN);
 	}
 
 	public function test_logout() {
 
 		$this->GET('/logout');
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 1);
+		$this->assertEquals($this->body->errno, Err::USERS_NOT_LOGGED_IN);
 
 		$post = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $post);
@@ -140,7 +141,7 @@ class AdminRouteHTTPTest extends TestCase {
 		$this->assertEquals($this->code, 404);
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 1);
+		$this->assertEquals($this->body->errno, Err::USERS_NOT_LOGGED_IN);
 
 		$post = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $post);
@@ -148,31 +149,31 @@ class AdminRouteHTTPTest extends TestCase {
 		$post = ['pass1' => '1234'];
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 4);
+		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
 
 		$post['pass2'] = '123';
 		# cannot post array as value
 		$post['pass0'] = ['xxx'];
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 4);
+		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
 
 		$post['pass0'] = 'xxx';
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 5);
+		$this->assertEquals($this->body->errno, Err::OLD_PASSWORD_INVALID);
 
 		$post['pass0'] = 'admin';
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 6);
-		$this->assertEquals($this->body->data, 1);
+		$this->assertEquals($this->body->errno, Err::PASSWORD_INVALID);
+		$this->assertEquals($this->body->data, Err::PASSWORD_NOT_SAME);
 
 		$post['pass1'] = '123';
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 6);
-		$this->assertEquals($this->body->data, 2);
+		$this->assertEquals($this->body->errno, Err::PASSWORD_INVALID);
+		$this->assertEquals($this->body->data, Err::PASSWORD_TOO_SHORT);
 
 		$post['pass1'] = '1234';
 		$post['pass2'] = '1234';
@@ -183,7 +184,7 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 3);
+		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
 
 		$post = ['uname' => 'root', 'upass' => '1234'];
 		$this->POST('/login', $post);
@@ -218,17 +219,16 @@ class AdminRouteHTTPTest extends TestCase {
 		$post = ['addname' => 'jack', 'addpass1' => 'qwer'];
 		$this->POST('/register', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 3);
+		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
 
 		$post['addpass2'] = 'qwer';
 		$this->POST('/register', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 3);
+		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
 
 		$post['email'] = '~#%#!';
 		$this->POST('/register', $post);
-		$this->assertEquals($this->body->errno, 5);
-		$this->assertEquals($this->body->data, 0);
+		$this->assertEquals($this->body->errno, Err::INVALID_EMAIL);
 
 		$post['email'] = 'w+t@c.jo';
 		$this->POST('/register', $post);
@@ -240,17 +240,16 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$post['addname'] = 'jonathan';
 		$this->POST('/register', $post);
-		$this->assertEquals($this->body->errno, 5);
-		$this->assertEquals($this->body->data, 1);
+		$this->assertEquals($this->body->errno, Err::EMAIL_EXISTS);
 
 		$post['addname'] = str_repeat('jonathan', 24);
 		$this->POST('/register', $post);
-		$this->assertEquals($this->body->errno, 4);
+		$this->assertEquals($this->body->errno, Err::NAME_TOO_LONG);
 
 		$post['addname'] = 'jonathan';
 		$post['email'] = str_repeat('jonathan', 24) . '@example.org';
 		$this->POST('/register', $post);
-		$this->assertEquals($this->body->errno, 5);
+		$this->assertEquals($this->body->errno, Err::INVALID_EMAIL);
 	}
 
 	public function test_useradd() {
@@ -290,7 +289,7 @@ class AdminRouteHTTPTest extends TestCase {
 		];
 		$this->POST('/useradd', $post);
 		$this->assertEquals($this->code, 403);
-		$this->assertEquals($this->body->errno, 7);
+		$this->assertEquals($this->body->errno, Err::USERS_EXISTS);
 
 		# email exists
 		$post = [
@@ -300,7 +299,7 @@ class AdminRouteHTTPTest extends TestCase {
 		];
 		$this->POST('/useradd', $post);
 		$this->assertEquals($this->code, 403);
-		$this->assertEquals($this->body->errno, 5);
+		$this->assertEquals($this->body->errno, Err::EMAIL_EXISTS);
 	}
 
 	public function test_userdel() {
@@ -401,7 +400,7 @@ class AdminRouteHTTPTest extends TestCase {
 		$post['pass2'] = '1234';
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, 2);
+		$this->assertEquals($this->body->errno, Err::USERS_NOT_FOUND);
 		# end mock
 	}
 

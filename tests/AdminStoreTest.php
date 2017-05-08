@@ -5,6 +5,7 @@ use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapAdmin as za;
+use BFITech\ZapAdmin\AdminStoreError as Err;
 
 
 if (!defined('HTDOCS'))
@@ -99,7 +100,7 @@ class AdminStoreTest extends TestCase {
 
 		# loading user data is forbidden
 		$this->assertEquals(
-			$adm->adm_get_safe_user_data()[0], 1);
+			$adm->adm_get_safe_user_data()[0], Err::USERS_NOT_LOGGED_IN);
 
 		# set an invalid token
 		$adm->adm_set_user_token('invalid token');
@@ -109,11 +110,11 @@ class AdminStoreTest extends TestCase {
 
 		# loading user data is still forbidden
 		$this->assertEquals(
-			$adm->adm_get_safe_user_data()[0], 1);
+			$adm->adm_get_safe_user_data()[0], Err::USERS_NOT_LOGGED_IN);
 
 		# cannot sign out with no valid session
 		$this->assertEquals(
-			$adm->adm_logout()[0], 1);
+			$adm->adm_logout()[0], Err::USERS_NOT_LOGGED_IN);
 	}
 
 	public function test_login() {
@@ -122,22 +123,22 @@ class AdminStoreTest extends TestCase {
 		# invalid post data
 		$args = ['uname' => 'admin'];
 		$this->assertEquals(
-			$adm->adm_login($args)[0], 2);
+			$adm->adm_login($args)[0], Err::MISSING_POST_ARGS);
 
 		# incomplete post data
 		$args = self::postFormatter($args);
 		$this->assertEquals(
-			$adm->adm_login($args)[0], 3);
+			$adm->adm_login($args)[0], Err::MISSING_DICT);
 
 		# invalid user
 		$args['post']['upass'] = '1243';
 		$this->assertEquals(
-			$adm->adm_login($args)[0], 4);
+			$adm->adm_login($args)[0], Err::USERS_NOT_FOUND);
 
 		# invalid password
 		$args['post']['uname'] = 'root';
 		$this->assertEquals(
-			$adm->adm_login($args)[0], 5);
+			$adm->adm_login($args)[0], Err::WRONG_PASSWORD);
 
 		# missing token
 		$this->assertEquals(
@@ -156,7 +157,7 @@ class AdminStoreTest extends TestCase {
 		$adm->adm_status();
 		# re-login will fail
 		$this->assertEquals(
-			$adm->adm_login($args)[0], 1);
+			$adm->adm_login($args)[0], Err::USERS_ALREADY_LOGGED_IN);
 	}
 
 	private function _test_session_expiration_sequence(
@@ -199,8 +200,8 @@ class AdminStoreTest extends TestCase {
 		$this->_test_session_expiration_sequence(
 			$fake_expire_callback);
 		$this->assertEquals(
-			$adm->adm_get_safe_user_data()[0], 1);
-		$this->assertEquals($adm->adm_logout()[0], 1);
+			$adm->adm_get_safe_user_data()[0], Err::USERS_NOT_LOGGED_IN);
+		$this->assertEquals($adm->adm_logout()[0], Err::USERS_NOT_LOGGED_IN);
 
 		# normal login again
 		$this->_test_session_expiration_sequence();
@@ -211,7 +212,7 @@ class AdminStoreTest extends TestCase {
 
 	public function test_logout() {
 		$adm = self::$adm;
-		$this->assertEquals($adm->adm_logout()[0], 1);
+		$this->assertEquals($adm->adm_logout()[0], Err::USERS_NOT_LOGGED_IN);
 		self::loginOK();
 		$this->assertEquals($adm->adm_logout()[0], 0);
 	}
@@ -221,36 +222,36 @@ class AdminStoreTest extends TestCase {
 		# not logged in
 		$args = ['pass1' => '123'];
 		$this->assertEquals(
-			$adm->adm_change_password($args)[0], 1);
+			$adm->adm_change_password($args)[0], Err::USERS_NOT_LOGGED_IN);
 
 		self::loginOK();
 
 		# invalid data
 		$this->assertEquals(
-			$adm->adm_change_password($args)[0], 3);
+			$adm->adm_change_password($args)[0], Err::MISSING_POST_ARGS);
 
 		# incomplete data
 		$args['pass2'] = '1234';
 		$args = self::postFormatter($args);
 		$result = $adm->adm_change_password($args, true);
-		$this->assertEquals($result[0], 4);
+		$this->assertEquals($result[0], Err::MISSING_DICT);
 
 		# wrong old password
 		$args['post']['pass0'] = '1234';
 		$result = $adm->adm_change_password($args, true);
-		$this->assertEquals($result[0], 5);
+		$this->assertEquals($result[0], Err::OLD_PASSWORD_INVALID);
 
 		# new passwords don't verify
 		$args['post']['pass0'] = 'admin';
 		$result = $adm->adm_change_password($args, true);
-		$this->assertEquals($result[0], 6);
-		$this->assertEquals($result[1], 1);
+		$this->assertEquals($result[0], Err::PASSWORD_INVALID);
+		$this->assertEquals($result[1], Err::PASSWORD_NOT_SAME);
 
 		# new password too short
 		$args['post']['pass2'] = '123';
 		$result = $adm->adm_change_password($args, true);
-		$this->assertEquals($result[0], 6);
-		$this->assertEquals($result[1], 2);
+		$this->assertEquals($result[0], Err::PASSWORD_INVALID);
+		$this->assertEquals($result[1], Err::PASSWORD_TOO_SHORT);
 
 		# success
 		$args['post']['pass1'] = '1234';
@@ -282,7 +283,7 @@ class AdminStoreTest extends TestCase {
 
 		# not logged in
 		$r = $adm->adm_change_bio([]);
-		$this->assertEquals($r[0], 1);
+		$this->assertEquals($r[0], Err::USERS_NOT_LOGGED_IN);
 
 		# begin process
 
@@ -292,7 +293,7 @@ class AdminStoreTest extends TestCase {
 
 		# missing arguments post
 		$r = $adm->adm_change_bio( [] );
-		$this->assertEquals($r[0], 2);
+		$this->assertEquals($r[0], Err::MISSING_POST_ARGS);
 
 		# no change
 		$r = $adm->adm_change_bio(['post' => []]);
@@ -320,7 +321,7 @@ class AdminStoreTest extends TestCase {
 		$r = $adm->adm_change_bio([
 			'post' => [
 				'site' => $test_site]]);
-		$this->assertEquals($r[0], 3);
+		$this->assertEquals($r[0], Err::INVALID_SITE_URL);
 
 		# change site url
 		$r = $adm->adm_change_bio([
@@ -337,7 +338,7 @@ class AdminStoreTest extends TestCase {
 
 		# missing post arguments
 		$this->assertEquals(
-			$adm->adm_add_user([], true, true)[0], 3);
+			$adm->adm_add_user([], true, true)[0], Err::MISSING_POST_ARGS);
 
 		$args = ['post' => [
 			'addname' => 'root',
@@ -346,7 +347,7 @@ class AdminStoreTest extends TestCase {
 
 		# user exists
 		$this->assertEquals(
-			$adm->adm_add_user($args, true, true)[0], 7);
+			$adm->adm_add_user($args, true, true)[0], Err::USERS_EXISTS);
 
 		# success
 		$args['post']['addname'] = 'john';
@@ -359,7 +360,7 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($user_data['uname'], 'john');
 
 		$result = $adm->adm_self_add_user($args, true, true);
-		$this->assertEquals($result[0], 1);
+		$this->assertEquals($result[0], Err::USERS_ALREADY_LOGGED_IN);
 
 		$adm->adm_logout();
 
@@ -369,14 +370,13 @@ class AdminStoreTest extends TestCase {
 		# not typing password twice and no email
 		unset($args['post']['addpass2']);
 		$result = $adm->adm_self_add_user($args, true, true);
-		$this->assertEquals($result[0], 3);
+		$this->assertEquals($result[0], Err::MISSING_DICT);
 
 		# invalid email
 		$args['post']['addpass2'] = 'qwer';
 		$args['post']['email'] = '#qwer';
 		$result = $adm->adm_self_add_user($args, true, true);
-		$this->assertEquals($result[0], 5);
-		$this->assertEquals($result[1], 0);
+		$this->assertEquals($result[0], Err::INVALID_EMAIL);
 
 		# success
 		$args['post']['email'] = 'test+bed@example.org';
@@ -386,20 +386,18 @@ class AdminStoreTest extends TestCase {
 		# email exists
 		$args['post']['addname'] = 'jonathan';
 		$result = $adm->adm_self_add_user($args, true, true);
-		$this->assertEquals($result[0], 5);
-		$this->assertEquals($result[1], 1);
+		$this->assertEquals($result[0], Err::EMAIL_EXISTS);
 
 		# uname too long
 		$args['post']['addname'] = str_repeat('jonathan', 24);
 		$this->assertEquals(
-			$adm->adm_self_add_user($args, true, true)[0], 4);
+			$adm->adm_self_add_user($args, true, true)[0], Err::NAME_TOO_LONG);
 
 		# email too long
 		$args['post']['addname'] = 'jonathan';
 		$args['post']['email'] = str_repeat('jonathan', 12) . '@l.co';
 		$result = $adm->adm_self_add_user($args, true, true);
-		$this->assertEquals($result[0], 5);
-		$this->assertEquals($result[1], 0);
+		$this->assertEquals($result[0], Err::INVALID_EMAIL);
 	}
 
 	/**
@@ -414,20 +412,19 @@ class AdminStoreTest extends TestCase {
 
 		# no authn, self-registration disabled
 		$this->assertEquals(
-			$adm->adm_add_user($args, false, false)[0], 2);
+			$adm->adm_add_user($args, false, false)[0], Err::SELF_REGISTER_NOT_ALLOWED);
 
 		# as 'john' with default callback
 		self::loginOK('john', 'asdf');
 		# no authz
 		$result = $adm->adm_add_user($args);
-		$this->assertEquals($result[0], 1);
-		$this->assertEquals($result[1], 1);
+		$this->assertEquals($result[0], Err::USERS_NOT_AUTHORIZED);
 		$adm->adm_logout();
 
 		# as root, with unavailable name
 		self::loginOK();
 		# user exists
-		$this->assertEquals($adm->adm_add_user($args)[0], 7);
+		$this->assertEquals($adm->adm_add_user($args)[0], Err::USERS_EXISTS);
 
 		# as root, with available name
 		$args['post']['addname'] = 'jocelyn';
@@ -454,8 +451,7 @@ class AdminStoreTest extends TestCase {
 		# no authz, doesn't satisfy callback
 		$result = $adm->adm_add_user(
 			$args, false, false, false, $cbf, $cbp);
-		$this->assertEquals($result[0], 1);
-		$this->assertEquals($result[1], 1);
+		$this->assertEquals($result[0], Err::USERS_NOT_AUTHORIZED);
 		$adm->adm_logout();
 
 		# as 'john'
@@ -465,8 +461,8 @@ class AdminStoreTest extends TestCase {
 		# pass authz but password doesn't check out
 		$result = $adm->adm_add_user(
 			$args, false, false, false, $cbf, $cbp);
-		$this->assertEquals($result[0], 6);
-		$this->assertEquals($result[1], 2);
+		$this->assertEquals($result[0], Err::PASSWORD_INVALID);
+		$this->assertEquals($result[1], Err::PASSWORD_TOO_SHORT);
 
 		# as 'john'
 		$args['post']['addpass1'] = 'asdfgh';
@@ -478,12 +474,12 @@ class AdminStoreTest extends TestCase {
 		$args['post']['addname'] = 'john smith';
 		$this->assertEquals(
 			$adm->adm_add_user(
-				$args, false, false, false, $cbf, $cbp), [4, 1]);
+				$args, false, false, false, $cbf, $cbp)[0], Err::NAME_CONTAIN_WHITESPACE);
 		# name starts with plus sign
 		$args['post']['addname'] = '+jacqueline';
 		$this->assertEquals(
 			$adm->adm_add_user(
-				$args, false, false, false, $cbf, $cbp), [4, 2]);
+				$args, false, false, false, $cbf, $cbp)[0], Err::NAME_LEADING_PLUS);
 		$adm->adm_logout();
 
 		# try sign in as 'jonah', no exception thrown
@@ -500,7 +496,7 @@ class AdminStoreTest extends TestCase {
 
 		# cannot list user when not signed in
 		$this->assertEquals(
-			$adm->adm_list_user($args)[1], 1);
+			$adm->adm_list_user($args)[0], Err::USERS_NOT_AUTHORIZED);
 
 		self::loginOK();
 		$user_list = $adm->adm_list_user($args)[1];
@@ -515,17 +511,17 @@ class AdminStoreTest extends TestCase {
 
 		# no authn
 		$this->assertEquals(
-			$adm->adm_delete_user($args)[0], 1);
+			$adm->adm_delete_user($args)[0], Err::USERS_NOT_LOGGED_IN);
 
 		# as 'jonah'
 		self::loginOK('jonah', 'asdfgh');
 		# missing post arguments
 		$this->assertEquals(
-			$adm->adm_delete_user([])[0], 2);
+			$adm->adm_delete_user([])[0], Err::MISSING_POST_ARGS);
 		# with default callback, any user cannot delete another user 
 		# except root
 		$this->assertEquals(
-			$adm->adm_delete_user($args)[0], 3);
+			$adm->adm_delete_user($args)[0], Err::USERS_NOT_AUTHORIZED);
 		# but s/he can self-delete
 		$args['post']['uid'] = $adm->adm_status()['uid'];
 		$this->assertEquals(
@@ -536,7 +532,7 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($adm->adm_login(self::postFormatter([
 			'uname' => 'jonah',
 			'upass' => 'asdfgh',
-		]))[0], 4);
+		]))[0], Err::USERS_NOT_FOUND);
 
 		# with callback
 		$cbf = function($_args) {
@@ -552,11 +548,11 @@ class AdminStoreTest extends TestCase {
 		$cbp = ['uname' => $uname];
 		# user doesn't exist
 		$this->assertEquals(
-			$adm->adm_delete_user($args, $cbf, $cbp)[0], 5);
+			$adm->adm_delete_user($args, $cbf, $cbp)[0], Err::USERS_NOT_FOUND);
 		# cannot delete 'root'
 		$args['post']['uid'] = '1';
 		$this->assertEquals(
-			$adm->adm_delete_user($args, $cbf, $cbp)[0], 4);
+			$adm->adm_delete_user($args, $cbf, $cbp)[0], Err::CANNOT_DELETE_ROOT);
 		# success, delete 'jocelyn' uid=3
 		$args['post']['uid'] = '3';
 		$this->assertEquals(
@@ -578,14 +574,12 @@ class AdminStoreTest extends TestCase {
 
 		# no 'service' in args
 		$result = $adm->adm_self_add_user_passwordless($args);
-		$this->assertEquals($result[0], 2);
-		$this->assertEquals($result[1], 0);
+		$this->assertEquals($result[0], Err::MISSING_SERVICE_ARGS);
 
 		# not enough args
 		$args['service'] = ['uname' => '1234'];
 		$result = $adm->adm_self_add_user_passwordless($args);
-		$this->assertEquals($result[0], 2);
-		$this->assertEquals($result[1], 1);
+		$this->assertEquals($result[0], Err::MISSING_DICT);
 
 		# success
 		$args['service']['uservice'] = 'github';
@@ -643,7 +637,7 @@ class AdminStoreTest extends TestCase {
 		# passwordless login can't change password
 		$args['post']['pass1'] = $args['post']['pass2'] = 'blablabla';
 		$this->assertEquals(
-			$adm->adm_change_password($args)[0], 2);
+			$adm->adm_change_password($args)[0], Err::USERS_NOT_FOUND);
 
 		# check expiration
 		$tnow = $sql->query(sprintf(

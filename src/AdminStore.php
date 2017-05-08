@@ -17,48 +17,48 @@ class AdminStoreError extends \Exception {
 	/** Cannot delete root. */
 	const CANNOT_DELETE_ROOT = 0x0100;
 
-	/** Password Invalid */
+	/** Password Invalid. */
 	const PASSWORD_INVALID = 0x0200;
-	/** Password confirmation not equal with password */
+	/** Password confirmation not equal with password. */
 	const PASSWORD_NOT_SAME = 0x0201;
-	/** Password too short */
+	/** Password too short. */
 	const PASSWORD_TOO_SHORT = 0x0202;
-	/** Old Password Invalid */
+	/** Old password invalid. */
 	const OLD_PASSWORD_INVALID = 0x0203;
-	/** Wrong password */
+	/** Wrong password. */
 	const WRONG_PASSWORD = 0x0204;
 
-	/** Users not loggedin */
+	/** Users not signed in. */
 	const USERS_NOT_LOGGED_IN = 0x03;
-	/** Users already loggedin */
+	/** Users already signed in. */
 	const USERS_ALREADY_LOGGED_IN = 0x0301;
-	/** Users not found */
+	/** Users not found. */
 	const USERS_NOT_FOUND = 0x0302;
-	/** Users not authorized */
+	/** Users not authorized. */
 	const USERS_NOT_AUTHORIZED = 0x0305;
 
-	/** Self-registration is not allowed */
+	/** Self-registration not allowed. */
 	const SELF_REGISTER_NOT_ALLOWED = 0x04;
 
-	/** Missing arguments post */
+	/** Missing arguments post. */
 	const MISSING_POST_ARGS = 0x05;
-	/** Missing arguments service */
+	/** Missing arguments service. */
 	const MISSING_SERVICE_ARGS = 0x0500;
-	/** Missing dict from post args */
+	/** Missing dict from post args. */
 	const MISSING_DICT = 0x0501;
-	/** Invalid site URL */
+	/** Invalid site URL. */
 	const INVALID_SITE_URL = 0x0502;
-	/** Invalid name: too long */
+	/** Invalid name: too long. */
 	const NAME_TOO_LONG = 0x0503;
-	/** Invalid name: contain whitespace */
+	/** Invalid name: contain whitespace. */
 	const NAME_CONTAIN_WHITESPACE = 0x0504;
-	/** Invalid name: leading '+' reservered for passwordless account*/
+	/** Invalid name: leading '+' reserved for passwordless account. */
 	const NAME_LEADING_PLUS = 0x0505;
-	/** Invalid email */
+	/** Invalid email address. */
 	const INVALID_EMAIL = 0x0506;
-	/** email already exists */
+	/** Email already exists. */
 	const EMAIL_EXISTS = 0x0507;
-	/** email already exists */
+	/** User already exists. */
 	const USERS_EXISTS = 0x0508;
 }
 
@@ -153,7 +153,7 @@ abstract class AdminStore {
 
 		$sql::$logger->deactivate();
 		try {
-			$test = $sql->query("SELECT 1 FROM udata LIMIT 1");
+			$sql->query("SELECT 1 FROM udata LIMIT 1");
 			$sql::$logger->activate();
 			if (!$force_create_table)
 				return;
@@ -351,11 +351,10 @@ abstract class AdminStore {
 	}
 
 	private function hash_password($uname, $upass, $usalt) {
-		if (strlen($usalt) > 16) {
-			// @codeCoverageIgnoreStart
+		// @codeCoverageIgnoreStart
+		if (strlen($usalt) > 16)
 			$usalt = substr($usalt, 0, 16);
-			// @codeCoverageIgnoreEnd
-		}
+		// @codeCoverageIgnoreEnd
 		return $this->generate_secret($upass . $uname, $usalt);
 	}
 
@@ -445,7 +444,7 @@ abstract class AdminStore {
 			return [AdminStoreError::MISSING_POST_ARGS];
 		if (!Common::check_idict($args['post'], ['uname', 'upass']))
 			return [AdminStoreError::MISSING_DICT];
-		extract($args['post'], EXTR_SKIP);
+		extract($args['post']);
 
 		$usalt = $this->store->query(
 			"SELECT usalt FROM udata WHERE uname=? LIMIT 1",
@@ -538,11 +537,13 @@ abstract class AdminStore {
 	 * @param bool $with_old_password Whether user should provide
 	 *     valid old password.
 	 */
-	public function adm_change_password($args, $with_old_password=false) {
+	public function adm_change_password(
+		$args, $with_old_password=null
+	) {
 		if (!$this->is_logged_in())
 			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 
-		extract($this->user_data, EXTR_SKIP);
+		extract($this->user_data);
 
 		$logger = $this->logger;
 
@@ -559,8 +560,7 @@ abstract class AdminStore {
 		$post = Common::check_idict($args['post'], $keys);
 		if (!$post)
 			return [AdminStoreError::MISSING_DICT];
-		extract($post, EXTR_SKIP);
-
+		extract($post);
 
 		# check old password if applicable
 		if (
@@ -576,7 +576,8 @@ abstract class AdminStore {
 		if ($verify_password !== 0) {
 			$logger->warning(
 				"Zapmin: chpasswd: new passwd invalid: '$uname'.");
-			return [AdminStoreError::PASSWORD_INVALID, $verify_password];
+			return [AdminStoreError::PASSWORD_INVALID,
+				$verify_password];
 		}
 
 		# update
@@ -650,15 +651,16 @@ abstract class AdminStore {
 	 * @param bool $allow_self_register Whether self-registration is
 	 *     allowed.
 	 * @param bool $email_required Whether email address is mandatory.
-	 * @param function $callback_authz A function that takes one parameter
-	 *     $callback_param to allow registration to proceed. Default to
-	 *     current user being root.
+	 * @param function $callback_authz A function that takes one
+	 *     parameter $callback_param to allow registration to proceed.
+	 *     Defaults to current user being root.
 	 * @param array $callback_param Parameter to pass to
 	 *     `$callback_authz`.
 	 */
 	public function adm_add_user(
-		$args, $pass_twice=false, $allow_self_register=false,
-		$email_required=false, $callback_authz=null, $callback_param=null
+		$args, $pass_twice=null, $allow_self_register=null,
+		$email_required=null, $callback_authz=null,
+		$callback_param=null
 	) {
 		$logger = $this->logger;
 
@@ -697,7 +699,7 @@ abstract class AdminStore {
 		$post = Common::check_idict($args['post'], $keys);
 		if (!$post)
 			return [AdminStoreError::MISSING_DICT];
-		extract($post, EXTR_SKIP);
+		extract($post);
 
 		# check name, allow unicode but not whitespace
 		if (strlen($addname) > 64) {
@@ -786,7 +788,7 @@ abstract class AdminStore {
 	 *     provided.
 	 */
 	public function adm_self_add_user(
-		$args, $pass_twice=false, $email_required=false
+		$args, $pass_twice=null, $email_required=null
 	) {
 		if ($this->is_logged_in())
 			return [AdminStoreError::USERS_ALREADY_LOGGED_IN];
@@ -830,7 +832,7 @@ abstract class AdminStore {
 			['uname', 'uservice']);
 		if (!$service)
 			return [AdminStoreError::MISSING_DICT];
-		extract($service, EXTR_SKIP);
+		extract($service);
 
 		$dbuname = '+' . $uname . ':' . $uservice;
 		$check = $this->store->query(
@@ -882,7 +884,7 @@ abstract class AdminStore {
 	 * @param array $args Dict with key: `uid`.
 	 * @param function $callback_authz A function that takes one
 	 *     parameter `$callback_args` to allow deletion to proceed.
-	 *     Default to current user being root, or self-deletion for
+	 *     Defaults to current user being root, or self-deletion for
 	 *     non-root user.
 	 * @param array $callback_param Parameter to pass to
 	 *     `$callback_authz`.
@@ -898,7 +900,7 @@ abstract class AdminStore {
 			return [AdminStoreError::MISSING_POST_ARGS];
 		if (!Common::check_idict($args['post'], ['uid']))
 			return [AdminStoreError::MISSING_DICT];
-		extract($args['post'], EXTR_SKIP);
+		extract($args['post']);
 
 		if (!$callback_authz) {
 			# default callback
@@ -976,7 +978,7 @@ abstract class AdminStore {
 		if ($ret !== 0)
 			return [AdminStoreError::USERS_NOT_AUTHORIZED];
 
-		extract($args['post'], EXTR_SKIP);
+		extract($args['post']);
 
 		$page = isset($page) ? (int)$page : 0;
 		if ($page < 0)

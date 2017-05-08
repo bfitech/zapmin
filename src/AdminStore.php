@@ -9,8 +9,60 @@ use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQL;
 use BFITech\ZapStore\SQLError;
 
+/**
+ * Error Class
+ */
+class AdminStoreError extends \Exception {
 
-class AdminStoreError extends \Exception {}
+	/** Cannot drop data/tables. */
+	const CANNOT_DROP_DATA = 0x01;
+	/** Cannot delete root. */
+	const CANNOT_DELETE_ROOT = 0x0100;
+
+	/** Password Invalid */
+	const PASSWORD_INVALID = 0x0200;
+	/** Password confirmation not equal with password */
+	const PASSWORD_NOT_SAME = 0x0201;
+	/** Password too short */
+	const PASSWORD_TOO_SHORT = 0x0202;
+	/** Old Password Invalid */
+	const OLD_PASSWORD_INVALID = 0x0203
+	/** Wrong password */
+	const WRONG_PASSWORD = 0x0204;
+
+	/** Users not loggedin */
+	const USERS_NOT_LOGGED_IN = 0x03;
+	/** Users already loggedin */
+	const USERS_ALREADY_LOGGED_IN = 0x0301;
+	/** Users not found */
+	const USERS_NOT_FOUND = 0x0302;
+	/** Users not authorized */
+	const USERS_NOT_AUTHORIZED = 0x0305;
+
+	/** Self-registration is not allowed */
+	const SELF_REGISTER_NOT_ALLOWED = 0x04;
+
+	/** Missing arguments post */
+	const MISSING_POST_ARGS = 0x05;
+	/** Missing arguments service */
+	const MISSING_SERVICE_ARGS = 0x0500;
+	/** Missing dict from post args */
+	const MISSING_DICT = 0x0501;
+	/** Invalid site URL */
+	const INVALID_SITE_URL = 0x0502;
+	/** Invalid name: too long */
+	const NAME_TOO_LONG = 0x0503;
+	/** Invalid name: contain whitespace */
+	const NAME_CONTAIN_WHITESPACE = 0x0504;
+	/** Invalid name: leading '+' reservered for passwordless account*/
+	const NAME_LEADING_PLUS = 0x0505;
+	/** Invalid email */
+	const INVALID_EMAIL = 0x0506;
+	/** email already exists */
+	const EMAIL_EXISTS = 0x0507;
+	/** email already exists */
+	const USERS_EXISTS = 0x0508;
+}
 
 
 /**
@@ -129,7 +181,7 @@ abstract class AdminStore {
 			} catch(SQLError $e) {
 				$msg = "Cannot drop data:" . $e->getMessage();
 				$this->logger->error("Zapmin: sql error: $msg");
-				throw new AdminStoreError($msg);
+				throw new AdminStoreError::CANNOT_DROP_DATA;
 			}
 		}
 
@@ -265,7 +317,7 @@ abstract class AdminStore {
 	 */
 	public function adm_get_safe_user_data($args=null) {
 		if (!$this->is_logged_in())
-			return [1];
+			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 		$data = $this->user_data;
 		foreach (['upass', 'usalt', 'sid', 'token', 'expire'] as $key)
 			unset($data[$key]);
@@ -320,10 +372,10 @@ abstract class AdminStore {
 		$pass2 = trim($pass2);
 		# type twice the same
 		if ($pass1 != $pass2)
-			return 1;
+			return AdminStoreError::PASSWORD_NOT_SAME;
 		# must be longer than 3
 		if (strlen($pass1) < 4)
-			return 2;
+			return AdminStoreError::PASSWORD_TOO_SHORT;
 		return 0;
 	}
 
@@ -389,12 +441,12 @@ abstract class AdminStore {
 		$logger = $this->logger;
 
 		if ($this->is_logged_in())
-			return [1];
+			return [AdminStoreError::USERS_ALREADY_LOGGED_IN];
 
 		if (!isset($args['post']))
-			return [2];
+			return [AdminStoreError::MISSING_POST_ARGS];
 		if (!Common::check_idict($args['post'], ['uname', 'upass']))
-			return [3];
+			return [AdminStoreError::MISSING_DICT];
 		extract($args['post'], EXTR_SKIP);
 
 		$usalt = $this->store->query(
@@ -402,14 +454,14 @@ abstract class AdminStore {
 			[$uname]);
 		if (!$usalt)
 			# user not found
-			return [4];
+			return [AdminStoreError::USERS_NOT_FOUND];
 		$usalt = $usalt['usalt'];
 
 		$udata = $this->match_password($uname, $upass, $usalt);
 		if (!$udata) {
 			# wrong password
 			$logger->warning("Zapmin: login: wrong password: '$uname'.");
-			return [5];
+			return [AdminStoreError::WRONG_PASSWORD];
 		}
 
 		// generate token
@@ -464,7 +516,7 @@ abstract class AdminStore {
 	 */
 	public function adm_logout($args=null) {
 		if (!$this->is_logged_in())
-			return [1];
+			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 		$this->logger->info(sprintf(
 			"Zapmin: logout: OK: '%s'.",
 			$this->user_data['uname']
@@ -490,7 +542,7 @@ abstract class AdminStore {
 	 */
 	public function adm_change_password($args, $with_old_password=false) {
 		if (!$this->is_logged_in())
-			return [1];
+			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 
 		extract($this->user_data, EXTR_SKIP);
 
@@ -498,17 +550,17 @@ abstract class AdminStore {
 
 		if (!$usalt)
 			# passwordless has no salt
-			return [2];
+			return [AdminStoreError::USERS_NOT_FOUND];
 
 		$keys = ['pass1', 'pass2'];
 		if ($with_old_password)
 			$keys[] = 'pass0';
 
 		if (!isset($args['post']))
-			return [3];
+			return [AdminStoreError::MISSING_POST_ARGS];
 		$post = Common::check_idict($args['post'], $keys);
 		if (!$post)
-			return [4];
+			return [AdminStoreError::MISSING_DICT];
 		extract($post, EXTR_SKIP);
 
 
@@ -519,14 +571,14 @@ abstract class AdminStore {
 		) {
 			$logger->warning(
 				"Zapmin: chpasswd: old passwd invalid: '$uname'.");
-			return [5];
+			return [AdminStoreError::OLD_PASSWORD_INVALID];
 		}
 
 		$verify_password = $this->verify_password($pass1, $pass2);
 		if ($verify_password !== 0) {
 			$logger->warning(
 				"Zapmin: chpasswd: new passwd invalid: '$uname'.");
-			return [6, $verify_password];
+			return [AdminStoreError::PASSWORD_INVALID, $verify_password];
 		}
 
 		# update
@@ -548,10 +600,10 @@ abstract class AdminStore {
 	 */
 	public function adm_change_bio($args) {
 		if (!$this->is_logged_in())
-			return [1];
+			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 
 		if (!isset($args['post']))
-			return [2];
+			return [AdminStoreError::MISSING_POST_ARGS];
 		$post = $args['post'];
 		$vars = [];
 		foreach (['fname', 'site'] as $key) {
@@ -572,7 +624,7 @@ abstract class AdminStore {
 		if (isset($site) && !self::verify_site_url($site)) {
 			$this->logger->warning(
 				"Zapmin: chbio: site URL invalid: '$site'.");
-			return [3];
+			return [AdminStoreError::INVALID_SITE_URL];
 		}
 
 		$this->store->update('udata', $vars, [
@@ -626,19 +678,19 @@ abstract class AdminStore {
 			}
 			$ret = $callback_authz($callback_param);
 			if ($ret !== 0)
-				return [1, $ret];
+				return [AdminStoreError::USERS_NOT_AUTHORIZED];
 		} else {
 			# not signed in
 			if (!$allow_self_register)
 				# self-registration not allowed
-				return [2];
+				return [AdminStoreError::SELF_REGISTER_NOT_ALLOWED];
 			# @note Other constraint such as captcha happens outside
 			#     of this class.
 		}
 
 		# check vars
 		if (!isset($args['post']))
-			return [3, 0];
+			return [AdminStoreError::MISSING_POST_ARGS];
 		$keys = ['addname', 'addpass1'];
 		if ($pass_twice)
 			$keys[] = 'addpass2';
@@ -646,7 +698,7 @@ abstract class AdminStore {
 			$keys[] = 'email';
 		$post = Common::check_idict($args['post'], $keys);
 		if (!$post)
-			return [3, 1];
+			return [AdminStoreError::MISSING_DICT];
 		extract($post, EXTR_SKIP);
 
 		# check name, allow unicode but not whitespace
@@ -654,21 +706,21 @@ abstract class AdminStore {
 			# max 64 chars
 			$logger->warning(
 				"Zapmin: usradd: name invalid: '$addname'.");
-			return [4, 0];
+			return [AdminStoreError::NAME_TOO_LONG];
 		}
 		foreach([" ", "\n", "\r", "\t"] as $white) {
 			# never allow whitespace in the middle
 			if (strpos($addname, $white) !== false) {
 				$logger->warning(
 					"Zapmin: usradd: name invalid: '$addname'.");
-				return [4, 1];
+				return [AdminStoreError::NAME_CONTAIN_WHITESPACE];
 			}
 		}
 		if ($addname[0] == '+') {
 			# leading '+' is reserved for passwordless accounts
 			$logger->warning(
 				"Zapmin: usradd: name invalid: '$addname'.");
-			return [4, 2];
+			return [AdminStoreError::NAME_LEADING_PLUS];
 		}
 
 		if ($email_required) {
@@ -676,7 +728,7 @@ abstract class AdminStore {
 				$logger->warning(sprintf(
 					"Zapmin: usradd: email invalid: '%s' <- '%s'.",
 					$addname, $email));
-				return [5, 0];
+				return [AdminStoreError::INVALID_EMAIL];
 			}
 			if ($this->store->query(
 				"SELECT uid FROM udata WHERE email=? LIMIT 1",
@@ -685,7 +737,7 @@ abstract class AdminStore {
 				$logger->warning(sprintf(
 					"Zapmin: usradd: email exists: '%s' <- '%s'.",
 					$addname, $email));
-				return [5, 1];
+				return [AdminStoreError::EMAIL_EXISTS];
 			}
 		}
 
@@ -695,7 +747,7 @@ abstract class AdminStore {
 		if ($verify_password !== 0) {
 			$logger->warning(
 				"Zapmin: usradd: passwd invalid: '$addname'.");
-			return [6, $verify_password];
+			return [AdminStoreError::PASSWORD_INVALID, $verify_password];
 		}
 
 		# hashes generation
@@ -715,7 +767,7 @@ abstract class AdminStore {
 		} catch(SQLError $e) {
 			# user exists
 			$logger->info("Zapmin: usradd: user exists: '$addname'.");
-			return [7];
+			return [AdminStoreError::USERS_EXISTS];
 		}
 
 		# success
@@ -739,7 +791,7 @@ abstract class AdminStore {
 		$args, $pass_twice=false, $email_required=false
 	) {
 		if ($this->is_logged_in())
-			return [1];
+			return [AdminStoreError::USERS_ALREADY_LOGGED_IN];
 		return $this->adm_add_user(
 			$args, $pass_twice, true, $email_required);
 	}
@@ -771,15 +823,15 @@ abstract class AdminStore {
 	 */
 	public function adm_self_add_user_passwordless($args) {
 		if ($this->is_logged_in())
-			return [1];
+			return [AdminStoreError::USERS_ALREADY_LOGGED_IN];
 
 		# check vars
 		if (!isset($args['service']))
-			return [2, 0];
+			return [AdminStoreError::MISSING_SERVICE_ARGS];
 		$service = Common::check_idict($args['service'],
 			['uname', 'uservice']);
 		if (!$service)
-			return [2, 1];
+			return [AdminStoreError::MISSING_DICT];
 		extract($service, EXTR_SKIP);
 
 		$dbuname = '+' . $uname . ':' . $uservice;
@@ -841,13 +893,13 @@ abstract class AdminStore {
 		$args, $callback_authz=null, $callback_param=null
 	) {
 		if (!$this->is_logged_in())
-			return [1];
+			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 		$user_data = $this->user_data;
 
 		if (!isset($args['post']))
-			return [2];
+			return [AdminStoreError::MISSING_POST_ARGS];
 		if (!Common::check_idict($args['post'], ['uid']))
-			return [2];
+			return [AdminStoreError::MISSING_DICT];
 		extract($args['post'], EXTR_SKIP);
 
 		if (!$callback_authz) {
@@ -866,11 +918,11 @@ abstract class AdminStore {
 		}
 		$ret = $callback_authz($callback_param);
 		if ($ret !== 0)
-			return [3, $ret];
+			return [AdminStoreError::USERS_NOT_AUTHORIZED];
 
 		# cannot delete root
 		if ($uid == 1)
-			return [4];
+			return [AdminStoreError::CANNOT_DELETE_ROOT];
 
 		if (!$this->store->query(
 			"SELECT uid FROM udata WHERE uid=? LIMIT 1",
@@ -881,7 +933,7 @@ abstract class AdminStore {
 				"Zapmin: usrdel: not found: uid=%s.",
 				$uid
 			));
-			return [5];
+			return [AdminStoreError::USERS_NOT_FOUND];
 		}
 
 		# delete user data and its related session history via
@@ -924,7 +976,7 @@ abstract class AdminStore {
 		}
 		$ret = $callback_authz($callback_param);
 		if ($ret !== 0)
-			return [1, $ret];
+			return [AdminStoreError::USERS_NOT_AUTHORIZED];
 
 		extract($args['post'], EXTR_SKIP);
 

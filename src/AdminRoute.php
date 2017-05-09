@@ -34,7 +34,6 @@ class AdminRoute extends AdminStore {
 	public $core = null;
 
 	private $token_name = null;
-	private $token_value = null;
 
 	/**
 	 * Constructor.

@@ -7,6 +7,7 @@ use BFITech\ZapCoreDev\RouterDev as Router;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapAdmin\AdminRouteDefault;
 use BFITech\ZapAdmin\AdminStoreError as Err;
+use BFITech\ZapAdmin\AdminRouteError;
 
 
 if (!defined('HTDOCS'))
@@ -78,6 +79,15 @@ class AdminRouteTest extends TestCase {
 		$adm->core->shutdown();
 
 		unlink($logfile);
+
+		# route_prefix no longer works
+		try {
+			new AdminRouteDefault([
+				'dbtype' => 'sqlite3',
+				'dbname' => ':memory:',
+				'route_prefix' => '/usr',
+			], $core, null, $logger);
+		} catch(AdminRouteError $e){}
 	}
 
 	private function make_router($store=null) {

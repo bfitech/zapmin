@@ -45,7 +45,8 @@ class AdminRoute extends AdminStore {
 	 * @param string $shutdown Core shutdown function switch.
 	 * @param array $dbargs Database connection parameter.
 	 * @param int $expiration Expiration interval.
-	 * @param bool $force_create_table Whether overwriting tables is allowed.
+	 * @param bool $force_create_table Whether overwriting tables is
+	 *     allowed.
 	 * @param string $token_name Name of authorization token. Defaults
 	 *     to 'zapmin'.
 	 * @param Router $core_instance Use this core instance instead of
@@ -59,14 +60,13 @@ class AdminRoute extends AdminStore {
 	public function __construct(
 		$home_or_kwargs=null, $host=null, $shutdown=true,
 		$dbargs=[], $expiration=null, $force_create_table=false,
-		$token_name=null, Router $core_instance=null, 
+		$token_name=null, Router $core_instance=null,
 		SQL $store_instance=null, Logger $logger_instance=null
 	) {
 		if (is_array($home_or_kwargs)) {
 			if (isset($home_or_kwargs['route_prefix']))
 				throw new AdminRouteError(
-					"'route_prefix' param has been deprecated", 1);
-				
+					"'route_prefix' param has been removed.", 1);
 			extract(Common::extract_kwargs($home_or_kwargs, [
 				'home' => null,
 				'host' => null,

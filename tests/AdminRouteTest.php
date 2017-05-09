@@ -57,15 +57,16 @@ class AdminRouteTest extends TestCase {
 
 		# let's not use kwargs for a change, see 'prefix'
 		# parameter and match it against REQUEST_URI
-		$adm = new AdminRouteDefault('/ignored', null, false, [
+		$prefix = '/usr';
+		$adm = new AdminRouteDefault($prefix . '/ignored', null, false, [
 			'dbtype' => 'sqlite3',
 			'dbname' => ':memory:',
-			], 3600, false, 'hello_world', '/usr',
+			], 3600, false, 'hello_world',
 			$core, null, $logger);
 
 		$this->assertEquals($adm->adm_get_token_name(), 'hello_world');
 
-		$adm->route('/test', function($args) use($adm){
+		$adm->route($prefix . '/test', function($args) use($adm){
 			$this->assertEquals(
 				$args['cookie']['hello_world'], 'test');
 			echo "HELLO, FRIEND";

@@ -9,6 +9,10 @@ use BFITech\ZapCore\Logger;
 use BFITech\ZapCore\Router;
 use BFITech\ZapStore\SQL;
 
+/**
+ * Error Class
+ */
+class AdminRouteError extends \Exception{}
 
 /**
  * AdminRoute class.
@@ -29,7 +33,6 @@ class AdminRoute extends AdminStore {
 	 */
 	public $core = null;
 
-	private $prefix = null;
 	private $token_name = null;
 	private $token_value = null;
 
@@ -46,7 +49,6 @@ class AdminRoute extends AdminStore {
 	 * @param bool $force_create_table Whether overwriting tables is allowed.
 	 * @param string $token_name Name of authorization token. Defaults
 	 *     to 'zapmin'.
-	 * @param string $route_prefix Route prefix.
 	 * @param Router $core_instance Use this core instance instead of
 	 *     instantiating a new one.
 	 * @param SQL $store_instance Use this store instance instead of
@@ -58,11 +60,14 @@ class AdminRoute extends AdminStore {
 	public function __construct(
 		$home_or_kwargs=null, $host=null, $shutdown=true,
 		$dbargs=[], $expiration=null, $force_create_table=false,
-		$token_name=null, $route_prefix=null,
-		Router $core_instance=null, SQL $store_instance=null,
-		Logger $logger_instance=null
+		$token_name=null, Router $core_instance=null, 
+		SQL $store_instance=null, Logger $logger_instance=null
 	) {
 		if (is_array($home_or_kwargs)) {
+			if (isset($home_or_kwargs['route_prefix']))
+				throw new AdminRouteError(
+					"'route_prefix' param has been deprecated", 1);
+				
 			extract(Common::extract_kwargs($home_or_kwargs, [
 				'home' => null,
 				'host' => null,
@@ -71,7 +76,6 @@ class AdminRoute extends AdminStore {
 				'expiration' => null,
 				'force_create_table' => false,
 				'token_name' => null,
-				'route_prefix' => null,
 				'core_instance' => null,
 				'store_instance' => null,
 				'logger_instance' => null,
@@ -93,17 +97,6 @@ class AdminRoute extends AdminStore {
 		if (!$token_name)
 			$token_name = 'zapmin';
 		$this->token_name = $token_name;
-
-		$this->prefix = $this->verify_prefix($route_prefix);
-	}
-
-	private function verify_prefix($prefix) {
-		if (!$prefix)
-			return null;
-		$prefix = trim($prefix, '/');
-		if (!$prefix)
-			return null;
-		return '/' . $prefix;
 	}
 
 	/**
@@ -127,8 +120,6 @@ class AdminRoute extends AdminStore {
 	 * @param string|array $method Router request method.
 	 */
 	public function route($path, $callback, $method='GET') {
-		if ($this->prefix)
-			$path = $this->prefix . $path;
 		$this->core->route($path, function($args) use($callback){
 			# set token if available
 			if (isset($args['cookie'][$this->token_name])) {

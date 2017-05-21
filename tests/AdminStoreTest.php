@@ -14,6 +14,7 @@ if (!defined('HTDOCS'))
 
 class AdminStore extends za\AdminStore {}
 
+
 class AdminStoreTest extends TestCase {
 
 	protected static $sql;
@@ -95,10 +96,10 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($adm->adm_get_expiration(), 3600 * 2);
 
 		# working on invalid connection
-		$adm = new AdminStore($sql, null, null, $logger);
+		$adm = new AdminStore($sql, $logger);
 		$sql->close();
 		try {
-			$adm = new AdminStore($sql, null, null, $logger);
+			$adm = new AdminStore($sql, $logger);
 		} catch(za\AdminStoreError $e) {}
 
 		unlink($dbfile);
@@ -117,7 +118,7 @@ class AdminStoreTest extends TestCase {
 		$sql = new SQLite3(['dbname' => ':memory:'], $logger);
 
 		$open_adm = function($drop=null) use($sql, $logger) {
-			$_adm = (new AdminStore($sql, null, null, $logger));
+			$_adm = (new AdminStore($sql, $logger));
 			if ($drop)
 				$_adm->config('force_create_table', true);
 			return $_adm->init();

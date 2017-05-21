@@ -13,13 +13,11 @@ namespace BFITech\ZapAdmin;
  * @code
  * # index.php
  *
- * use BFITech\ZapAdmin as za;
- * $adm = new za\AdminRouteDefault([
- *   'dbargs' => [
- *     'dbtype' => 'sqlite3',
- *     'dbname' => '/tmp/zapmin.sq3',
- *   ]
- * ]);
+ * use BFITech\ZapStore\SQLite3;
+ * use BFITech\ZapAdmin\AdminRouteDefault;
+ *
+ * $store = new SQLite3(['dbname' => '/tmp/zapmin.sq3']);
+ * $adm = new AdminRouteDefault($store);
  * $adm->route('/status', [$adm, 'route_status'], 'GET');
  *
  * # run it with something like `php -S 0.0.0.0:8000`

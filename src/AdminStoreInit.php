@@ -37,6 +37,8 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	protected $user_token = null;
 	/** User data. */
 	protected $user_data = null;
+	/** Session token name, used by router. */
+	protected $token_name = 'zapmin';
 
 	private $force_create_table = false;
 	private $initialized = false;
@@ -45,14 +47,11 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 * Constructor.
 	 *
 	 * @param SQL $store SQL instance.
-	 * @param int $expiration Deprecated.
-	 * @param bool $force_create_table Deprecated.
 	 * @param Logger $logger Logger instance.
 	 * @param RedisConn $redis RedisConn instance.
 	 */
 	public function __construct(
-		SQL $store, $expiration=null, $force_create_table=null,
-		Logger $logger=null, RedisConn $redis=null
+		SQL $store, Logger $logger=null, RedisConn $redis=null
 	) {
 		$this->logger = $logger ? $logger : new Logger();
 
@@ -74,6 +73,9 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 			case 'expiration':
 			case 'byway_expiration':
 				$this->$key = $this->store_check_expiration($val);
+				break;
+			case 'token_name':
+				$this->token_name = rawurlencode($val);
 				break;
 			case 'force_create_table':
 				$this->force_create_table = (bool)$val;

@@ -8,17 +8,14 @@ use BFITech\ZapCore\Common;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapCore\Router;
 use BFITech\ZapStore\SQL;
+use BFITech\ZapStore\RedisConn;
 
-/**
- * Error Class
- */
-class AdminRouteError extends \Exception{}
 
 /**
  * AdminRoute class.
  *
  * This is a thin layer than glues router and storage together.
- * Subclassess extends from this instead of abstract AdminStore.
+ * Subclassess extend this instead of abstract AdminStore.
  *
  * @see AdminRouteDefault for limited example.
  */
@@ -27,92 +24,28 @@ class AdminRoute extends AdminStore {
 	/**
 	 * Core instance.
 	 *
-	 * Subclasses are expected to collect HTTP variables with this. This
-	 * is no longer static to allow user to easily change different
-	 * router in subclasses.
+	 * Subclasses are expected to collect HTTP variables with this.
 	 */
 	public $core = null;
-
-	private $token_name = null;
 
 	/**
 	 * Constructor.
 	 *
-	 * To use a patched core, use $core_instance parameter.
-	 *
-	 * @param string $home_or_kwargs Core home or kwargs.
-	 * @param string $host Core host.
-	 * @param string $shutdown Core shutdown function switch.
-	 * @param array $dbargs Database connection parameter.
-	 * @param int $expiration Expiration interval.
-	 * @param bool $force_create_table Whether overwriting tables is
-	 *     allowed.
-	 * @param string $token_name Name of authorization token. Defaults
-	 *     to 'zapmin'.
-	 * @param Router $core_instance Use this core instance instead of
-	 *     instantiating a new one.
-	 * @param SQL $store_instance Use this store instance instead of
-	 *     instantiating a new one.
-	 * @param Logger $logger_instance Logging service.
-	 *
-	 * @todo Simplify parameters in upcoming minor release.
+	 * @param Router $core Router instance.
+	 * @param SQL $store SQL instance.
+	 * @param Logger $logger Logger instance.
+	 * @param RedisConn $redis Redis instance.
 	 */
 	public function __construct(
-		$home_or_kwargs=null, $host=null, $shutdown=true,
-		$dbargs=[], $expiration=null, $force_create_table=false,
-		$token_name=null, Router $core_instance=null,
-		SQL $store_instance=null, Logger $logger_instance=null
+		Router $core, SQL $store, Logger $logger=null,
+		RedisConn $redis=null
 	) {
-		if (is_array($home_or_kwargs)) {
-			if (isset($home_or_kwargs['route_prefix']))
-				throw new AdminRouteError(
-					"'route_prefix' param has been removed.", 1);
-			extract(Common::extract_kwargs($home_or_kwargs, [
-				'home' => null,
-				'host' => null,
-				'shutdown' => true,
-				'dbargs' => [],
-				'expiration' => null,
-				'force_create_table' => false,
-				'token_name' => null,
-				'core_instance' => null,
-				'store_instance' => null,
-				'logger_instance' => null,
-			]));
-		} else {
-			$home = $home_or_kwargs;
-		}
-
-		if (!$logger_instance)
-			$logger_instance = new Logger();
-		$this->core = $core_instance ? $core_instance
-			: new Router($home, $host, $shutdown, $logger_instance);
-		$store = $store_instance ? $store_instance
-			: new SQL($dbargs, $logger_instance);
-
-		parent::__construct($store, $expiration,
-			$force_create_table, $logger_instance);
-
-		if (!$token_name)
-			$token_name = 'zapmin';
-		$this->token_name = $token_name;
+		$this->core = $core;
+		parent::__construct($store, $logger, $redis);
 	}
 
 	/**
-	 * Safely retrieve authentication token name.
-	 *
-	 * Useful for e.g. setting cookie name or HTTP request header
-	 * on the client side.
-	 *
-	 * @note This doesn't belong in AdminStore which cares about
-	 *     token value but not token name.
-	 */
-	public function adm_get_token_name() {
-		return $this->token_name;
-	}
-
-	/**
-	 * Standard wrapper for Route::route().
+	 * Standard wrapper for Router::route.
 	 *
 	 * @param string $path Router path.
 	 * @param callable $callback Router callback.

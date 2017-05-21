@@ -31,11 +31,7 @@ $store = new zs\SQLite3([
 	'dbname' => $dbname,
 ], $logger);
 
-$adm = new za\AdminRouteDefault([
-	'core_instance' => $core,
-	'store_instance' => $store,
-	'logger_instance' => $logger,
-]);
+$adm = new za\AdminRouteDefault($core, $store, $logger);
 
 $adm->route('/',         [$adm, 'route_home'],     'GET');
 $adm->route('/status',   [$adm, 'route_status'],   'GET');

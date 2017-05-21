@@ -42,52 +42,36 @@ class AdminRouteTest extends TestCase {
 	}
 
 	public function test_constructor() {
-		# must fake these earlier because Router will
-		# process it immediately upon instantiation
 		$_SERVER['REQUEST_URI'] = '/usr/test';
+		$_COOKIE['hello_world'] = 'test';
 
 		$logfile = HTDOCS . '/zapmin-test-route-constructor.log';
 		$logger = new Logger(Logger::ERROR, $logfile);
 
-		# must use this patched Router to silent output
-		$core = new Router(null, null, false, $logger);
+		$core = (new Router())
+			->config('home', '/usr')
+			->config('shutdown', false)
+			->config('logger', $logger);
 
-		# other fake HTTP variables can wait after Router
-		# instantiation
-		$_COOKIE['hello_world'] = 'test';
+		$store = new SQLite3(['dbname' => ':memory:']);
 
-		# let's not use kwargs for a change, see 'prefix'
-		# parameter and match it against REQUEST_URI
-		$prefix = '/usr';
-		$adm = new AdminRouteDefault($prefix . '/ignored', null, false, [
-			'dbtype' => 'sqlite3',
-			'dbname' => ':memory:',
-			], 3600, false, 'hello_world',
-			$core, null, $logger);
+		$adm = new AdminRouteDefault($core, $store, $logger);
+		$adm->config('token_name', 'hello_world');
 
 		$this->assertEquals($adm->adm_get_token_name(), 'hello_world');
 
-		$adm->route($prefix . '/test', function($args) use($adm){
+		$adm->route('/test', function($args) use($adm){
 			$this->assertEquals(
 				$args['cookie']['hello_world'], 'test');
 			echo "HELLO, FRIEND";
 		}, 'GET');
 		$this->assertEquals('HELLO, FRIEND', $core::$body_raw);
 
-		# since there's a matched route, calling shutdown functions
+		# since there's a matched route, calling shutdown manually
 		# will take no effect
 		$adm->core->shutdown();
 
 		unlink($logfile);
-
-		# route_prefix no longer works
-		try {
-			new AdminRouteDefault([
-				'dbtype' => 'sqlite3',
-				'dbname' => ':memory:',
-				'route_prefix' => '/usr',
-			], $core, null, $logger);
-		} catch(AdminRouteError $e){}
 	}
 
 	private function make_router($store=null) {
@@ -96,12 +80,8 @@ class AdminRouteTest extends TestCase {
 				['dbname' => ':memory:'], self::$logger);
 		# use new instance on every matching mock HTTP request
 		$core = new Router(null, null, false, self::$logger);
-		return new AdminRouteDefault([
-			'token_name' => 'test-zapmin',
-			'core_instance' => $core,
-			'store_instance' => $store,
-			'logger_instance' => self::$logger,
-		]);
+		return (new AdminRouteDefault($core, $store, self::$logger))
+			->config('token_name', 'test-zapmin');
 	}
 
 	/**

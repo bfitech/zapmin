@@ -85,6 +85,8 @@ class AdminStoreTest extends TestCase {
 
 		# deinit, expiration goes back to default
 		$adm->deinit();
+		# calling deinit repeatedly has no effect
+		$adm->deinit();
 		$this->assertEquals($adm->adm_get_expiration(), 3600 * 2);
 
 		# working on invalid connection

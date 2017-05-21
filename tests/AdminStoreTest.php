@@ -471,7 +471,8 @@ class AdminStoreTest extends TestCase {
 
 		# no authn, self-registration disabled
 		$this->assertEquals(
-			$adm->adm_add_user($args, false, false)[0], Err::SELF_REGISTER_NOT_ALLOWED);
+			$adm->adm_add_user($args, false, false)[0],
+			Err::SELF_REGISTER_NOT_ALLOWED);
 
 		# as 'john' with default callback
 		self::loginOK('john', 'asdf');
@@ -483,7 +484,8 @@ class AdminStoreTest extends TestCase {
 		# as root, with unavailable name
 		self::loginOK();
 		# user exists
-		$this->assertEquals($adm->adm_add_user($args)[0], Err::USERS_EXISTS);
+		$this->assertEquals($adm->adm_add_user($args)[0],
+			Err::USERS_EXISTS);
 
 		# as root, with available name
 		$args['post']['addname'] = 'jocelyn';
@@ -533,12 +535,18 @@ class AdminStoreTest extends TestCase {
 		$args['post']['addname'] = 'john smith';
 		$this->assertEquals(
 			$adm->adm_add_user(
-				$args, false, false, false, $cbf, $cbp)[0], Err::NAME_CONTAIN_WHITESPACE);
+				$args, false, false, false, $cbf, $cbp)[0],
+				Err::NAME_CONTAIN_WHITESPACE);
 		# name starts with plus sign
 		$args['post']['addname'] = '+jacqueline';
 		$this->assertEquals(
 			$adm->adm_add_user(
-				$args, false, false, false, $cbf, $cbp)[0], Err::NAME_LEADING_PLUS);
+				$args, false, false, false, $cbf, $cbp)[0],
+				Err::NAME_LEADING_PLUS);
+		# add 'jessica'
+		$args['post']['addname'] = 'jessica';
+		$adm->adm_add_user($args, false, false, false, $cbf, $cbp);
+		# sign out
 		$adm->adm_logout();
 
 		# try sign in as 'jonah', no exception thrown
@@ -558,9 +566,22 @@ class AdminStoreTest extends TestCase {
 			$adm->adm_list_user($args)[0], Err::USERS_NOT_AUTHORIZED);
 
 		self::loginOK();
+
+		# check number of users
+		$user_count= $adm->store->query(
+			"SELECT count(uid) AS count FROM udata"
+			)['count'];
 		$user_list = $adm->adm_list_user($args)[1];
-		# so far we have 5 users
-		$this->assertEquals(count($user_list), 5);
+		$this->assertEquals(count($user_list), $user_count);
+
+		# root can delete anyone except herself
+		$jessica_uid = $adm->store->query(
+			"SELECT uid FROM udata WHERE uname=? LIMIT 1",
+			['jessica'])['uid'];
+		$args['post']['uid'] = $jessica_uid;
+		$this->assertEquals(
+			$adm->adm_delete_user($args)[0], 0);
+
 		$adm->adm_logout();
 
 		# create uid arrays
@@ -577,7 +598,7 @@ class AdminStoreTest extends TestCase {
 		# missing post arguments
 		$this->assertEquals(
 			$adm->adm_delete_user([])[0], Err::MISSING_POST_ARGS);
-		# with default callback, any user cannot delete another user 
+		# with default callback, any user cannot delete another user
 		# except root
 		$this->assertEquals(
 			$adm->adm_delete_user($args)[0], Err::USERS_NOT_AUTHORIZED);
@@ -624,6 +645,7 @@ class AdminStoreTest extends TestCase {
 		} catch (Exception $e) {
 			$this->assertEquals($adm->adm_status(), null);
 		}
+
 	}
 
 	public function test_self_register_passwordless() {

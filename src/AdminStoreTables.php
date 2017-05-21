@@ -49,15 +49,15 @@ class AdminStoreTables {
 			"DROP TABLE IF EXISTS udata",
 			"DROP TABLE IF EXISTS meta",
 		] as $drop) {
+			// @codeCoverageIgnoreStart
 			try {
 				self::$sql->query_raw($drop);
 			} catch(SQLError $e) {
-				// @codeCoverageIgnoreStart
 				$msg = "Cannot drop data:" . $e->getMessage();
 				self::$logger->error("Zapmin: sql error: $msg");
 				throw new AdminStoreError($msg);
-				// @codeCoverageIgnoreEnd
 			}
+			// @codeCoverageIgnoreEnd
 		}
 	}
 

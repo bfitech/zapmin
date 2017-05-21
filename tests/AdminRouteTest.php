@@ -149,7 +149,7 @@ class AdminRouteTest extends TestCase {
 		extract($core::$body);
 
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, Err::USERS_NOT_LOGGED_IN);
+		$this->assertEquals($errno, Err::USER_NOT_LOGGED_IN);
 
 		###
 
@@ -181,7 +181,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, Err::MISSING_DICT);
+		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
 
 		###
 
@@ -215,7 +215,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, Err::MISSING_DICT);
+		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
 
 		###
 
@@ -259,7 +259,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, Err::INVALID_SITE_URL);
+		$this->assertEquals($errno, Err::SITEURL_INVALID);
 
 		###
 
@@ -296,7 +296,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, Err::MISSING_DICT);
+		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
 
 		###
 
@@ -331,7 +331,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($errno, Err::MISSING_DICT);
+		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
 
 		###
 
@@ -377,7 +377,7 @@ class AdminRouteTest extends TestCase {
 		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
 		extract($core::$body);
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($errno, Err::MISSING_DICT);
+		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
 
 		###
 
@@ -457,7 +457,7 @@ class AdminRouteTest extends TestCase {
 
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
 		extract($core::$body);
-		$this->assertEquals($errno, Err::MISSING_SERVICE_ARGS);
+		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
 
 		###
 

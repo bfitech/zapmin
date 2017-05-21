@@ -90,7 +90,7 @@ class AdminRouteHTTPTest extends TestCase {
 	public function test_status() {
 		$this->GET('/status');
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::USERS_NOT_LOGGED_IN);
+		$this->assertEquals($this->body->errno, Err::USER_NOT_LOGGED_IN);
 		$this->assertEquals($this->body->data, []);
 	}
 
@@ -98,12 +98,12 @@ class AdminRouteHTTPTest extends TestCase {
 		$post = ['uname' => 'xoot', 'usass' => 'xxxx'];
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
+		$this->assertEquals($this->body->errno, Err::DATA_INCOMPLETE);
 
 		$post['upass'] = 'xxxx';
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::USERS_NOT_FOUND);
+		$this->assertEquals($this->body->errno, Err::USER_NOT_FOUND);
 
 		$post['uname'] = 'root';
 		$this->POST('/login', $post);
@@ -117,14 +117,14 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::USERS_ALREADY_LOGGED_IN);
+		$this->assertEquals($this->body->errno, Err::USER_ALREADY_LOGGED_IN);
 	}
 
 	public function test_logout() {
 
 		$this->GET('/logout');
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::USERS_NOT_LOGGED_IN);
+		$this->assertEquals($this->body->errno, Err::USER_NOT_LOGGED_IN);
 
 		$post = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $post);
@@ -141,7 +141,7 @@ class AdminRouteHTTPTest extends TestCase {
 		$this->assertEquals($this->code, 404);
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::USERS_NOT_LOGGED_IN);
+		$this->assertEquals($this->body->errno, Err::USER_NOT_LOGGED_IN);
 
 		$post = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $post);
@@ -149,14 +149,14 @@ class AdminRouteHTTPTest extends TestCase {
 		$post = ['pass1' => '1234'];
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
+		$this->assertEquals($this->body->errno, Err::DATA_INCOMPLETE);
 
 		$post['pass2'] = '123';
 		# cannot post array as value
 		$post['pass0'] = ['xxx'];
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
+		$this->assertEquals($this->body->errno, Err::DATA_INCOMPLETE);
 
 		$post['pass0'] = 'xxx';
 		$this->POST('/chpasswd', $post);
@@ -184,7 +184,7 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
+		$this->assertEquals($this->body->errno, Err::DATA_INCOMPLETE);
 
 		$post = ['uname' => 'root', 'upass' => '1234'];
 		$this->POST('/login', $post);
@@ -219,16 +219,16 @@ class AdminRouteHTTPTest extends TestCase {
 		$post = ['addname' => 'jack', 'addpass1' => 'qwer'];
 		$this->POST('/register', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
+		$this->assertEquals($this->body->errno, Err::DATA_INCOMPLETE);
 
 		$post['addpass2'] = 'qwer';
 		$this->POST('/register', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::MISSING_DICT);
+		$this->assertEquals($this->body->errno, Err::DATA_INCOMPLETE);
 
 		$post['email'] = '~#%#!';
 		$this->POST('/register', $post);
-		$this->assertEquals($this->body->errno, Err::INVALID_EMAIL);
+		$this->assertEquals($this->body->errno, Err::EMAIL_INVALID);
 
 		$post['email'] = 'w+t@c.jo';
 		$this->POST('/register', $post);
@@ -244,12 +244,12 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$post['addname'] = str_repeat('jonathan', 24);
 		$this->POST('/register', $post);
-		$this->assertEquals($this->body->errno, Err::NAME_TOO_LONG);
+		$this->assertEquals($this->body->errno, Err::USERNAME_TOO_LONG);
 
 		$post['addname'] = 'jonathan';
 		$post['email'] = str_repeat('jonathan', 24) . '@example.org';
 		$this->POST('/register', $post);
-		$this->assertEquals($this->body->errno, Err::INVALID_EMAIL);
+		$this->assertEquals($this->body->errno, Err::EMAIL_INVALID);
 	}
 
 	public function test_useradd() {
@@ -289,7 +289,7 @@ class AdminRouteHTTPTest extends TestCase {
 		];
 		$this->POST('/useradd', $post);
 		$this->assertEquals($this->code, 403);
-		$this->assertEquals($this->body->errno, Err::USERS_EXISTS);
+		$this->assertEquals($this->body->errno, Err::USERNAME_EXISTS);
 
 		# email exists
 		$post = [
@@ -400,7 +400,7 @@ class AdminRouteHTTPTest extends TestCase {
 		$post['pass2'] = '1234';
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::USERS_NOT_FOUND);
+		$this->assertEquals($this->body->errno, Err::USER_NOT_FOUND);
 		# end mock
 	}
 

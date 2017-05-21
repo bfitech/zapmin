@@ -642,7 +642,6 @@ abstract class AdminStore extends AdminStoreInit {
 		if ($page < 0)
 			$page = 0;
 
-		$limit = 10;
 		$limit = isset($limit) ? (int)$limit : 10;
 		if ($limit <= 0 || $limit >= 40)
 			$limit = 10;

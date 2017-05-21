@@ -571,6 +571,10 @@ class AdminStoreTest extends TestCase {
 		$user_count= $adm->store->query(
 			"SELECT count(uid) AS count FROM udata"
 			)['count'];
+		# invalid page and limit on user listing will be silently
+		# set to their defaults
+		$args['post']['page'] = -1e3;
+		$args['post']['limit'] = 1e3;
 		$user_list = $adm->adm_list_user($args)[1];
 		$this->assertEquals(count($user_list), $user_count);
 

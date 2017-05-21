@@ -631,6 +631,11 @@ class AdminStoreTest extends TestCase {
 
 		$args = ['post' => null];
 
+		self::loginOK();
+		$result = $adm->adm_self_add_user_passwordless($args);
+		$this->assertEquals($result[0], Err::USERS_ALREADY_LOGGED_IN);
+		$adm->adm_logout();
+
 		# no 'service' in args
 		$result = $adm->adm_self_add_user_passwordless($args);
 		$this->assertEquals($result[0], Err::MISSING_SERVICE_ARGS);

@@ -11,17 +11,20 @@
   ],
   "require": {
     "php": ">=5.5 || ~7.0",
-    "bfitech/zapcore": "~1.3.2",
-    "bfitech/zapstore-sqlite3": "~1.3.1"
+    "bfitech/zapstore-sqlite3": "~1.3.2"
   },
   "require-dev": {
-    "bfitech/zapstore-mysql": "~1.3.1",
-    "bfitech/zapstore-pgsql": "~1.3.1",
+    "bfitech/zapstore-mysql": "~1.3.2",
+    "bfitech/zapstore-pgsql": "~1.3.2",
+    "bfitech/zapstore-redis": "~1.3.0",
+    "bfitech/zapstore-predis": "~1.3.0",
     "phpunit/phpunit": "4.8.*"
   },
   "suggest": {
     "bfitech/zapstore-mysql": "Use MySQL as database backend.",
-    "bfitech/zapstore-pgsql": "Use PostgreSQL as database backend."
+    "bfitech/zapstore-pgsql": "Use PostgreSQL as database backend.",
+    "bfitech/zapstore-redis": "Use Phpredis as additional backend.",
+    "bfitech/zapstore-predis": "Use Predis as additional backend."
   },
   "autoload": {
     "psr-4": {

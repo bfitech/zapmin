@@ -99,8 +99,8 @@ class AdminStoreTest extends TestCase {
 
 	public function test_upgrade_tables(){
 		# run test on sqlite3 only
-		#if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
-		#	return;
+		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
+			return;
 
 		$logfile = HTDOCS . '/zapmin-test-table-update.log';
 		if (file_exists($logfile))
@@ -109,11 +109,18 @@ class AdminStoreTest extends TestCase {
 
 		$sql = new SQLite3(['dbname' => ':memory:'], $logger);
 
-		$open_adm = function() use($sql, $logger) {
-			return (new AdminStore($sql, null, null, $logger))
-				->init();
+		$open_adm = function($drop=null) use($sql, $logger) {
+			$_adm = (new AdminStore($sql, null, null, $logger));
+			if ($drop)
+				$_adm->config('force_create_table', true);
+			return $_adm->init();
 		};
-		$open_adm();
+
+		# dummy drop
+		$sql->query_raw("CREATE TABLE udata (key VARCHAR(20))");
+		$adm = $open_adm(true);
+		$this->assertEquals($adm->get_table_version(),
+			za\AdminStoreTables::TABLE_VERSION);
 
 		# fake table upgrading from no version
 		$sql->query_raw("DROP TABLE IF EXISTS meta");

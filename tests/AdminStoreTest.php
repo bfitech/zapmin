@@ -69,8 +69,9 @@ class AdminStoreTest extends TestCase {
 			'dbname' => $dbfile,
 		], $logger);
 
-		# default maximum expiration with forced table overwrite
+		# default expiration with forced table overwrite
 		$adm = (new AdminStore($sql, null, null, $logger))
+			->config('expiration', null)
 			->config('force_create_table', true);
 		$this->assertEquals($adm->adm_get_expiration(), 3600 * 2);
 
@@ -81,6 +82,10 @@ class AdminStoreTest extends TestCase {
 		# minimum expiration
 		$adm = new AdminStore($sql);
 		$adm->config('expiration', 120);
+		$this->assertEquals($adm->adm_get_expiration(), 600);
+
+		# calling config after (implicit) init has no effect
+		$adm->config('expiration', 1200)->init();
 		$this->assertEquals($adm->adm_get_expiration(), 600);
 
 		# deinit, expiration goes back to default

@@ -20,8 +20,10 @@ class AdminStoreCommon {
 	 * @param string $usalt Salt.
 	 */
 	public static function hash_password($uname, $upass, $usalt) {
+		// @codeCoverageIgnoreStart
 		if (strlen($usalt) > 16)
 			$usalt = substr($usalt, 0, 16);
+		// @codeCoverageIgnoreEnd
 		return self::generate_secret($upass . $uname, $usalt);
 	}
 

@@ -69,7 +69,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 */
 	final public function config($key, $val) {
 		if ($this->initialized)
-			return;
+			return $this;
 		switch ($key) {
 			case 'expiration':
 			case 'byway_expiration':
@@ -87,7 +87,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 */
 	final public function init() {
 		if ($this->initialized)
-			return;
+			return $this;
 		$this->initialized = true;
 		$this->check_tables();
 		return $this;
@@ -98,7 +98,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 */
 	final public function deinit() {
 		if (!$this->initialized)
-			return;
+			return $this;
 
 		$this->user_token = null;
 		$this->user_data = null;

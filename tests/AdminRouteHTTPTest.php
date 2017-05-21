@@ -90,7 +90,8 @@ class AdminRouteHTTPTest extends TestCase {
 	public function test_status() {
 		$this->GET('/status');
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::USER_NOT_LOGGED_IN);
+		$this->assertEquals($this->body->errno,
+			Err::USER_NOT_LOGGED_IN);
 		$this->assertEquals($this->body->data, []);
 	}
 
@@ -117,14 +118,16 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::USER_ALREADY_LOGGED_IN);
+		$this->assertEquals($this->body->errno,
+			Err::USER_ALREADY_LOGGED_IN);
 	}
 
 	public function test_logout() {
 
 		$this->GET('/logout');
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::USER_NOT_LOGGED_IN);
+		$this->assertEquals($this->body->errno,
+			Err::USER_NOT_LOGGED_IN);
 
 		$post = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $post);
@@ -141,7 +144,8 @@ class AdminRouteHTTPTest extends TestCase {
 		$this->assertEquals($this->code, 404);
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::USER_NOT_LOGGED_IN);
+		$this->assertEquals($this->body->errno,
+			Err::USER_NOT_LOGGED_IN);
 
 		$post = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $post);
@@ -161,7 +165,8 @@ class AdminRouteHTTPTest extends TestCase {
 		$post['pass0'] = 'xxx';
 		$this->POST('/chpasswd', $post);
 		$this->assertEquals($this->code, 401);
-		$this->assertEquals($this->body->errno, Err::OLD_PASSWORD_INVALID);
+		$this->assertEquals($this->body->errno,
+			Err::OLD_PASSWORD_INVALID);
 
 		$post['pass0'] = 'admin';
 		$this->POST('/chpasswd', $post);

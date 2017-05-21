@@ -113,8 +113,6 @@ class AdminRouteDefault extends AdminRoute {
 		$retval = $this->adm_self_add_user_passwordless($args);
 		if ($retval[0] !== 0)
 			return $this->core->pj($retval, 403);
-		if (!isset($retval[1]) || !isset($retval[1]['token']))
-			return $this->core->pj($retval, 403);
 		# alway autologin on success
 		$token = $retval[1]['token'];
 		$this->adm_set_user_token($token);

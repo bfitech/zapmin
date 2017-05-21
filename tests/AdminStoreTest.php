@@ -42,7 +42,8 @@ class AdminStoreTest extends TestCase {
 		self::$sql = new SQLite3([
 			'dbname' => ':memory:'
 		], $logger);
-		self::$adm = new AdminStore(self::$sql, 600);
+		self::$adm = (new AdminStore(self::$sql))
+			->config('expiration', 600);
 	}
 
 	public static function tearDownAfterClass() {
@@ -68,25 +69,69 @@ class AdminStoreTest extends TestCase {
 			'dbname' => $dbfile,
 		], $logger);
 
-		# minimum expiration
-		$adm = new AdminStore($sql, 60);
-		$this->assertEquals($adm->adm_get_expiration(), 600);
-
 		# default maximum expiration with forced table overwrite
-		$adm = new AdminStore($sql, null, true, $logger);
+		$adm = (new AdminStore($sql, null, null, $logger))
+			->config('force_create_table', true);
 		$this->assertEquals($adm->adm_get_expiration(), 3600 * 2);
 
 		# table check statement should not be logged
 		$this->assertFalse(strpos(
 			file_get_contents($logfile), "SELECT 1 FROM udata"));
 
+		# minimum expiration
+		$adm = new AdminStore($sql);
+		$adm->config('expiration', 120);
+		$this->assertEquals($adm->adm_get_expiration(), 600);
+
+		# deinit, expiration goes back to default
+		$adm->deinit();
+		$this->assertEquals($adm->adm_get_expiration(), 3600 * 2);
+
 		# working on invalid connection
+		$adm = new AdminStore($sql, null, null, $logger);
 		$sql->close();
 		try {
-			$adm = new AdminStore($sql, null, true, $logger);
+			$adm = new AdminStore($sql, null, null, $logger);
 		} catch(za\AdminStoreError $e) {}
 
 		unlink($dbfile);
+	}
+
+	public function test_upgrade_tables(){
+		# run test on sqlite3 only
+		#if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
+		#	return;
+
+		$logfile = HTDOCS . '/zapmin-test-table-update.log';
+		if (file_exists($logfile))
+			unlink($logfile);
+		$logger = new Logger(Logger::DEBUG, $logfile);
+
+		$sql = new SQLite3(['dbname' => ':memory:'], $logger);
+
+		$open_adm = function() use($sql, $logger) {
+			return (new AdminStore($sql, null, null, $logger))
+				->init();
+		};
+		$open_adm();
+
+		# fake table upgrading from no version
+		$sql->query_raw("DROP TABLE IF EXISTS meta");
+		$adm = $open_adm();
+		$this->assertEquals($adm->get_table_version(),
+			za\AdminStoreTables::TABLE_VERSION);
+
+		# fake table upgrading from 0.1
+		$sql->update('meta', ['version' => '0.1']);
+		$this->assertEquals($adm->get_table_version(), '0.1');
+		$adm = $open_adm();
+		$this->assertEquals($adm->get_table_version(),
+			za\AdminStoreTables::TABLE_VERSION);
+
+		# no table updates
+		$adm = $open_adm();
+		$this->assertNotFalse(strpos(
+			file_get_contents($logfile), "Tables are up-to-date."));
 	}
 
 	public function test_table() {

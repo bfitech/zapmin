@@ -8,236 +8,16 @@ use BFITech\ZapCore\Common;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQL;
 use BFITech\ZapStore\SQLError;
-
-/**
- * Error Class
- */
-class AdminStoreError extends \Exception {
-
-	/** Cannot delete root. */
-	const CANNOT_DELETE_ROOT = 0x0100;
-
-	/** Password Invalid. */
-	const PASSWORD_INVALID = 0x0200;
-	/** Password confirmation not equal with password. */
-	const PASSWORD_NOT_SAME = 0x0201;
-	/** Password too short. */
-	const PASSWORD_TOO_SHORT = 0x0202;
-	/** Old password invalid. */
-	const OLD_PASSWORD_INVALID = 0x0203;
-	/** Wrong password. */
-	const WRONG_PASSWORD = 0x0204;
-
-	/** Users not signed in. */
-	const USERS_NOT_LOGGED_IN = 0x03;
-	/** Users already signed in. */
-	const USERS_ALREADY_LOGGED_IN = 0x0301;
-	/** Users not found. */
-	const USERS_NOT_FOUND = 0x0302;
-	/** Users not authorized. */
-	const USERS_NOT_AUTHORIZED = 0x0305;
-
-	/** Self-registration not allowed. */
-	const SELF_REGISTER_NOT_ALLOWED = 0x04;
-
-	/** Missing arguments post. */
-	const MISSING_POST_ARGS = 0x05;
-	/** Missing arguments service. */
-	const MISSING_SERVICE_ARGS = 0x0500;
-	/** Missing dict from post args. */
-	const MISSING_DICT = 0x0501;
-	/** Invalid site URL. */
-	const INVALID_SITE_URL = 0x0502;
-	/** Invalid name: too long. */
-	const NAME_TOO_LONG = 0x0503;
-	/** Invalid name: contain whitespace. */
-	const NAME_CONTAIN_WHITESPACE = 0x0504;
-	/** Invalid name: leading '+' reserved for passwordless account. */
-	const NAME_LEADING_PLUS = 0x0505;
-	/** Invalid email address. */
-	const INVALID_EMAIL = 0x0506;
-	/** Email already exists. */
-	const EMAIL_EXISTS = 0x0507;
-	/** User already exists. */
-	const USERS_EXISTS = 0x0508;
-}
+use BFITech\ZapStore\RedisConn;
 
 
 /**
  * AdminStore class.
  *
- * Router-expose public methods must be prefixed with adm_* in this
+ * Router-exposed public methods must be prefixed with `adm_*` in this
  * class or in its subclasses for clarity.
  */
-abstract class AdminStore {
-
-	private $dbtype = null;
-
-	private $user_token = null;
-	private $user_data = null;
-
-	private $expiration;
-	private $byway_expiration;
-
-	/**
-	 * SQL instance.
-	 *
-	 * This is no longer static for to allow user to use different
-	 * databases in subclasses.
-	 */
-	public $store;
-	/**
-	 * Logging service.
-	 *
-	 * This is no longer static to allow user to use different
-	 * logging in subclasses.
-	 */
-	public $logger;
-
-	/**
-	 * Constructor.
-	 *
-	 * @param SQL $store An instance of BFITech\\ZapStore\\SQL.
-	 * @param int $expiration Session expiration interval in seconds.
-	 *     Defaults to 2 hours.
-	 * @param bool $force_create_table If true, tables are recreated
-	 *     whether they currently exist or not.
-	 * @param Logger $logger Logger instance.
-	 */
-	public function __construct(
-		SQL $store, $expiration=null, $force_create_table=null,
-		Logger $logger=null
-	) {
-
-		$this->logger = $logger ? $logger : new Logger();
-
-		$this->store = $store;
-		$this->dbtype = $store->get_connection_params()['dbtype'];
-
-		if ($expiration)
-			$expiration = $this->check_expiration($expiration);
-		else
-			$expiration = 3600 * 2;
-		$this->expiration = $expiration;
-
-		$this->byway_expiration = 360 * 24 * 7;
-
-		$this->check_tables($force_create_table);
-	}
-
-	/**
-	 * Verify expiration.
-	 *
-	 * Do not allow session that's too short. That would annoy users.
-	 *
-	 * @param int $expiration Session expiration, in seconds. This can
-	 *     be used for standard or byway session.
-	 */
-	private function check_expiration($expiration) {
-		$expiration = (int)$expiration;
-		if ($expiration < 600)
-			$expiration = 600;
-		return $expiration;
-	}
-
-
-	/**
-	 * Check if tables exist.
-	 *
-	 * @param bool $force_create_table When set to true, new table
-	 *     will be created despite the old one.
-	 */
-	private function check_tables($force_create_table=null) {
-
-		$sql = $this->store;
-
-		$sql::$logger->deactivate();
-		try {
-			$sql->query("SELECT 1 FROM udata LIMIT 1");
-			$sql::$logger->activate();
-			if (!$force_create_table)
-				return;
-			$this->logger->info("Zapmin: Recreating tables.");
-		} catch (SQLError $e) {}
-		$sql::$logger->activate();
-
-		$index = $sql->stmt_fragment('index');
-		$engine = $sql->stmt_fragment('engine');
-		$dtnow = $sql->stmt_fragment('datetime');
-		$expire = $sql->stmt_fragment(
-				'datetime', ['delta' => $this->expiration]);
-		if ($this->dbtype == 'mysql')
-			$dtnow = $expire = 'CURRENT_TIMESTAMP';
-
-		foreach([
-			"DROP VIEW IF EXISTS v_usess;",
-			"DROP TABLE IF EXISTS usess;",
-			"DROP TABLE IF EXISTS udata;",
-		] as $drop) {
-			try {
-				$sql->query_raw($drop);
-			} catch(SQLError $e) {
-				$msg = "Cannot drop data:" . $e->getMessage();
-				$this->logger->error("Zapmin: sql error: $msg");
-				throw new AdminStoreError($msg);
-			}
-		}
-
-		# @note
-		# - Unique and null in one column is not portable.
-		#   Must check email uniqueness manually.
-		# - Email verification must be held separately.
-		#   Table only reserves a column for it.
-		$user_table = (
-			"CREATE TABLE udata (" .
-			"  uid %s," .
-			"  uname VARCHAR(64) UNIQUE," .
-			"  upass VARCHAR(64)," .
-			"  usalt VARCHAR(16)," .
-			"  since TIMESTAMP NOT NULL DEFAULT %s," .
-			"  email VARCHAR(64)," .
-			"  email_verified INT NOT NULL DEFAULT 0," .
-			"  fname VARCHAR(128)," .
-			"  site VARCHAR(128)" .
-			") %s;"
-		);
-		$user_table = sprintf($user_table, $index, $dtnow, $engine);
-		$sql->query_raw($user_table);
-
-		$root_salt = $this->generate_secret('root', null, 16);
-		$root_pass = $this->hash_password('root', 'admin', $root_salt);
-		$sql->insert('udata', [
-			'uid' => 1,
-			'uname' => 'root',
-			'upass' => $root_pass,
-			'usalt' => $root_salt,
-		]);
-
-		$session_table = (
-			"CREATE TABLE usess (" .
-			"  sid %s," .
-			"  uid INTEGER REFERENCES udata(uid) ON DELETE CASCADE," .
-			"  token VARCHAR(64)," .
-			"  expire TIMESTAMP NOT NULL DEFAULT %s" .
-			") %s;"
-		);
-		$session_table = sprintf(
-			$session_table, $index, $expire, $engine);
-		$sql->query_raw($session_table);
-
-		$user_session_view = (
-			"CREATE VIEW v_usess AS" .
-			"  SELECT" .
-			"    udata.*," .
-			"    usess.sid," .
-			"    usess.token," .
-			"    usess.expire" .
-			"  FROM udata, usess" .
-			"  WHERE" .
-			"    udata.uid=usess.uid;"
-		);
-		$sql->query_raw($user_session_view);
-	}
+abstract class AdminStore extends AdminStoreInit {
 
 	/**
 	 * Set user token.
@@ -245,6 +25,7 @@ abstract class AdminStore {
 	 * Token can be obtained from cookie or custom header.
 	 */
 	public function adm_set_user_token($user_token=null) {
+		$this->init();
 		if (!$user_token)
 			return;
 		$this->user_token = $user_token;
@@ -256,6 +37,7 @@ abstract class AdminStore {
 	 * Useful for client-side manipulation such as sending cookies.
 	 */
 	public function adm_get_expiration() {
+		$this->init();
 		return $this->expiration;
 	}
 
@@ -270,41 +52,27 @@ abstract class AdminStore {
 	 * @param int $expiration Byway expiration, in seconds.
 	 */
 	public function adm_set_byway_expiration($expiration) {
-		$this->byway_expiration = $this->check_expiration($expiration);
+		$this->init();
+		$this->byway_expiration = $this->store_check_expiration(
+			$expiration);
 	}
 
 	/**
 	 * Getter for byway expiration.
 	 */
 	public function adm_get_byway_expiration() {
+		$this->init();
 		return $this->byway_expiration;
 	}
 
 	/**
-	 * Populate session data.
+	 * Get user login status.
 	 *
 	 * Call this early on in every HTTP request once session token
 	 * is available.
 	 */
 	public function adm_status() {
-		if ($this->user_token === null)
-			return null;
-		if ($this->user_data !== null)
-			return $this->user_data;
-		$expire = $this->store->stmt_fragment('datetime');
-		$session = $this->store->query(
-			sprintf(
-				"SELECT * FROM v_usess " .
-				"WHERE token=? AND expire>%s " .
-				"LIMIT 1",
-				$expire
-			), [$this->user_token]);
-		if (!$session) {
-			# session not found or expired
-			$this->status_reset();
-			return $this->user_data;
-		}
-		return $this->user_data = $session;
+		return $this->store_get_user_status();
 	}
 
 	/**
@@ -314,108 +82,12 @@ abstract class AdminStore {
 	 *     pattern consistent.
 	 */
 	public function adm_get_safe_user_data($args=null) {
-		if (!$this->is_logged_in())
+		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 		$data = $this->user_data;
 		foreach (['upass', 'usalt', 'sid', 'token', 'expire'] as $key)
 			unset($data[$key]);
 		return [0, $data];
-	}
-
-	/**
-	 * Shorthand for nullifying session data.
-	 */
-	private function status_reset() {
-		$this->user_data = null;
-		$this->user_token = null;
-	}
-
-	/**
-	 * Match password and return user data on success.
-	 *
-	 * @param string $uname Username.
-	 * @param string $upass User plain text password.
-	 * @param string $usalt User salt.
-	 * @return array|bool False on failure, user data on
-	 *     success. User data elements are just subset of
-	 *     those returned by get_safe_user_data().
-	 */
-	private function match_password($uname, $upass, $usalt) {
-		$udata = $this->store->query(
-			"SELECT uid, uname " .
-				"FROM udata WHERE upass=? LIMIT 1",
-			[$this->hash_password($uname, $upass, $usalt)]);
-		if (!$udata)
-			return false;
-		return $udata;
-	}
-
-	private function hash_password($uname, $upass, $usalt) {
-		// @codeCoverageIgnoreStart
-		if (strlen($usalt) > 16)
-			$usalt = substr($usalt, 0, 16);
-		// @codeCoverageIgnoreEnd
-		return $this->generate_secret($upass . $uname, $usalt);
-	}
-
-	/**
-	 * Verify plaintext password.
-	 *
-	 * Used by password change, registration, and derivatives
-	 * like password reset, etc.
-	 */
-	private function verify_password($pass1, $pass2) {
-		$pass1 = trim($pass1);
-		$pass2 = trim($pass2);
-		# type twice the same
-		if ($pass1 != $pass2)
-			return AdminStoreError::PASSWORD_NOT_SAME;
-		# must be longer than 3
-		if (strlen($pass1) < 4)
-			return AdminStoreError::PASSWORD_TOO_SHORT;
-		return 0;
-	}
-
-	/**
-	 * Verify email address.
-	 *
-	 * @param string $email Email address.
-	 */
-	public static function verify_email_address($email) {
-		$email = trim($email);
-		if (!$email || strlen($email) > 64)
-			return false;
-		return filter_var($email, FILTER_VALIDATE_EMAIL);
-	}
-
-	/**
-	 * Verify site url
-	 *
-	 * @param string $url Site URL.
-	 */
-	public static function verify_site_url($url) {
-		$url = trim($url);
-		if (!$url || strlen($url) > 64)
-			return false;
-		return filter_var($url, FILTER_VALIDATE_URL);
-	}
-
-	/**
-	 * Generate salt.
-	 *
-	 * @param string $data Input data.
-	 * @param string $key HMAC key.
-	 * @param int $length Maximum length of generated salt. Normal
-	 *     usage is 16 for user salt and 64 for hashed password.
-	 */
-	private function generate_secret($data, $key=null, $length=64) {
-		if (!$key)
-			$key = dechex(time() + mt_rand());
-		$bstr = $data . $key;
-		$bstr = hash_hmac('sha256', $bstr, $key, true);
-		$bstr = base64_encode($bstr);
-		$bstr = str_replace(['/', '+', '='], '', $bstr);
-		return substr($bstr, 0, $length);
 	}
 
 	/**
@@ -435,9 +107,10 @@ abstract class AdminStore {
 	 *     @endcode
 	 */
 	public function adm_login($args) {
+		$this->init();
 		$logger = $this->logger;
 
-		if ($this->is_logged_in())
+		if ($this->store_is_logged_in())
 			return [AdminStoreError::USERS_ALREADY_LOGGED_IN];
 
 		if (!isset($args['post']))
@@ -454,7 +127,7 @@ abstract class AdminStore {
 			return [AdminStoreError::USERS_NOT_FOUND];
 		$usalt = $usalt['usalt'];
 
-		$udata = $this->match_password($uname, $upass, $usalt);
+		$udata = $this->store_match_password($uname, $upass, $usalt);
 		if (!$udata) {
 			# wrong password
 			$logger->warning("Zapmin: login: wrong password: '$uname'.");
@@ -491,19 +164,6 @@ abstract class AdminStore {
 		]];
 	}
 
-	private function is_logged_in() {
-		if ($this->user_data === null)
-			$this->adm_status();
-		return $this->user_data;
-	}
-
-	private function close_session($sid) {
-		$now = $this->store->stmt_fragment('datetime');
-		$this->store->query_raw(sprintf(
-			"UPDATE usess SET expire=(%s) WHERE sid='%s'",
-			$now, $sid));
-	}
-
 	/**
 	 * Sign out.
 	 *
@@ -512,7 +172,7 @@ abstract class AdminStore {
 	 * @note Using _GET is enough for this operation.
 	 */
 	public function adm_logout($args=null) {
-		if (!$this->is_logged_in())
+		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 		$this->logger->info(sprintf(
 			"Zapmin: logout: OK: '%s'.",
@@ -521,9 +181,9 @@ abstract class AdminStore {
 		# this just close sessions with current sid, whether
 		# it exists or not, possibly deleted by account
 		# self-delete
-		$this->close_session($this->user_data['sid']);
+		$this->store_close_session($this->user_data['sid']);
 		# reset status
-		$this->status_reset();
+		$this->store_reset_status();
 		# router must set appropriate cookie, e.g.:
 		# setcookie('cookie_adm', '', time() - 7200, '/');
 		return [0];
@@ -540,7 +200,7 @@ abstract class AdminStore {
 	public function adm_change_password(
 		$args, $with_old_password=null
 	) {
-		if (!$this->is_logged_in())
+		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 
 		extract($this->user_data);
@@ -565,7 +225,7 @@ abstract class AdminStore {
 		# check old password if applicable
 		if (
 			$with_old_password &&
-			!$this->match_password($uname, $pass0, $usalt)
+			!$this->store_match_password($uname, $pass0, $usalt)
 		) {
 			$logger->warning(
 				"Zapmin: chpasswd: old passwd invalid: '$uname'.");
@@ -598,7 +258,7 @@ abstract class AdminStore {
 	 * @param array $args Dict with keys: `fname`, `site`.
 	 */
 	public function adm_change_bio($args) {
-		if (!$this->is_logged_in())
+		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 
 		if (!isset($args['post']))
@@ -662,9 +322,10 @@ abstract class AdminStore {
 		$email_required=null, $callback_authz=null,
 		$callback_param=null
 	) {
+		$this->init();
 		$logger = $this->logger;
 
-		if ($this->is_logged_in()) {
+		if ($this->store_is_logged_in()) {
 			if (!$callback_authz) {
 				# default callback
 				$callback_authz = function($param) {
@@ -679,13 +340,9 @@ abstract class AdminStore {
 			$ret = $callback_authz($callback_param);
 			if ($ret !== 0)
 				return [AdminStoreError::USERS_NOT_AUTHORIZED];
-		} else {
-			# not signed in
-			if (!$allow_self_register)
-				# self-registration not allowed
-				return [AdminStoreError::SELF_REGISTER_NOT_ALLOWED];
-			# @note Other constraint such as captcha happens outside
-			#     of this class.
+		} elseif (!$allow_self_register) {
+			# self-registration not allowed
+			return [AdminStoreError::SELF_REGISTER_NOT_ALLOWED];
 		}
 
 		# check vars
@@ -790,7 +447,7 @@ abstract class AdminStore {
 	public function adm_self_add_user(
 		$args, $pass_twice=null, $email_required=null
 	) {
-		if ($this->is_logged_in())
+		if ($this->store_is_logged_in())
 			return [AdminStoreError::USERS_ALREADY_LOGGED_IN];
 		return $this->adm_add_user(
 			$args, $pass_twice, true, $email_required);
@@ -822,7 +479,7 @@ abstract class AdminStore {
 	 *     @endcode
 	 */
 	public function adm_self_add_user_passwordless($args) {
-		if ($this->is_logged_in())
+		if ($this->store_is_logged_in())
 			return [AdminStoreError::USERS_ALREADY_LOGGED_IN];
 
 		# check vars
@@ -892,7 +549,7 @@ abstract class AdminStore {
 	public function adm_delete_user(
 		$args, $callback_authz=null, $callback_param=null
 	) {
-		if (!$this->is_logged_in())
+		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USERS_NOT_LOGGED_IN];
 		$user_data = $this->user_data;
 
@@ -963,8 +620,9 @@ abstract class AdminStore {
 	public function adm_list_user(
 		$args, $callback_authz=null, $callback_param=null
 	) {
+		$this->init();
 		if (!$callback_authz) {
-			$this->is_logged_in();
+			$this->store_is_logged_in();
 			$callback_authz = function($param) {
 				# allow uid=1 only
 				if ($param['uid'] == 1)

@@ -25,13 +25,14 @@ class Router extends zc\Router {
 		echo "ERROR: $code";
 	}
 }
-$core = new Router(null, null, true, $logger);
+$core = new Router();
+$core->config('logger', $logger);
 
 $store = new zs\SQLite3([
 	'dbname' => $dbname,
 ], $logger);
 
-$adm = new za\AdminRouteDefault($core, $store, $logger);
+$adm = new za\AdminRouteDefault($store, $logger, null, $core);
 
 $adm->route('/',         [$adm, 'route_home'],     'GET');
 $adm->route('/status',   [$adm, 'route_status'],   'GET');

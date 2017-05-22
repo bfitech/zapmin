@@ -42,7 +42,7 @@ class AdminStorePgTest extends AdminStoreTest {
 				json_encode($dbargs, JSON_PRETTY_PRINT));
 			exit(1);
 		}
-		self::$adm = (new AdminStore(self::$sql, null, null, $logger))
+		self::$adm = (new AdminStore(self::$sql, $logger))
 			->config('expiration', 600)
 			->config('force_create_table', true);
 	}

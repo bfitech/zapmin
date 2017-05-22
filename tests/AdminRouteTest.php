@@ -43,7 +43,9 @@ class AdminRouteTest extends TestCase {
 
 	public function test_constructor() {
 		$_SERVER['REQUEST_URI'] = '/usr/test';
-		$_COOKIE['hello_world'] = 'test';
+
+		# use 'foo' as token name
+		$_COOKIE['foo'] = 'test';
 
 		$logfile = HTDOCS . '/zapmin-test-route-constructor.log';
 		$logger = new Logger(Logger::ERROR, $logfile);
@@ -55,14 +57,18 @@ class AdminRouteTest extends TestCase {
 
 		$store = new SQLite3(['dbname' => ':memory:']);
 
-		$adm = new AdminRouteDefault($core, $store, $logger);
-		$adm->config('token_name', 'hello_world');
+		# change token name via config
+		$adm = (new AdminRouteDefault($store, $logger, null, $core))
+			->config('token_name', 'bar');
+		$this->assertEquals($adm->adm_get_token_name(), 'bar');
 
-		$this->assertEquals($adm->adm_get_token_name(), 'hello_world');
+		# change back token name via setter
+		$adm->adm_set_token_name('foo');
+		$this->assertEquals($adm->adm_get_token_name(), 'foo');
 
 		$adm->route('/test', function($args) use($adm){
 			$this->assertEquals(
-				$args['cookie']['hello_world'], 'test');
+				$args['cookie']['foo'], 'test');
 			echo "HELLO, FRIEND";
 		}, 'GET');
 		$this->assertEquals('HELLO, FRIEND', $core::$body_raw);
@@ -79,8 +85,10 @@ class AdminRouteTest extends TestCase {
 			$store = new SQLite3(
 				['dbname' => ':memory:'], self::$logger);
 		# use new instance on every matching mock HTTP request
-		$core = new Router(null, null, false, self::$logger);
-		return (new AdminRouteDefault($core, $store, self::$logger))
+		$core = (new Router())
+			->config('logger', self::$logger);
+		return (new AdminRouteDefault(
+				$store, self::$logger, null, $core))
 			->config('token_name', 'test-zapmin');
 	}
 

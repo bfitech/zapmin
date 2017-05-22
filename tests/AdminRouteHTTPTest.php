@@ -10,6 +10,7 @@ use BFITech\ZapAdmin\AdminStoreError as Err;
 if (!defined('HTDOCS'))
 	define('HTDOCS', __DIR__ . '/htdocs-test');
 
+
 class AdminRouteHTTPTest extends TestCase {
 
 	public static $cookiefile;
@@ -66,7 +67,8 @@ class AdminRouteHTTPTest extends TestCase {
 	}
 
 	public static function tearDownAfterClass() {
-		unlink(self::$cookiefile);
+		if (file_exists(self::$cookiefile))
+			unlink(self::$cookiefile);
 		Common::http_client([
 			'url' => self::$base_uri,
 			'method' => 'GET',

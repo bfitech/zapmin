@@ -6,6 +6,7 @@ namespace BFITech\ZapAdmin;
 
 use BFITech\ZapCore\Common;
 use BFITech\ZapCore\Logger;
+use BFITech\ZapCore\Router;
 use BFITech\ZapStore\SQL;
 use BFITech\ZapStore\SQLError;
 use BFITech\ZapStore\RedisConn;
@@ -27,6 +28,8 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	public $redis;
 	/** Logging service. */
 	public $logger;
+	/** Router instance. */
+	public $core;
 
 	/** Regular session expiration. */
 	protected $expiration = 7200;
@@ -49,9 +52,12 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 * @param SQL $store SQL instance.
 	 * @param Logger $logger Logger instance.
 	 * @param RedisConn $redis RedisConn instance.
+	 * @param Router $core Router instance. Not used in this class but
+	 *     declared here for cleaner construct.
 	 */
 	public function __construct(
-		SQL $store, Logger $logger=null, RedisConn $redis=null
+		SQL $store, Logger $logger=null, RedisConn $redis=null,
+		Router $core=null
 	) {
 		$this->logger = $logger ? $logger : new Logger();
 
@@ -61,6 +67,9 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 
 		# redis
 		$this->redis = $redis;
+
+		# router
+		$this->core = $core;
 	}
 
 	/**
@@ -73,7 +82,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 *   - (bool)force_create_table: Force recreate table on start,
 	 *     even if tables already exist.
 	 */
-	final public function config($key, $val) {
+	public function config($key, $val) {
 		if ($this->initialized)
 			return $this;
 		switch ($key) {
@@ -94,7 +103,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	/**
 	 * Initialize properties, tables, etc.
 	 */
-	final public function init() {
+	public function init() {
 		if ($this->initialized)
 			return $this;
 		$this->initialized = true;
@@ -105,7 +114,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	/**
 	 * Restore properties to default.
 	 */
-	final public function deinit() {
+	public function deinit() {
 		if (!$this->initialized)
 			return $this;
 

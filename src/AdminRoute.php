@@ -4,13 +4,6 @@
 namespace BFITech\ZapAdmin;
 
 
-use BFITech\ZapCore\Common;
-use BFITech\ZapCore\Logger;
-use BFITech\ZapCore\Router;
-use BFITech\ZapStore\SQL;
-use BFITech\ZapStore\RedisConn;
-
-
 /**
  * AdminRoute class.
  *
@@ -20,29 +13,6 @@ use BFITech\ZapStore\RedisConn;
  * @see AdminRouteDefault for limited example.
  */
 class AdminRoute extends AdminStore {
-
-	/**
-	 * Core instance.
-	 *
-	 * Subclasses are expected to collect HTTP variables with this.
-	 */
-	public $core = null;
-
-	/**
-	 * Constructor.
-	 *
-	 * @param Router $core Router instance.
-	 * @param SQL $store SQL instance.
-	 * @param Logger $logger Logger instance.
-	 * @param RedisConn $redis Redis instance.
-	 */
-	public function __construct(
-		Router $core, SQL $store, Logger $logger=null,
-		RedisConn $redis=null
-	) {
-		$this->core = $core;
-		parent::__construct($store, $logger, $redis);
-	}
 
 	/**
 	 * Standard wrapper for Router::route.

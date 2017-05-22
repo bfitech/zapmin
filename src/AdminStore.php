@@ -63,13 +63,22 @@ abstract class AdminStore extends AdminStoreInit {
 	}
 
 	/**
-	 * Safely retrieve authentication token name.
+	 * Retrieve session token name.
 	 *
 	 * Useful for e.g. setting cookie name or HTTP request header
 	 * on the client side.
 	 */
 	public function adm_get_token_name() {
 		return $this->token_name;
+	}
+
+	/**
+	 * Set sesion token name.
+	 *
+	 * @param string $token_name Session token name.
+	 */
+	public function adm_set_token_name($token_name) {
+		$this->token_name = $token_name;
 	}
 
 	/**

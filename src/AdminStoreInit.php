@@ -196,6 +196,11 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 		return $udata;
 	}
 
+	/**
+	 * Read session data from cache.
+	 *
+	 * @param string $token Session token.
+	 */
 	protected function store_redis_cache_read($token) {
 		if (!$this->redis)
 			return null;
@@ -214,6 +219,16 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 		return $data;
 	}
 
+	/**
+	 * Write session to cache.
+	 *
+	 * @param string $token Session token.
+	 * @param array $data User data.
+	 * @param string $expire_at Redis expireat parameter, in UTC
+	 *     datetime.
+	 * @param int $expire Redis expire parameter, in seconds. If this
+	 *     is set, $expire_at is ignored.
+	 */
 	protected function store_redis_cache_write(
 		$token, $data, $expire_at, $expire=null
 	) {
@@ -237,11 +252,18 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 			$token, json_encode($data)));
 	}
 
+	/**
+	 * Remove session cache.
+	 *
+	 * @param string $token Session token.
+	 */
 	protected function store_redis_cache_del($token) {
 		if (!$this->redis)
 			return;
 		$key = sprintf('%s:%s', $this->token_name, $token);
 		$this->redis->del($key);
+		$this->logger->debug(sprintf(
+			"Zapmin: session removed from cache: '%s'.", $token));
 	}
 
 	/**
@@ -256,16 +278,14 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 
 		$token = $this->user_token;
 
-		if ($this->redis) {
-			# cache validation
-			$cached = $this->store_redis_cache_read($token);
-			if ($cached !== null) {
-				if ($cached['uid'] == -1)
-					# cached invalid session
-					return null;
-				# cached valid session
-				return $this->user_data = $cached;
-			}
+		# cache validation
+		$cached = $this->store_redis_cache_read($token);
+		if ($cached !== null) {
+			if ($cached['uid'] == -1)
+				# cached invalid session
+				return null;
+			# cached valid session
+			return $this->user_data = $cached;
 		}
 
 		$expire = $this->store->stmt_fragment('datetime');
@@ -279,10 +299,9 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 		if (!$session) {
 			# session not found or expired
 			$this->store_reset_status();
-			if ($this->redis)
-				# cache invalid session for 10 minutes
-				$this->store_redis_cache_write($token,
-					['uid' => -1], null, 600);
+			# cache invalid session for 10 minutes
+			$this->store_redis_cache_write($token,
+				['uid' => -1], null, 600);
 			return $this->user_data;
 		}
 
@@ -315,6 +334,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 		$this->store->query_raw(sprintf(
 			"UPDATE usess SET expire=(%s) WHERE sid='%s'",
 			$now, $sid));
+		$this->store_redis_cache_del($this->user_token);
 	}
 
 }

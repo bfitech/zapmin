@@ -176,10 +176,6 @@ abstract class AdminStore extends AdminStoreInit {
 	public function adm_logout() {
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
-		$this->logger->info(sprintf(
-			"Zapmin: logout: OK: '%s'.",
-			$this->user_data['uname']
-		));
 		# this just close sessions with current sid, whether
 		# it exists or not, possibly deleted by account
 		# self-delete
@@ -188,6 +184,10 @@ abstract class AdminStore extends AdminStoreInit {
 		$this->store_reset_status();
 		# router must set appropriate cookie, e.g.:
 		# setcookie('cookie_adm', '', time() - 7200, '/');
+		$this->logger->info(sprintf(
+			"Zapmin: logout: OK: '%s'.",
+			$this->user_data['uname']
+		));
 		return [0];
 	}
 

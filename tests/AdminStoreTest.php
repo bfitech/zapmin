@@ -153,6 +153,8 @@ class AdminStoreTest extends TestCase {
 		$adm->adm_set_user_token($token);
 		$adm->adm_status();
 
+		# @warning These following is very sensitive to log
+		#     structure.
 		$parse_log = function($pattern) use($logfile) {
 			$logline = null;
 			foreach (file($logfile) as $line) {
@@ -222,6 +224,23 @@ class AdminStoreTest extends TestCase {
 		$logdata = $parse_log(sprintf(
 			"session read from cache: '%s'", $bogus_token));
 		$this->assertEquals($logdata['uid'], -2);
+
+		# re-sign in
+		$adm = new AdminStore($sql, $logger, self::$redis);
+		$adm->adm_set_user_token($token);
+		$adm->adm_status();
+		$udata = $adm->adm_get_safe_user_data();
+		# retrieved cache
+		$logdata = $parse_log(sprintf(
+			"session read from cache: '%s'", $token));
+		$this->assertEquals($logdata['token'], $token);
+
+		# sign out
+		$adm->adm_logout();
+		$this->assertNotFalse(stripos(
+			file_get_contents($logfile),
+			sprintf("session removed from cache: '%s'", $token))
+		);
 
 		self::$redis->get_connection()->flushdb();
 	}

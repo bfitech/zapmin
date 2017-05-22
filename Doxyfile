@@ -5,7 +5,7 @@
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "ZapAdmin"
-PROJECT_NUMBER         = "1.3"
+PROJECT_NUMBER         = "1.4"
 PROJECT_BRIEF          = "An authentication manager."
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       = ./docs

@@ -5,10 +5,7 @@ namespace BFITech\ZapAdmin;
 
 
 use BFITech\ZapCore\Common;
-use BFITech\ZapCore\Logger;
-use BFITech\ZapStore\SQL;
 use BFITech\ZapStore\SQLError;
-use BFITech\ZapStore\RedisConn;
 
 
 /**
@@ -87,11 +84,8 @@ abstract class AdminStore extends AdminStoreInit {
 
 	/**
 	 * Get user data excluding sensitive info.
-	 *
-	 * @param array $args Unused. Keep it here to keep callback
-	 *     pattern consistent.
 	 */
-	public function adm_get_safe_user_data($args=null) {
+	public function adm_get_safe_user_data() {
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
 		$data = $this->user_data;
@@ -177,11 +171,9 @@ abstract class AdminStore extends AdminStoreInit {
 	/**
 	 * Sign out.
 	 *
-	 * @param array $args Unused. Retained for callback pattern
-	 *     consistency.
 	 * @note Using _GET is enough for this operation.
 	 */
-	public function adm_logout($args=null) {
+	public function adm_logout() {
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
 		$this->logger->info(sprintf(
@@ -202,10 +194,18 @@ abstract class AdminStore extends AdminStoreInit {
 	/**
 	 * Change password.
 	 *
-	 * @param array $args Dict with keys: `pass1`, `pass2` and
-	 *     optionally `pass0` if `$with_old_password` is set to true.
-	 * @param bool $with_old_password Whether user should provide
-	 *     valid old password.
+	 * @param array $args Dict of the form:
+	 *     @code
+	 *     (dict){
+	 *       'pass1': (string pass1),
+	 *       'pass2': (string pass2),
+	 *       'pass0': (string:optional pass0)
+	 *     }
+	 *     @endcode
+	 *     where `pass0` is processed only if $with_old_password is set
+	 *     to true.
+	 * @param bool $with_old_password Whether user should provide valid
+	 *     old password.
 	 */
 	public function adm_change_password(
 		$args, $with_old_password=null
@@ -472,9 +472,17 @@ abstract class AdminStore extends AdminStoreInit {
 	 * also returns `sid` to associate `session.sid` with a column
 	 * on different table.
 	 *
-	 * @param array $args Array with key `service` containing another
-	 *     array with keys: `uname` and `uservice`. This can be added
-	 *     to `$args` parameter of route callback.
+	 * @param array $args Dict of the form:
+	 *     @code
+	 *     (dict){
+	 *       'service': (dict){
+	 *         'uname': (string uname),
+	 *         'uservice': (string uservice)
+	 *       }
+	 *     }
+	 *     @endcode
+	 *     This can be added to `$args` parameter of route callback.
+	 *
 	 * @return array An array of the form:
 	 *     @code
 	 *     (array)[
@@ -505,12 +513,12 @@ abstract class AdminStore extends AdminStoreInit {
 		$check = $this->store->query(
 			"SELECT uid FROM udata WHERE uname=? LIMIT 1",
 			[$dbuname]);
-		if (!$check) {
+		if ($check) {
+			$uid = $check['uid'];
+		} else {
 			$uid = $this->store->insert("udata", [
 				'uname' => $dbuname,
 			], 'uid');
-		} else {
-			$uid = $check['uid'];
 		}
 
 		# token generation is a little different

@@ -65,6 +65,13 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 
 	/**
 	 * Configure.
+	 *
+	 * Available configurables:
+	 *   - (int)expiration: Regular session expiration, in seconds.
+	 *   - (int)byway_expiration: Byway session expiration, in seconds.
+	 *   - (string)token_name: Session token name.
+	 *   - (bool)force_create_table: Force recreate table on start,
+	 *     even if tables already exist.
 	 */
 	final public function config($key, $val) {
 		if ($this->initialized)
@@ -189,6 +196,54 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 		return $udata;
 	}
 
+	protected function store_redis_cache_read($token) {
+		if (!$this->redis)
+			return null;
+		$key = sprintf('%s:%s', $this->token_name, $token);
+		$data = $this->redis->get($key);
+		if ($data === false)
+			# key not fund
+			return null;
+		$data = @json_decode($data, true);
+		if (!$data)
+			# cached data is broken
+			$data = ['uid' => -2];
+		$this->logger->debug(sprintf(
+			"Zapmin: session read from cache: '%s' <- '%s'.",
+			$token, json_encode($data)));
+		return $data;
+	}
+
+	protected function store_redis_cache_write(
+		$token, $data, $expire_at, $expire=null
+	) {
+		if (!$this->redis)
+			return;
+
+		$key = sprintf('%s:%s', $this->token_name, $token);
+		$this->redis->set($key, json_encode($data));
+
+		if ($expire !== null) {
+			$this->redis->expire($key, $expire);
+		} else {
+			$expire_at = str_replace(' ', 'T', $expire_at) . 'Z';
+			$expire_at = \DateTime::createFromFormat(
+				\DateTime::ATOM, $expire_at)->format("U");
+			$this->redis->expireat($key, $expire_at);
+		}
+
+		$this->logger->debug(sprintf(
+			"Zapmin: session written to cache: '%s' <- '%s'.",
+			$token, json_encode($data)));
+	}
+
+	protected function store_redis_cache_del($token) {
+		if (!$this->redis)
+			return;
+		$key = sprintf('%s:%s', $this->token_name, $token);
+		$this->redis->del($key);
+	}
+
 	/**
 	 * Populate session data.
 	 */
@@ -198,6 +253,21 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 			return null;
 		if ($this->user_data !== null)
 			return $this->user_data;
+
+		$token = $this->user_token;
+
+		if ($this->redis) {
+			# cache validation
+			$cached = $this->store_redis_cache_read($token);
+			if ($cached !== null) {
+				if ($cached['uid'] == -1)
+					# cached invalid session
+					return null;
+				# cached valid session
+				return $this->user_data = $cached;
+			}
+		}
+
 		$expire = $this->store->stmt_fragment('datetime');
 		$session = $this->store->query(
 			sprintf(
@@ -205,12 +275,23 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 				"WHERE token=? AND expire>%s " .
 				"LIMIT 1",
 				$expire
-			), [$this->user_token]);
+			), [$token]);
 		if (!$session) {
 			# session not found or expired
 			$this->store_reset_status();
+			if ($this->redis)
+				# cache invalid session for 10 minutes
+				$this->store_redis_cache_write($token,
+					['uid' => -1], null, 600);
 			return $this->user_data;
 		}
+
+		if (!$this->redis)
+			return $this->user_data = $session;
+
+		$this->store_redis_cache_write($token, $session,
+			$session['expire']);
+
 		return $this->user_data = $session;
 	}
 

@@ -4,6 +4,8 @@
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQLite3;
+use BFITech\ZapStore\Redis;
+use BFITech\ZapStore\RedisError;
 use BFITech\ZapAdmin as za;
 use BFITech\ZapAdmin\AdminStoreError as Err;
 
@@ -18,6 +20,7 @@ class AdminStore extends za\AdminStore {}
 class AdminStoreTest extends TestCase {
 
 	protected static $sql;
+	protected static $redis;
 	protected static $adm;
 
 	protected static $pwdless_uid;
@@ -45,6 +48,27 @@ class AdminStoreTest extends TestCase {
 		], $logger);
 		self::$adm = (new AdminStore(self::$sql))
 			->config('expiration', 600);
+
+		# redis-specific
+		$redisconf = HTDOCS . '/zapmin-test-redis.json';
+		if (!file_exists($redisconf)) {
+			$conf = [
+				'redishost' => 'localhost',
+				'redispassword' => 'xoxo',
+			];
+			file_put_contents($redisconf,
+				json_encode($conf, JSON_PRETTY_PRINT));
+		} else {
+			$conf = json_decode(file_get_contents($redisconf), true);
+		}
+		try {
+			$redis = new Redis($conf, $logger);
+		} catch(RedisError $e) {
+			echo "ERROR: Configure your test redis server here:\n";
+			echo "       '$redisconf'\n";
+			exit(1);
+		}
+		self::$redis = $redis;
 	}
 
 	public static function tearDownAfterClass() {
@@ -71,7 +95,7 @@ class AdminStoreTest extends TestCase {
 		], $logger);
 
 		# default expiration with forced table overwrite
-		$adm = (new AdminStore($sql, null, null, $logger))
+		$adm = (new AdminStore($sql, $logger))
 			->config('expiration', null)
 			->config('force_create_table', true);
 		$this->assertEquals($adm->adm_get_expiration(), 3600 * 2);
@@ -103,6 +127,103 @@ class AdminStoreTest extends TestCase {
 		} catch(za\AdminStoreError $e) {}
 
 		unlink($dbfile);
+	}
+
+	public function test_redis_cache() {
+		# run test on sqlite3 only
+		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
+			return;
+
+		$logfile = HTDOCS . '/zapmin-test-redis.log';
+		$dbfile = HTDOCS . '/zapmit-test-redis.sq3';
+		foreach ([$logfile, $dbfile] as $fl)
+			if (file_exists($fl))
+				unlink($fl);
+
+		$logger = new Logger(Logger::DEBUG, $logfile);
+		$sql = new  SQLite3(['dbname' => $dbfile], $logger);
+
+		# default expiration with forced table overwrite
+		$adm = (new AdminStore($sql, $logger, self::$redis))
+			->config('force_create_table', true);
+
+		$args = self::postFormatter([
+			'uname' => 'root', 'upass' => 'admin']);
+		$token = $adm->adm_login($args)[1]['token'];
+		$adm->adm_set_user_token($token);
+		$adm->adm_status();
+
+		$parse_log = function($pattern) use($logfile) {
+			$logline = null;
+			foreach (file($logfile) as $line) {
+				if (stripos($line, $pattern) !== false) {
+					$logline = trim($line);
+					break;
+				}
+			}
+			$logdata = trim(explode('<-', $logline)[1]);
+			$logdata = rtrim($logdata, '.');
+			$logdata = trim($logdata, "'");
+			return json_decode($logdata, true);
+		};
+
+		# valid new cache
+		$udata = $adm->adm_get_safe_user_data();
+		# newly-written cache
+		$logdata = $parse_log(sprintf(
+			"session written to cache: '%s'", $token));
+		$this->assertEquals($logdata['token'], $token);
+
+		# valid old cache
+		$adm = new AdminStore($sql, $logger, self::$redis);
+		$adm->adm_set_user_token($token);
+		$adm->adm_status();
+		$udata = $adm->adm_get_safe_user_data();
+		# retrieved cache
+		$logdata = $parse_log(sprintf(
+			"session read from cache: '%s'", $token));
+		$this->assertEquals($logdata['token'], $token);
+
+		#file_put_contents($logfile, '');
+		$bogus_token = 'lalalala';
+
+		# invalid new session cache
+		$adm = new AdminStore($sql, $logger, self::$redis);
+		$adm->adm_set_user_token($bogus_token);
+		$adm->adm_status();
+		$udata = $adm->adm_get_safe_user_data();
+		# retrieved cache
+		$logdata = $parse_log(sprintf(
+			"session written to cache: '%s'", $bogus_token));
+		$this->assertEquals($logdata['uid'], -1);
+
+		# invalid old session cache
+		$adm = new AdminStore($sql, $logger, self::$redis);
+		$adm->adm_set_user_token($bogus_token);
+		$adm->adm_status();
+		$udata = $adm->adm_get_safe_user_data();
+		# retrieved cache
+		$logdata = $parse_log(sprintf(
+			"session read from cache: '%s'", $bogus_token));
+		$this->assertEquals($logdata['uid'], -1);
+
+		# break cache
+		file_put_contents($logfile, '');
+		$token_name = $adm->adm_get_token_name();
+		$key = sprintf('%s:%s', $token_name, $bogus_token);
+		self::$redis->set($key, 'zzz');
+
+		# broken old session cache
+		$adm = new AdminStore($sql, $logger, self::$redis);
+		$adm->adm_set_user_token($bogus_token);
+		$adm->adm_status();
+		$udata = $adm->adm_get_safe_user_data();
+		# retrieved cache
+		$logdata = $parse_log(sprintf(
+			"session read from cache: '%s'", $bogus_token));
+		$this->assertEquals($logdata['uid'], -2);
+
+		self::$redis->get_connection()->flushdb();
 	}
 
 	public function test_upgrade_tables(){

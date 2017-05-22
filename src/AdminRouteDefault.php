@@ -26,12 +26,12 @@ namespace BFITech\ZapAdmin;
 class AdminRouteDefault extends AdminRoute {
 
 	/** `GET: /` */
-	public function route_home($args) {
+	public function route_home() {
 		echo '<h1>It wurks!</h1>';
 	}
 
 	/** `GET: /status` */
-	public function route_status($args) {
+	public function route_status() {
 		return $this->core->pj($this->adm_get_safe_user_data());
 	}
 

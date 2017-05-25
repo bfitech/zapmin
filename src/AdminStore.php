@@ -21,10 +21,8 @@ abstract class AdminStore extends AdminStoreInit {
 	 *
 	 * Token can be obtained from cookie or custom header.
 	 */
-	public function adm_set_user_token($user_token=null) {
+	public function adm_set_user_token($user_token) {
 		$this->init();
-		if (!$user_token)
-			return;
 		$this->user_token = $user_token;
 	}
 
@@ -185,14 +183,18 @@ abstract class AdminStore extends AdminStoreInit {
 	public function adm_logout() {
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
+
 		# this just close sessions with current sid, whether
 		# it exists or not, possibly deleted by account
 		# self-delete
 		$this->store_close_session($this->user_data['sid']);
+
 		# reset status
 		$this->store_reset_status();
+
 		# router must set appropriate cookie, e.g.:
 		# setcookie('cookie_adm', '', time() - 7200, '/');
+
 		$this->logger->info(sprintf(
 			"Zapmin: logout: OK: '%s'.",
 			$this->user_data['uname']
@@ -563,22 +565,36 @@ abstract class AdminStore extends AdminStoreInit {
 	}
 
 	/**
+	 * Default method to decide if user deletion is allowed.
+	 *
+	 * This succeeds is current user is root, or if it's a case of
+	 * self-deletion for non-root user.
+	 *
+	 * @param int User ID to delete.
+	 */
+	public function authz_delete_user($uid) {
+		$udata = $this->user_data;
+		if ($udata['uid'] == 1 && $uid != 1)
+			return true;
+		if ($udata['uid'] == $uid)
+			return true;
+		return false;
+	}
+
+	/**
 	 * Delete a user.
 	 *
 	 * @param array $args Dict with key: `uid`.
-	 * @param function $callback_authz A function that takes one
-	 *     parameter `$callback_args` to allow deletion to proceed.
-	 *     Defaults to current user being root, or self-deletion for
-	 *     non-root user.
-	 * @param array $callback_param Parameter to pass to
-	 *     `$callback_authz`.
+	 * @param function $callback_authz Deprecated in favor of
+	 *     AdminStore::authz_delete_user.
+	 * @param array $callback_param Deprecated in favor of
+	 *     AdminStore::authz_delete_user.
 	 */
 	public function adm_delete_user(
 		$args, $callback_authz=null, $callback_param=null
 	) {
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
-		$user_data = $this->user_data;
 
 		if (!isset($args['post']))
 			return [AdminStoreError::DATA_INCOMPLETE];
@@ -586,22 +602,7 @@ abstract class AdminStore extends AdminStoreInit {
 			return [AdminStoreError::DATA_INCOMPLETE];
 		extract($args['post']);
 
-		if (!$callback_authz) {
-			# default callback
-			$callback_authz = function($param) {
-				if ($param['own_uid'] == 1 && $param['del_uid'] != 1)
-					return 0;
-				if ($param['own_uid'] == $param['del_uid'])
-					return 0;
-				return 1;
-			};
-			$callback_param = [
-				'own_uid' => $user_data['uid'],
-				'del_uid' => $uid,
-			];
-		}
-		$ret = $callback_authz($callback_param);
-		if ($ret !== 0)
+		if (!$this->authz_delete_user($uid))
 			return [AdminStoreError::USER_NOT_AUTHORIZED];
 
 		# cannot delete root
@@ -634,33 +635,29 @@ abstract class AdminStore extends AdminStoreInit {
 	}
 
 	/**
+	 * Default method to decide if user listing is allowed.
+	 *
+	 * This succeeds if current user is root.
+	 */
+	public function authz_list_user() {
+		return $this->user_data['uid'] == 1;
+	}
+
+	/**
 	 * List all users.
 	 *
 	 * @param array $args Dict with keys: `page`, `limit`, `order`
 	 *     where `order` is `ASC` or `DESC`.
-	 * @param function $callback_authz A function that takes one
-	 *     parameter `$callback_param` to decide if listing is
-	 *     allowed. Defaults to current user being root.
-	 * @param array $callback_param Parameter to pass to
-	 *     `$callback_authz`.
+	 * @param function $callback_authz Deprecated in favor of
+	 *     AdminStore::authz_list_user.
+	 * @param array $callback_param Deprecated in favor of
+	 *     AdminStore::authz_list_user.
 	 */
 	public function adm_list_user(
 		$args, $callback_authz=null, $callback_param=null
 	) {
 		$this->init();
-		if (!$callback_authz) {
-			$this->store_is_logged_in();
-			$callback_authz = function($param) {
-				# allow uid=1 only
-				if ($param['uid'] == 1)
-					return 0;
-				return 1;
-			};
-			$callback_param = [
-				'uid' => $this->user_data['uid']];
-		}
-		$ret = $callback_authz($callback_param);
-		if ($ret !== 0)
+		if (!$this->authz_list_user())
 			return [AdminStoreError::USER_NOT_AUTHORIZED];
 
 		extract($args['post']);

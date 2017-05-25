@@ -16,6 +16,16 @@ if (!defined('HTDOCS'))
 
 class AdminStore extends za\AdminStore {}
 
+class AdminStorePatched extends AdminStore {
+
+	public function authz_delete_user($uid) {
+		$udata = $this->user_data;
+		if (in_array($udata['uname'], ['root', 'john']))
+			return true;
+	}
+
+}
+
 
 class AdminStoreTest extends TestCase {
 
@@ -175,9 +185,9 @@ class AdminStoreTest extends TestCase {
 		$logdata = $parse_log(sprintf(
 			"session written to cache: '%s'", $token));
 		$this->assertEquals($logdata['token'], $token);
+		$adm->deinit();
 
 		# valid old cache
-		$adm = new AdminStore($sql, $logger, self::$redis);
 		$adm->adm_set_user_token($token);
 		$adm->adm_status();
 		$udata = $adm->adm_get_safe_user_data();
@@ -185,12 +195,12 @@ class AdminStoreTest extends TestCase {
 		$logdata = $parse_log(sprintf(
 			"session read from cache: '%s'", $token));
 		$this->assertEquals($logdata['token'], $token);
+		$adm->deinit();
 
 		#file_put_contents($logfile, '');
 		$bogus_token = 'lalalala';
 
 		# invalid new session cache
-		$adm = new AdminStore($sql, $logger, self::$redis);
 		$adm->adm_set_user_token($bogus_token);
 		$adm->adm_status();
 		$udata = $adm->adm_get_safe_user_data();
@@ -198,9 +208,9 @@ class AdminStoreTest extends TestCase {
 		$logdata = $parse_log(sprintf(
 			"session written to cache: '%s'", $bogus_token));
 		$this->assertEquals($logdata['uid'], -1);
+		$adm->deinit();
 
 		# invalid old session cache
-		$adm = new AdminStore($sql, $logger, self::$redis);
 		$adm->adm_set_user_token($bogus_token);
 		$adm->adm_status();
 		$udata = $adm->adm_get_safe_user_data();
@@ -208,15 +218,16 @@ class AdminStoreTest extends TestCase {
 		$logdata = $parse_log(sprintf(
 			"session read from cache: '%s'", $bogus_token));
 		$this->assertEquals($logdata['uid'], -1);
+		$adm->deinit();
 
 		# break cache
 		file_put_contents($logfile, '');
 		$token_name = $adm->adm_get_token_name();
 		$key = sprintf('%s:%s', $token_name, $bogus_token);
 		self::$redis->set($key, 'zzz');
+		$adm->deinit();
 
 		# broken old session cache
-		$adm = new AdminStore($sql, $logger, self::$redis);
 		$adm->adm_set_user_token($bogus_token);
 		$adm->adm_status();
 		$udata = $adm->adm_get_safe_user_data();
@@ -224,9 +235,9 @@ class AdminStoreTest extends TestCase {
 		$logdata = $parse_log(sprintf(
 			"session read from cache: '%s'", $bogus_token));
 		$this->assertEquals($logdata['uid'], -2);
+		$adm->deinit();
 
 		# re-sign in
-		$adm = new AdminStore($sql, $logger, self::$redis);
 		$adm->adm_set_user_token($token);
 		$adm->adm_status();
 		$udata = $adm->adm_get_safe_user_data();
@@ -264,24 +275,26 @@ class AdminStoreTest extends TestCase {
 			return $_adm->init();
 		};
 
+		$tab = new za\AdminStoreTables;
+
 		# dummy drop
 		$sql->query_raw("CREATE TABLE udata (key VARCHAR(20))");
 		$adm = $open_adm(true);
 		$this->assertEquals($adm->get_table_version(),
-			za\AdminStoreTables::TABLE_VERSION);
+			$tab::TABLE_VERSION);
 
 		# fake table upgrading from no version
 		$sql->query_raw("DROP TABLE IF EXISTS meta");
 		$adm = $open_adm();
 		$this->assertEquals($adm->get_table_version(),
-			za\AdminStoreTables::TABLE_VERSION);
+			$tab::TABLE_VERSION);
 
 		# fake table upgrading from 0.1
 		$sql->update('meta', ['version' => '0.1']);
 		$this->assertEquals($adm->get_table_version(), '0.1');
 		$adm = $open_adm();
 		$this->assertEquals($adm->get_table_version(),
-			za\AdminStoreTables::TABLE_VERSION);
+			$tab::TABLE_VERSION);
 
 		# no table updates
 		$adm = $open_adm();
@@ -400,8 +413,10 @@ class AdminStoreTest extends TestCase {
 		$this->_test_session_expiration_sequence(
 			$fake_expire_callback);
 		$this->assertEquals(
-			$adm->adm_get_safe_user_data()[0], Err::USER_NOT_LOGGED_IN);
-		$this->assertEquals($adm->adm_logout()[0], Err::USER_NOT_LOGGED_IN);
+			$adm->adm_get_safe_user_data()[0],
+			Err::USER_NOT_LOGGED_IN);
+		$this->assertEquals($adm->adm_logout()[0],
+			Err::USER_NOT_LOGGED_IN);
 
 		# normal login again
 		$this->_test_session_expiration_sequence();
@@ -538,7 +553,8 @@ class AdminStoreTest extends TestCase {
 
 		# missing post arguments
 		$this->assertEquals(
-			$adm->adm_add_user([], true, true)[0], Err::DATA_INCOMPLETE);
+			$adm->adm_add_user([], true, true)[0],
+			Err::DATA_INCOMPLETE);
 
 		$args = ['post' => [
 			'addname' => 'root',
@@ -547,7 +563,8 @@ class AdminStoreTest extends TestCase {
 
 		# user exists
 		$this->assertEquals(
-			$adm->adm_add_user($args, true, true)[0], Err::USERNAME_EXISTS);
+			$adm->adm_add_user($args, true, true)[0],
+			Err::USERNAME_EXISTS);
 
 		# success
 		$args['post']['addname'] = 'john';
@@ -744,7 +761,7 @@ class AdminStoreTest extends TestCase {
 		# missing post arguments
 		$this->assertEquals(
 			$adm->adm_delete_user([])[0], Err::DATA_INCOMPLETE);
-		# with default callback, any user cannot delete another user
+		# with default authz, any user cannot delete another user
 		# except root
 		$this->assertEquals(
 			$adm->adm_delete_user($args)[0], Err::USER_NOT_AUTHORIZED);
@@ -760,30 +777,23 @@ class AdminStoreTest extends TestCase {
 			'upass' => 'asdfgh',
 		]))[0], Err::USER_NOT_FOUND);
 
-		# with callback
-		$cbf = function($_args) {
-			# only 'root' and 'john' are allowed to delete
-			if (in_array($_args['uname'], ['root', 'john']))
-				return 0;
-			return 1;
-		};
+		# use patched AdminStore
+		$adm_orig = $adm;
+		self::$adm = $adm = new AdminStorePatched(self::$sql);
 
 		# as john
 		self::loginOK('john', 'asdf');
-		$uname = $adm->adm_get_safe_user_data()[1]['uname'];
-		$cbp = ['uname' => $uname];
-		# user doesn't exist
+		# using jonah's ID, user no longer exists
 		$this->assertEquals(
-			$adm->adm_delete_user($args, $cbf, $cbp)[0], Err::USER_NOT_FOUND);
+			$adm->adm_delete_user($args)[0], Err::USER_NOT_FOUND);
 		# cannot delete 'root'
 		$args['post']['uid'] = '1';
 		$this->assertEquals(
-			$adm->adm_delete_user($args, $cbf, $cbp)[0],
-			Err::USER_NOT_AUTHORIZED);
+			$adm->adm_delete_user($args)[0], Err::USER_NOT_AUTHORIZED);
 		# success, delete 'jocelyn' uid=3
 		$args['post']['uid'] = '3';
 		$this->assertEquals(
-			$adm->adm_delete_user($args, $cbf, $cbp)[0], 0);
+			$adm->adm_delete_user($args)[0], 0);
 		$adm->adm_logout();
 
 		# sign in as 'jocelyn' fails
@@ -793,6 +803,8 @@ class AdminStoreTest extends TestCase {
 			$this->assertEquals($adm->adm_status(), null);
 		}
 
+		# restore default AdminStore
+		self::$adm = $adm_orig;
 	}
 
 	public function test_self_register_passwordless() {

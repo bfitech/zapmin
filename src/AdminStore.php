@@ -324,6 +324,15 @@ abstract class AdminStore extends AdminStoreInit {
 	}
 
 	/**
+	 * Default method to decide if user listing is allowed.
+	 *
+	 * This succeeds if current user is root.
+	 */
+	public function authz_add_user() {
+		return $this->user_data['uid'] == 1;
+	}
+
+	/**
 	 * Register a new user.
 	 *
 	 * @param array $args Dict with keys: `addname`, `addpass1`,
@@ -332,11 +341,10 @@ abstract class AdminStore extends AdminStoreInit {
 	 * @param bool $allow_self_register Whether self-registration is
 	 *     allowed.
 	 * @param bool $email_required Whether email address is mandatory.
-	 * @param function $callback_authz A function that takes one
-	 *     parameter $callback_param to allow registration to proceed.
-	 *     Defaults to current user being root.
-	 * @param array $callback_param Parameter to pass to
-	 *     `$callback_authz`.
+	 * @param function $callback_authz Deprecated in favor of
+	 *     AdminStore::authz_add_user.
+	 * @param array $callback_param Deprecated in favor of
+	 *     AdminStore::authz_add_user.
 	 */
 	public function adm_add_user(
 		$args, $pass_twice=null, $allow_self_register=null,
@@ -347,19 +355,7 @@ abstract class AdminStore extends AdminStoreInit {
 		$logger = $this->logger;
 
 		if ($this->store_is_logged_in()) {
-			if (!$callback_authz) {
-				# default callback
-				$callback_authz = function($param) {
-					# allow uid=1 only
-					if ($param['uid'] == 1)
-						return 0;
-					return 1;
-				};
-				$callback_param = [
-					'uid' => $this->user_data['uid']];
-			}
-			$ret = $callback_authz($callback_param);
-			if ($ret !== 0)
+			if (!$this->authz_add_user())
 				return [AdminStoreError::USER_NOT_AUTHORIZED];
 		} elseif (!$allow_self_register) {
 			# self-registration not allowed

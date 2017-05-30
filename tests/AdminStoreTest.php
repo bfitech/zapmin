@@ -569,7 +569,7 @@ class AdminStoreTest extends TestCase {
 		# success
 		$args['post']['addname'] = 'john';
 		$this->assertEquals(
-			$adm->adm_add_user($args, true, true)[0], 0);
+			$adm->adm_add_user($args, true, true)[0], 0); 
 		# autologin, this should happen immediately prior to
 		# sending anything to client
 		self::loginOK('john', 'asdf');
@@ -674,8 +674,8 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($result[0], Err::USER_NOT_AUTHORIZED);
 		$adm->adm_logout();
 
-		# as 'john'
-		self::loginOK('john', 'asdf');
+		# as 'root'
+		self::loginOK();
 		$uname = $adm->adm_get_safe_user_data()[1]['uname'];
 		$cbp = ['uname' => $uname];
 		# pass authz but password doesn't check out
@@ -719,10 +719,18 @@ class AdminStoreTest extends TestCase {
 		$adm = self::$adm;
 
 		$args = self::postFormatter(['uid' => '0']);
-
 		# cannot list user when not signed in
 		$this->assertEquals(
+			$adm->adm_list_user($args)[0], Err::USER_NOT_LOGGED_IN);
+
+		self::loginOK('john', 'asdf');
+
+		$args = self::postFormatter(['uid' => '0']);
+		# cannot list user when not authorized
+		$this->assertEquals(
 			$adm->adm_list_user($args)[0], Err::USER_NOT_AUTHORIZED);
+		# sign out
+		$adm->adm_logout();
 
 		self::loginOK();
 

@@ -361,7 +361,7 @@ abstract class AdminStore extends AdminStoreInit {
 			# self-registration not allowed
 			return [AdminStoreError::SELF_REGISTER_NOT_ALLOWED];
 		}
-
+		
 		# check vars
 		if (!isset($args['post']))
 			return [AdminStoreError::DATA_INCOMPLETE];
@@ -653,6 +653,10 @@ abstract class AdminStore extends AdminStoreInit {
 		$args, $callback_authz=null, $callback_param=null
 	) {
 		$this->init();
+		
+		if (!$this->store_is_logged_in())
+			return [AdminStoreError::USER_NOT_LOGGED_IN];
+
 		if (!$this->authz_list_user())
 			return [AdminStoreError::USER_NOT_AUTHORIZED];
 

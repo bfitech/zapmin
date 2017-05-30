@@ -65,7 +65,7 @@ class AdminRouteHTTPTest extends TestCase {
 		$this->format_response($response, $expect_json);
 	}
 
-	public static function _setUpBeforeClass() {
+	public static function setUpBeforeClass() {
 		$logfile_http = HTDOCS . '/zapmin-test-http.log';
 		if (file_exists($logfile_http))
 			unlink($logfile_http);

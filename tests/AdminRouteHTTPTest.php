@@ -21,7 +21,6 @@ class AdminRouteHTTPTest extends TestCase {
 	private $response;
 	private $code;
 	private $body;
-	private $authz = [];
 
 	private function format_response($response, $expect_json) {
 		if ($expect_json)
@@ -33,7 +32,7 @@ class AdminRouteHTTPTest extends TestCase {
 
 	private function GET($path, $get=[], $expect_json=true) {
 		$url = self::$base_uri . $path;
-		$request = [
+		$response = Common::http_client([
 			'url' => $url,
 			'method' => 'GET',
 			'get' => $get,
@@ -41,16 +40,13 @@ class AdminRouteHTTPTest extends TestCase {
 				CURLOPT_COOKIEJAR => self::$cookiefile,
 				CURLOPT_COOKIEFILE => self::$cookiefile,
 			]
-		];
-		if($this->authz)
-			$request['custom_opts'][CURLOPT_HTTPHEADER] = $this->authz;
-		$response = Common::http_client($request);
+		]);
 		$this->format_response($response, $expect_json);
 	}
 
 	private function POST($path, $post=[], $expect_json=true) {
 		$url = self::$base_uri . $path;
-		$request = [
+		$response = Common::http_client([
 			'url' => $url,
 			'method' => 'POST',
 			'post' => $post,
@@ -58,10 +54,7 @@ class AdminRouteHTTPTest extends TestCase {
 				CURLOPT_COOKIEJAR => self::$cookiefile,
 				CURLOPT_COOKIEFILE => self::$cookiefile,
 			]
-		];
-		if($this->authz)
-			$request['custom_opts'][CURLOPT_HTTPHEADER] = $this->authz;
-		$response = Common::http_client($request);
+		]);
 		$this->format_response($response, $expect_json);
 	}
 
@@ -124,8 +117,6 @@ class AdminRouteHTTPTest extends TestCase {
 		$this->assertEquals($this->code, 200);
 		$this->assertEquals($this->body->errno, 0);
 
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 401);
 		$this->assertEquals($this->body->errno,
@@ -143,8 +134,6 @@ class AdminRouteHTTPTest extends TestCase {
 		$this->POST('/login', $post);
 
 		# with post is ok too
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 		$this->POST('/logout');
 		$this->assertEquals($this->code, 200);
 		$this->assertEquals($this->body->errno, 0);
@@ -161,10 +150,6 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$post = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $post);
-
-		# Set header
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 
 		$post = ['pass1' => '1234'];
 		$this->POST('/chpasswd', $post);
@@ -211,11 +196,6 @@ class AdminRouteHTTPTest extends TestCase {
 		$this->POST('/login', $post);
 		$this->assertEquals($this->code, 200);
 
-		# set token
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
-
 		$post['pass0'] = '1234';
 		$post['pass1'] = 'admin';
 		$post['pass2'] = 'admin';
@@ -231,10 +211,6 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$pacc = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $pacc);
-
-		# set token header
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 
 		$this->POST('/chbio', $post);
 		$this->assertEquals($this->code, 200);
@@ -263,11 +239,6 @@ class AdminRouteHTTPTest extends TestCase {
 		$post['email'] = 'w+t@c.jo';
 		$this->POST('/register', $post);
 		$this->assertEquals($this->body->errno, 0);
-
-		# set token header
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
-
 		# autologin
 		$this->GET('/status');
 		$this->assertEquals($this->code, 200);
@@ -291,10 +262,6 @@ class AdminRouteHTTPTest extends TestCase {
 		$pacc = ['uname' => 'jack', 'upass' => 'qwer'];
 		$this->POST('/login', $pacc);
 		$this->assertEquals($this->code, 200);
-		# set token header
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 
 		$post = [
 			'addname' => 'jill',
@@ -307,10 +274,6 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$pacc = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $pacc);
-		# set token header
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 
 		$this->POST('/useradd', $post);
 		$this->assertEquals($this->code, 200);
@@ -318,19 +281,11 @@ class AdminRouteHTTPTest extends TestCase {
 
 		$pacc = ['uname' => 'jill', 'upass' => 'asdf'];
 		$this->POST('/login', $pacc);
-		# set token header
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 		$this->assertEquals($this->code, 200);
 		$this->POST('/logout');
 
 		$pacc = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $pacc);
-		# set token header
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 
 		# user exists
 		$post = [
@@ -356,10 +311,6 @@ class AdminRouteHTTPTest extends TestCase {
 	public function test_userdel() {
 		$pacc = ['uname' => 'jack', 'upass' => 'qwer'];
 		$this->POST('/login', $pacc);
-		# set token header
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 
 		# jack:uid=2, jill:uid=3
 
@@ -381,18 +332,10 @@ class AdminRouteHTTPTest extends TestCase {
 		$pacc = ['uname' => 'jill', 'upass' => 'asdf'];
 		$this->POST('/login', $pacc);
 		$this->assertEquals($this->code, 200);
-		# set token header
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 		$this->GET('/logout');
 
 		$pacc = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $pacc);
-		# set token header
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 		$post['uid'] = '3';
 		$this->POST('/userdel', $post);
 		$this->assertEquals($this->code, 200);
@@ -406,10 +349,6 @@ class AdminRouteHTTPTest extends TestCase {
 	public function test_userlist() {
 		$pacc = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $pacc);
-		# set token header
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 
 		$this->POST('/userlist', $pacc);
 		$this->assertEquals(count($this->body->data), 1);
@@ -429,10 +368,6 @@ class AdminRouteHTTPTest extends TestCase {
 	public function test_byway() {
 		$pacc = ['uname' => 'root', 'upass' => 'admin'];
 		$this->POST('/login', $pacc);
-		# set token header
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 
 		$this->POST('/byway');
 		$this->assertEquals($this->code, 403);
@@ -447,10 +382,6 @@ class AdminRouteHTTPTest extends TestCase {
 		$post['service']['uservice'] = 'yahoo';
 		$this->POST('/byway', $post);
 		$this->assertEquals($this->code, 200);
-		# set token header
-		$this->authz = [];
-		$this->authz[] = sprintf('Authorization: %s %s', 'zapmin', 
-			$this->body->data->token);
 
 		$this->GET('/status');
 		$data = $this->body->data;

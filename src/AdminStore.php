@@ -324,7 +324,7 @@ abstract class AdminStore extends AdminStoreInit {
 	}
 
 	/**
-	 * Default method to decide if user listing is allowed.
+	 * Default method to decide if adding new user is allowed.
 	 *
 	 * This succeeds if current user is root.
 	 */
@@ -563,10 +563,10 @@ abstract class AdminStore extends AdminStoreInit {
 	/**
 	 * Default method to decide if user deletion is allowed.
 	 *
-	 * This succeeds is current user is root, or if it's a case of
+	 * This succeeds if current user is root, or if it's a case of
 	 * self-deletion for non-root user.
 	 *
-	 * @param int User ID to delete.
+	 * @param int $uid User ID to delete.
 	 */
 	public function authz_delete_user($uid) {
 		$udata = $this->user_data;

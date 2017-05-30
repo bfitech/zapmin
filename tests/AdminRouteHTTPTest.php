@@ -101,7 +101,6 @@ class AdminRouteHTTPTest extends TestCase {
 		$this->assertEquals($this->code, 401);
 		$this->assertEquals($this->body->errno,
 			Err::USER_NOT_LOGGED_IN);
-		$this->assertEquals($this->body->data, []);
 	}
 
 	public function test_login() {

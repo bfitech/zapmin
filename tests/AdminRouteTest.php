@@ -86,6 +86,7 @@ class AdminRouteTest extends TestCase {
 				['dbname' => ':memory:'], self::$logger);
 		# use new instance on every matching mock HTTP request
 		$core = (new Router())
+			->config('home', '/')
 			->config('logger', self::$logger);
 		return (new AdminRouteDefault(
 				$store, self::$logger, null, $core))

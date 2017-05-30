@@ -121,6 +121,8 @@ abstract class AdminStore extends AdminStoreInit {
 		$this->init();
 		$logger = $this->logger;
 
+		$logger->debug("Haha: " . AdminStoreError::USER_ALREADY_LOGGED_IN);
+		$logger->debug("Haha: Loggedin: " . (int) $this->store_is_logged_in());
 		if ($this->store_is_logged_in())
 			return [AdminStoreError::USER_ALREADY_LOGGED_IN];
 

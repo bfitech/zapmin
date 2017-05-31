@@ -18,10 +18,27 @@ class AdminStore extends za\AdminStore {}
 
 class AdminStorePatched extends AdminStore {
 
+	public function authz_list_user() {
+		$udata = $this->user_data;
+		if (in_array($udata['uname'], ['root', 'john']))
+			return true;
+		return false;
+	}
+
+	public function authz_add_user() {
+		$udata = $this->user_data;
+		if (in_array($udata['uname'], ['root', 'john']))
+			return true;
+		return false;
+	}
+
 	public function authz_delete_user($uid) {
 		$udata = $this->user_data;
 		if (in_array($udata['uname'], ['root', 'john']))
 			return true;
+		if ($udata['uid'] == $uid)
+			return true;
+		return false;
 	}
 
 }
@@ -674,8 +691,12 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($result[0], Err::USER_NOT_AUTHORIZED);
 		$adm->adm_logout();
 
-		# as 'root'
-		self::loginOK();
+		# use patched AdminStore
+		$adm_orig = $adm;
+		self::$adm = $adm = new AdminStorePatched(self::$sql);
+
+		# as 'john'
+		self::loginOK('john', 'asdf');
 		$uname = $adm->adm_get_safe_user_data()[1]['uname'];
 		$cbp = ['uname' => $uname];
 		# pass authz but password doesn't check out
@@ -710,6 +731,9 @@ class AdminStoreTest extends TestCase {
 
 		# try sign in as 'jonah', no exception thrown
 		self::loginOK('jonah', 'asdfgh');
+
+		# restore default AdminStore
+		self::$adm = $adm = $adm_orig;
 	}
 
 	/**
@@ -732,6 +756,38 @@ class AdminStoreTest extends TestCase {
 		# sign out
 		$adm->adm_logout();
 
+		# use patched AdminStore
+		$adm_orig = $adm;
+		self::$adm = $adm = new AdminStorePatched(self::$sql);
+
+		# as 'john'
+		self::loginOK('john', 'asdf');
+
+		# check number of users
+		$user_count= $adm->store->query(
+			"SELECT count(uid) AS count FROM udata"
+			)['count'];
+		# invalid page and limit on user listing will be silently
+		# set to their defaults
+		$args['post']['page'] = -1e3;
+		$args['post']['limit'] = 1e3;
+		$user_list = $adm->adm_list_user($args)[1];
+		$this->assertEquals(count($user_list), $user_count);
+
+		# authorized user can delete anyone except herself
+		$jessica_uid = $adm->store->query(
+			"SELECT uid FROM udata WHERE uname=? LIMIT 1",
+			['jessica'])['uid'];
+		$args['post']['uid'] = $jessica_uid;
+		$this->assertEquals(
+			$adm->adm_delete_user($args)[0], 0);
+
+		$adm->adm_logout();
+
+		# restore default AdminStore
+		self::$adm = $adm = $adm_orig;
+
+		# as 'root'
 		self::loginOK();
 
 		# check number of users
@@ -745,14 +801,15 @@ class AdminStoreTest extends TestCase {
 		$user_list = $adm->adm_list_user($args)[1];
 		$this->assertEquals(count($user_list), $user_count);
 
-		# root can delete anyone except herself
-		$jessica_uid = $adm->store->query(
+		# root user can delete anyone except herself
+		$jocelyn_uid = $adm->store->query(
 			"SELECT uid FROM udata WHERE uname=? LIMIT 1",
-			['jessica'])['uid'];
-		$args['post']['uid'] = $jessica_uid;
+			['jocelyn'])['uid'];
+		$args['post']['uid'] = $jocelyn_uid;
 		$this->assertEquals(
 			$adm->adm_delete_user($args)[0], 0);
 
+		# logout
 		$adm->adm_logout();
 
 		# create uid arrays

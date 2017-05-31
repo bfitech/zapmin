@@ -774,7 +774,7 @@ class AdminStoreTest extends TestCase {
 		$user_list = $adm->adm_list_user($args)[1];
 		$this->assertEquals(count($user_list), $user_count);
 
-		# authorized user can delete anyone except herself
+		# authorized user can delete anyone including herself
 		$jessica_uid = $adm->store->query(
 			"SELECT uid FROM udata WHERE uname=? LIMIT 1",
 			['jessica'])['uid'];

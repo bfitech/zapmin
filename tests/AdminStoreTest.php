@@ -720,7 +720,7 @@ class AdminStoreTest extends TestCase {
 
 		# no authz
 		$result = $adm->adm_add_user(
-			$args, false, false, false, null, null);
+			$args, false, false, false);
 		$this->assertEquals($result[0], Err::USER_NOT_AUTHORIZED);
 		$adm->adm_logout();
 
@@ -731,8 +731,7 @@ class AdminStoreTest extends TestCase {
 		# as 'john'
 		self::loginOK('john', 'asdf');
 		# pass authz but password doesn't check out
-		$result = $adm->adm_add_user(
-			$args, false, false, false, null, null);
+		$result = $adm->adm_add_user($args, false, false, false);
 		$this->assertEquals($result[0], Err::PASSWORD_INVALID);
 		$this->assertEquals($result[1], Err::PASSWORD_TOO_SHORT);
 
@@ -740,23 +739,20 @@ class AdminStoreTest extends TestCase {
 		$args['post']['addpass1'] = 'asdfgh';
 		# success
 		$this->assertEquals(
-			$adm->adm_add_user(
-				$args, false, false, false, null, null)[0], 0);
+			$adm->adm_add_user($args, false, false, false)[0], 0);
 		# name contains white space
 		$args['post']['addname'] = 'john smith';
 		$this->assertEquals(
-			$adm->adm_add_user(
-				$args, false, false, false, null, null)[0],
+			$adm->adm_add_user($args, false, false, false)[0],
 				Err::USERNAME_HAS_WHITESPACE);
 		# name starts with plus sign
 		$args['post']['addname'] = '+jacqueline';
 		$this->assertEquals(
-			$adm->adm_add_user(
-				$args, false, false, false, null, null)[0],
+			$adm->adm_add_user($args, false, false, false)[0],
 				Err::USERNAME_LEADING_PLUS);
 		# add 'jessica'
 		$args['post']['addname'] = 'jessica';
-		$adm->adm_add_user($args, false, false, false, null, null);
+		$adm->adm_add_user($args, false, false, false);
 		# sign out
 		$adm->adm_logout();
 
@@ -896,7 +892,7 @@ class AdminStoreTest extends TestCase {
 		try {
 			self::loginOK('jocelyn', '1234');
 		} catch (Exception $e) {
-			$this->assertEquals($adm->adm_status(), null);
+			$this->assertNull($adm->adm_status());
 		}
 
 		# restore default AdminStore

@@ -356,15 +356,10 @@ abstract class AdminStore extends AdminStoreInit {
 	 * @param bool $allow_self_register Whether self-registration is
 	 *     allowed.
 	 * @param bool $email_required Whether email address is mandatory.
-	 * @param function $callback_authz Deprecated in favor of
-	 *     AdminStore::authz_add_user.
-	 * @param array $callback_param Deprecated in favor of
-	 *     AdminStore::authz_add_user.
 	 */
 	public function adm_add_user(
 		$args, $pass_twice=null, $allow_self_register=null,
-		$email_required=null, $callback_authz=null,
-		$callback_param=null
+		$email_required=null
 	) {
 		$this->init();
 		$logger = $this->logger;
@@ -503,7 +498,6 @@ abstract class AdminStore extends AdminStoreInit {
 	 *       }
 	 *     }
 	 *     @endcode
-	 *     This can be added to `$args` parameter of route callback.
 	 *
 	 * @return array An array of the form:
 	 *     @code
@@ -596,14 +590,8 @@ abstract class AdminStore extends AdminStoreInit {
 	 * Delete a user.
 	 *
 	 * @param array $args Dict with key: `uid`.
-	 * @param function $callback_authz Deprecated in favor of
-	 *     AdminStore::authz_delete_user.
-	 * @param array $callback_param Deprecated in favor of
-	 *     AdminStore::authz_delete_user.
 	 */
-	public function adm_delete_user(
-		$args, $callback_authz=null, $callback_param=null
-	) {
+	public function adm_delete_user($args) {
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
 
@@ -659,14 +647,8 @@ abstract class AdminStore extends AdminStoreInit {
 	 *
 	 * @param array $args Dict with keys: `page`, `limit`, `order`
 	 *     where `order` is `ASC` or `DESC`.
-	 * @param function $callback_authz Deprecated in favor of
-	 *     AdminStore::authz_list_user.
-	 * @param array $callback_param Deprecated in favor of
-	 *     AdminStore::authz_list_user.
 	 */
-	public function adm_list_user(
-		$args, $callback_authz=null, $callback_param=null
-	) {
+	public function adm_list_user($args) {
 		$this->init();
 		
 		if (!$this->store_is_logged_in())

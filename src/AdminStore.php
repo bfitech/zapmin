@@ -322,8 +322,8 @@ abstract class AdminStore extends AdminStoreInit {
 			), [$this->user_token]);
 		# update cache value
 		$updated_data = array_merge($this->user_data, $vars);
-		if($session)
-			$this->store_redis_cache_write($this->user_token, 
+		if ($session)
+			$this->store_redis_cache_write($this->user_token,
 				$updated_data, $session['expire']);
 
 		# reset user data but not user token

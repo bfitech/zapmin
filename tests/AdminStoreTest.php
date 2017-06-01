@@ -444,7 +444,7 @@ class AdminStoreTest extends TestCase {
 
 	public function test_logout() {
 		$adm = self::$adm;
-		$this->assertEquals($adm->adm_logout()[0], 
+		$this->assertEquals($adm->adm_logout()[0],
 			Err::USER_NOT_LOGGED_IN);
 		self::loginOK();
 		$this->assertEquals($adm->adm_logout()[0], 0);
@@ -454,7 +454,7 @@ class AdminStoreTest extends TestCase {
 		$adm = self::$adm;
 		# not logged in
 		$args = ['pass1' => '123'];
-		$this->assertEquals($adm->adm_change_password($args)[0], 
+		$this->assertEquals($adm->adm_change_password($args)[0],
 			Err::USER_NOT_LOGGED_IN);
 
 		self::loginOK();
@@ -562,7 +562,7 @@ class AdminStoreTest extends TestCase {
 				'site' => 'http://www.bfinews.com']]);
 
 		$safe_data = $adm->adm_get_safe_user_data()[1];
-		$this->assertEquals($safe_data['site'], 
+		$this->assertEquals($safe_data['site'],
 			'http://www.bfinews.com');
 		$this->assertEquals($safe_data['fname'], 'The Administrator');
 	}
@@ -598,7 +598,7 @@ class AdminStoreTest extends TestCase {
 				'site' => 'http://code.bfinews.com']]);
 		$cache_data = $adm->adm_status();
 
-		$this->assertEquals($cache_data['site'], 
+		$this->assertEquals($cache_data['site'],
 			'http://code.bfinews.com');
 		$this->assertEquals($cache_data['fname'], 'Administrator');
 
@@ -692,7 +692,7 @@ class AdminStoreTest extends TestCase {
 			$adm->adm_add_user($args, false, false)[0],
 			Err::SELF_REGISTER_NOT_ALLOWED);
 
-		# as 'john' 
+		# as 'john'
 		self::loginOK('john', 'asdf');
 		# no authz
 		$result = $adm->adm_add_user($args);

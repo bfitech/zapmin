@@ -565,6 +565,45 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($safe_data['fname'], 'The Administrator');
 	}
 
+	public function test_change_bio_redis() {
+		# run test on sqlite3 only
+		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
+			return;
+
+		$logfile = HTDOCS . '/zapmin-test-change-bio.log';
+		if (file_exists($logfile))
+			unlink($logfile);
+		$logger = new Logger(Logger::DEBUG, $logfile);
+		$sql = self::$sql;
+
+		$adm = (new AdminStore($sql, $logger, self::$redis))
+			->config('force_create_table', true);
+
+		$args = self::postFormatter([
+			'uname' => 'root', 'upass' => 'admin']);
+		$token = $adm->adm_login($args)[1]['token'];
+		$adm->adm_set_user_token($token);
+		$adm->adm_status();
+
+		# test userdata
+		$safe_data = $adm->adm_get_safe_user_data()[1];
+		$this->assertEquals($safe_data['fname'], '');
+
+		# change user info
+		$r = $adm->adm_change_bio([
+			'post' => [
+				'fname' => 'Administrator',
+				'site' => 'http://code.bfinews.com']]);
+		$cache_data = $adm->adm_status();
+
+		$this->assertEquals($cache_data['site'], 'http://code.bfinews.com');
+		$this->assertEquals($cache_data['fname'], 'Administrator');
+
+		$adm->adm_logout();
+
+		self::$redis->get_connection()->flushdb();
+	}
+
 	public function test_self_register() {
 		$adm = self::$adm;
 

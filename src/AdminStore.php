@@ -311,6 +311,21 @@ abstract class AdminStore extends AdminStoreInit {
 			'uid' => $this->user_data['uid']
 		]);
 
+		# also update redis cache
+		$expire = $this->store->stmt_fragment('datetime');
+		$session = $this->store->query(
+			sprintf(
+				"SELECT * FROM v_usess " .
+				"WHERE token=? AND expire>%s " .
+				"LIMIT 1",
+				$expire
+			), [$this->user_token]);
+		# update cache value
+		$updated_data = array_merge($this->user_data, $vars);
+		if($session)
+			$this->store_redis_cache_write($this->user_token, 
+				$updated_data, $session['expire']);
+
 		# reset user data but not user token
 		$this->user_data = null;
 		$this->adm_status();

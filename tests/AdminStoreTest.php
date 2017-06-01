@@ -444,7 +444,8 @@ class AdminStoreTest extends TestCase {
 
 	public function test_logout() {
 		$adm = self::$adm;
-		$this->assertEquals($adm->adm_logout()[0], Err::USER_NOT_LOGGED_IN);
+		$this->assertEquals($adm->adm_logout()[0], 
+			Err::USER_NOT_LOGGED_IN);
 		self::loginOK();
 		$this->assertEquals($adm->adm_logout()[0], 0);
 	}
@@ -453,8 +454,8 @@ class AdminStoreTest extends TestCase {
 		$adm = self::$adm;
 		# not logged in
 		$args = ['pass1' => '123'];
-		$this->assertEquals(
-			$adm->adm_change_password($args)[0], Err::USER_NOT_LOGGED_IN);
+		$this->assertEquals($adm->adm_change_password($args)[0], 
+			Err::USER_NOT_LOGGED_IN);
 
 		self::loginOK();
 
@@ -514,8 +515,8 @@ class AdminStoreTest extends TestCase {
 		$adm = self::$adm;
 
 		# not logged in
-		$r = $adm->adm_change_bio([]);
-		$this->assertEquals($r[0], Err::USER_NOT_LOGGED_IN);
+		$result = $adm->adm_change_bio([]);
+		$this->assertEquals($result[0], Err::USER_NOT_LOGGED_IN);
 
 		# begin process
 
@@ -524,15 +525,15 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($safe_data['fname'], '');
 
 		# missing arguments post
-		$r = $adm->adm_change_bio( [] );
-		$this->assertEquals($r[0], Err::DATA_INCOMPLETE);
+		$result = $adm->adm_change_bio( [] );
+		$this->assertEquals($result[0], Err::DATA_INCOMPLETE);
 
 		# no change
-		$r = $adm->adm_change_bio(['post' => []]);
-		$this->assertEquals($r[0], 0);
+		$result = $adm->adm_change_bio(['post' => []]);
+		$this->assertEquals($result[0], 0);
 
 		# fname empty value
-		$r = $adm->adm_change_bio([
+		$result = $adm->adm_change_bio([
 			'post' => [
 				'fname' => '']]);
 
@@ -540,7 +541,7 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($safe_data['fname'], '');
 
 		# change fname
-		$r = $adm->adm_change_bio([
+		$result = $adm->adm_change_bio([
 			'post' => [
 				'fname' => 'The Administrator']]);
 
@@ -550,18 +551,19 @@ class AdminStoreTest extends TestCase {
 
 		# site too long
 		$test_site = 'http://' . str_repeat('jonathan', 12) . '.co';
-		$r = $adm->adm_change_bio([
+		$result = $adm->adm_change_bio([
 			'post' => [
 				'site' => $test_site]]);
-		$this->assertEquals($r[0], Err::SITEURL_INVALID);
+		$this->assertEquals($result[0], Err::SITEURL_INVALID);
 
 		# change site url
-		$r = $adm->adm_change_bio([
+		$result = $adm->adm_change_bio([
 			'post' => [
 				'site' => 'http://www.bfinews.com']]);
 
 		$safe_data = $adm->adm_get_safe_user_data()[1];
-		$this->assertEquals($safe_data['site'], 'http://www.bfinews.com');
+		$this->assertEquals($safe_data['site'], 
+			'http://www.bfinews.com');
 		$this->assertEquals($safe_data['fname'], 'The Administrator');
 	}
 
@@ -590,13 +592,14 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($safe_data['fname'], '');
 
 		# change user info
-		$r = $adm->adm_change_bio([
+		$result = $adm->adm_change_bio([
 			'post' => [
 				'fname' => 'Administrator',
 				'site' => 'http://code.bfinews.com']]);
 		$cache_data = $adm->adm_status();
 
-		$this->assertEquals($cache_data['site'], 'http://code.bfinews.com');
+		$this->assertEquals($cache_data['site'], 
+			'http://code.bfinews.com');
 		$this->assertEquals($cache_data['fname'], 'Administrator');
 
 		$adm->adm_logout();
@@ -689,7 +692,7 @@ class AdminStoreTest extends TestCase {
 			$adm->adm_add_user($args, false, false)[0],
 			Err::SELF_REGISTER_NOT_ALLOWED);
 
-		# as 'john' with default callback
+		# as 'john' 
 		self::loginOK('john', 'asdf');
 		# no authz
 		$result = $adm->adm_add_user($args);
@@ -708,25 +711,16 @@ class AdminStoreTest extends TestCase {
 		$this->assertEquals($adm->adm_add_user($args)[0], 0);
 		$adm->adm_logout();
 
-		# with callback
-		$cbf = function($_args) {
-			# only 'root' and 'john' are allowed to add new user
-			if (in_array($_args['uname'], ['root', 'john']))
-				return 0;
-			return 1;
-		};
-
 		# try to add 'jonah'
 		$args['post']['addname'] = 'jonah';
 		$args['post']['addpass1'] = '123';
 
 		# as 'jocelyn'
 		self::loginOK('jocelyn', 'asdf');
-		$uname = $adm->adm_get_safe_user_data()[1]['uname'];
-		$cbp = ['uname' => $uname];
-		# no authz, doesn't satisfy callback
+
+		# no authz
 		$result = $adm->adm_add_user(
-			$args, false, false, false, $cbf, $cbp);
+			$args, false, false, false, null, null);
 		$this->assertEquals($result[0], Err::USER_NOT_AUTHORIZED);
 		$adm->adm_logout();
 
@@ -736,11 +730,9 @@ class AdminStoreTest extends TestCase {
 
 		# as 'john'
 		self::loginOK('john', 'asdf');
-		$uname = $adm->adm_get_safe_user_data()[1]['uname'];
-		$cbp = ['uname' => $uname];
 		# pass authz but password doesn't check out
 		$result = $adm->adm_add_user(
-			$args, false, false, false, $cbf, $cbp);
+			$args, false, false, false, null, null);
 		$this->assertEquals($result[0], Err::PASSWORD_INVALID);
 		$this->assertEquals($result[1], Err::PASSWORD_TOO_SHORT);
 
@@ -749,22 +741,22 @@ class AdminStoreTest extends TestCase {
 		# success
 		$this->assertEquals(
 			$adm->adm_add_user(
-				$args, false, false, false, $cbf, $cbp)[0], 0);
+				$args, false, false, false, null, null)[0], 0);
 		# name contains white space
 		$args['post']['addname'] = 'john smith';
 		$this->assertEquals(
 			$adm->adm_add_user(
-				$args, false, false, false, $cbf, $cbp)[0],
+				$args, false, false, false, null, null)[0],
 				Err::USERNAME_HAS_WHITESPACE);
 		# name starts with plus sign
 		$args['post']['addname'] = '+jacqueline';
 		$this->assertEquals(
 			$adm->adm_add_user(
-				$args, false, false, false, $cbf, $cbp)[0],
+				$args, false, false, false, null, null)[0],
 				Err::USERNAME_LEADING_PLUS);
 		# add 'jessica'
 		$args['post']['addname'] = 'jessica';
-		$adm->adm_add_user($args, false, false, false, $cbf, $cbp);
+		$adm->adm_add_user($args, false, false, false, null, null);
 		# sign out
 		$adm->adm_logout();
 

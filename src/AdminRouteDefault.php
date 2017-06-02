@@ -122,5 +122,5 @@ class AdminRouteDefault extends AdminRoute {
 		);
 		return $this->core->pj($retval);
 	}
-}
 
+}

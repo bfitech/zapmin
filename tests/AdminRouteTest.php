@@ -481,5 +481,5 @@ class AdminRouteTest extends TestCase {
 		$this->assertEquals($errno, 0);
 		$this->assertEquals($data['uname'], '+someone:github');
 	}
-}
 
+}

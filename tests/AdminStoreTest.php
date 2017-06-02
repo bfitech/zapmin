@@ -14,7 +14,8 @@ if (!defined('HTDOCS'))
 	define('HTDOCS', __DIR__ . '/htdocs-test');
 
 
-class AdminStore extends za\AdminStore {}
+class AdminStore extends za\AdminStore {
+}
 
 class AdminStorePatched extends AdminStore {
 
@@ -151,7 +152,8 @@ class AdminStoreTest extends TestCase {
 		$sql->close();
 		try {
 			$adm = new AdminStore($sql, $logger);
-		} catch(za\AdminStoreError $e) {}
+		} catch(za\AdminStoreError $e) {
+		}
 
 		unlink($dbfile);
 	}
@@ -273,7 +275,7 @@ class AdminStoreTest extends TestCase {
 		self::$redis->get_connection()->flushdb();
 	}
 
-	public function test_upgrade_tables(){
+	public function test_upgrade_tables() {
 		# run test on sqlite3 only
 		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
 			return;
@@ -628,7 +630,7 @@ class AdminStoreTest extends TestCase {
 		# success
 		$args['post']['addname'] = 'john';
 		$this->assertEquals(
-			$adm->adm_add_user($args, true, true)[0], 0); 
+			$adm->adm_add_user($args, true, true)[0], 0);
 		# autologin, this should happen immediately prior to
 		# sending anything to client
 		self::loginOK('john', 'asdf');
@@ -791,7 +793,7 @@ class AdminStoreTest extends TestCase {
 		self::loginOK('john', 'asdf');
 
 		# check number of users
-		$user_count= $adm->store->query(
+		$user_count = $adm->store->query(
 			"SELECT count(uid) AS count FROM udata"
 			)['count'];
 		# invalid page and limit on user listing will be silently
@@ -818,7 +820,7 @@ class AdminStoreTest extends TestCase {
 		self::loginOK();
 
 		# check number of users
-		$user_count= $adm->store->query(
+		$user_count = $adm->store->query(
 			"SELECT count(uid) AS count FROM udata"
 			)['count'];
 		# invalid page and limit on user listing will be silently
@@ -994,5 +996,5 @@ class AdminStoreTest extends TestCase {
 		$diff = abs((abs($dtexp - $dtnow) - $test_expire));
 		$this->assertTrue($diff <= 2);
 	}
-}
 
+}

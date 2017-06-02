@@ -419,5 +419,5 @@ class AdminRouteHTTPTest extends TestCase {
 		$this->assertEquals($response[0], 404);
 		$this->assertEquals($response[1], 'ERROR: 404');
 	}
-}
 
+}

@@ -46,5 +46,5 @@ class AdminStoreMyTest extends AdminStoreTest {
 			->config('expiration', 600)
 			->config('force_create_table', true);
 	}
-}
 
+}

@@ -20,10 +20,12 @@ if (isset($_GET['reloaddb'])) {
 
 # Use this router with its simplified abort.
 class Router extends zc\Router {
+
 	public function abort_custom($code) {
 		self::start_header($code);
 		echo "ERROR: $code";
 	}
+
 }
 $core = new Router();
 $core->config('logger', $logger);
@@ -45,4 +47,3 @@ $adm->route('/useradd',  [$adm, 'route_useradd'],  'POST');
 $adm->route('/userdel',  [$adm, 'route_userdel'],  'POST');
 $adm->route('/userlist', [$adm, 'route_userlist'], 'POST');
 $adm->route('/byway',    [$adm, 'route_byway'],    ['GET', 'POST']);
-

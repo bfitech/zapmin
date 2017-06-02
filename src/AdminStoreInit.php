@@ -146,7 +146,6 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 		return $expiration;
 	}
 
-
 	/**
 	 * Check tables.
 	 *
@@ -347,4 +346,3 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	}
 
 }
-

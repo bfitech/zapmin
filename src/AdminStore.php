@@ -141,7 +141,8 @@ abstract class AdminStore extends AdminStoreInit {
 		$udata = $this->store_match_password($uname, $upass, $usalt);
 		if (!$udata) {
 			# wrong password
-			$logger->warning("Zapmin: login: wrong password: '$uname'.");
+			$logger->warning(
+				"Zapmin: login: wrong password: '$uname'.");
 			return [AdminStoreError::WRONG_PASSWORD];
 		}
 
@@ -184,16 +185,14 @@ abstract class AdminStore extends AdminStoreInit {
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
 
-		# this just close sessions with current sid, whether
-		# it exists or not, possibly deleted by account
-		# self-delete
+		# this just close sessions with current sid, whether it exists
+		# or not, including the case of account self-deletion
 		$this->store_close_session($this->user_data['sid']);
 
 		# reset status
 		$this->store_reset_status();
 
-		# router must set appropriate cookie, e.g.:
-		# setcookie('cookie_adm', '', time() - 7200, '/');
+		# router must set appropriate cookie
 
 		$this->logger->info(sprintf(
 			"Zapmin: logout: OK: '%s'.",
@@ -371,7 +370,7 @@ abstract class AdminStore extends AdminStoreInit {
 			# self-registration not allowed
 			return [AdminStoreError::SELF_REGISTER_NOT_ALLOWED];
 		}
-		
+
 		# check vars
 		if (!isset($args['post']))
 			return [AdminStoreError::DATA_INCOMPLETE];
@@ -431,7 +430,8 @@ abstract class AdminStore extends AdminStoreInit {
 		if ($verify_password !== 0) {
 			$logger->warning(
 				"Zapmin: usradd: passwd invalid: '$addname'.");
-			return [AdminStoreError::PASSWORD_INVALID, $verify_password];
+			return [AdminStoreError::PASSWORD_INVALID,
+				$verify_password];
 		}
 
 		# hashes generation
@@ -650,7 +650,7 @@ abstract class AdminStore extends AdminStoreInit {
 	 */
 	public function adm_list_user($args) {
 		$this->init();
-		
+
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
 
@@ -681,5 +681,5 @@ abstract class AdminStore extends AdminStoreInit {
 
 		return [0, $this->store->query($stmt, [], true)];
 	}
-}
 
+}

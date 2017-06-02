@@ -49,4 +49,3 @@ class AdminStoreError extends \Exception {
 	/** User already exists. */
 	const USERNAME_EXISTS = 0x0508;
 }
-

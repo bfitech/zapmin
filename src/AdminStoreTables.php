@@ -79,7 +79,8 @@ class AdminStoreTables {
 				return false;
 			}
 			return true;
-		} catch (SQLError $e) {}
+		} catch (SQLError $e) {
+		}
 		$sql::$logger->activate();
 		return false;
 	}
@@ -244,5 +245,5 @@ class AdminStoreTables {
 
 		# other upgrade actions here ...
 	}
-}
 
+}

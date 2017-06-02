@@ -39,5 +39,5 @@ class AdminRoute extends AdminStore {
 			$callback($args);
 		}, $method);
 	}
-}
 
+}

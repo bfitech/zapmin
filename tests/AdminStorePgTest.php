@@ -16,10 +16,10 @@ class AdminStorePgTest extends AdminStoreTest {
 
 		# default
 		$params = [
-			'POSTGRES_HOST' => '127.0.0.1',
+			'POSTGRES_HOST' => 'localhost',
 			'POSTGRES_PORT' => '5432',
-			'POSTGRES_USER' => 'zapstore_test',
-			'POSTGRES_PASSWORD' => 'admin',
+			'POSTGRES_USER' => 'postgres',
+			'POSTGRES_PASSWORD' => '',
 			'POSTGRES_DB' => 'zapstore_test_db',
 		];
 

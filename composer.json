@@ -11,13 +11,13 @@
   ],
   "require": {
     "php": ">=5.5 || ~7.0",
-    "bfitech/zapstore-sqlite3": "~1.3.2"
+    "bfitech/zapstore-sqlite3": "~1.3.4"
   },
   "require-dev": {
-    "bfitech/zapstore-mysql": "~1.3.2",
-    "bfitech/zapstore-pgsql": "~1.3.2",
-    "bfitech/zapstore-redis": "~1.3.0",
-    "bfitech/zapstore-predis": "~1.3.0",
+    "bfitech/zapstore-mysql": "~1.3.4",
+    "bfitech/zapstore-pgsql": "~1.3.4",
+    "bfitech/zapstore-redis": "~1.3.4",
+    "bfitech/zapstore-predis": "~1.3.4",
     "phpunit/phpunit": "4.8.*"
   },
   "suggest": {

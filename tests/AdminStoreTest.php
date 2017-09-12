@@ -11,9 +11,9 @@ use BFITech\ZapAdmin as za;
 use BFITech\ZapAdmin\AdminStoreError as Err;
 
 
-
 class AdminStore extends za\AdminStore {
 }
+
 
 class AdminStorePatched extends AdminStore {
 
@@ -64,6 +64,43 @@ class AdminStoreTest extends TestCase {
 		self::$adm->adm_status();
 	}
 
+	private static function prepare_redis_config($configfile) {
+		if (file_exists($configfile))
+			return json_decode(
+				file_get_contents($configfile), true);
+
+		# default
+		$params = [
+			'REDISHOST' => '127.0.0.1',
+			'REDISPORT' => 6379,
+			'REDISDATABASE' => 10,
+			'REDISPASSWORD' => 'xoxo',
+		];
+
+		# parse from environment
+		foreach (array_keys($params) as $key) {
+			$val = getenv($key);
+			if (!$val)
+				continue;
+			$params[$key] = $val;
+		}
+		extract($params);
+
+		# set to standard zapstore params
+		$redisparams = [
+			'redishost' => $REDISHOST,
+			'redisport' => $REDISPORT,
+			'redisdatabase' => $REDISDATABASE,
+			'redispassword' => $REDISPASSWORD,
+		];
+
+		# save config
+		file_put_contents($configfile,
+			json_encode($redisparams, JSON_PRETTY_PRINT));
+
+		return $redisparams;
+	}
+
 	public static function setUpBeforeClass() {
 		CoreDev::testdir(__FILE__);
 
@@ -79,21 +116,18 @@ class AdminStoreTest extends TestCase {
 
 		# redis-specific
 		$redisconf = __TESTDIR__ . '/zapmin-redis.json';
-		if (!file_exists($redisconf)) {
-			$conf = [
-				'redishost' => 'localhost',
-				'redispassword' => 'xoxo',
-			];
-			file_put_contents($redisconf,
-				json_encode($conf, JSON_PRETTY_PRINT));
-		} else {
-			$conf = json_decode(file_get_contents($redisconf), true);
-		}
+		$redisparams = self::prepare_redis_config($redisconf);
 		try {
-			$redis = new Redis($conf, $logger);
+			$redis = new Redis($redisparams, $logger);
 		} catch(RedisError $e) {
-			echo "ERROR: Configure your test redis server here:\n";
-			echo "       '$redisconf'\n";
+			printf(
+				"\n" .
+				"ERROR: Cannot connect to redis server.\n" .
+				"       Please check configuration: '%s'.\n\n" .
+				"CURRENT CONFIGURATION:\n\n%s\n\n",
+				$redisconfig,
+				json_encode($redisparams, JSON_PRETTY_PRINT)
+			);
 			exit(1);
 		}
 		self::$redis = $redis;

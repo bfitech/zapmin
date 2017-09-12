@@ -64,7 +64,8 @@ class AdminStoreMyTest extends AdminStoreTest {
 				"ERROR: Cannot connect to mysql test database.\n" .
 				"       Please check configuration: '%s'.\n\n" .
 				"CURRENT CONFIGURATION:\n\n%s\n\n",
-				$dbconfig, json_encode($dbparams, JSON_PRETTY_PRINT));
+				$dbconfig, json_encode($dbparams, JSON_PRETTY_PRINT)
+			);
 			exit(1);
 		}
 		self::$adm = (new AdminStore(self::$sql, $logger))

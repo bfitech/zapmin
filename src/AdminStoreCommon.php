@@ -56,7 +56,9 @@ class AdminStoreCommon {
 	 * @param int $length Maximum length of generated salt. Normal
 	 *     usage is 16 for user salt and 64 for hashed password.
 	 */
-	public static function generate_secret($data, $key=null, $length=64) {
+	public static function generate_secret(
+		$data, $key=null, $length=64
+	) {
 		if (!$key)
 			$key = dechex(time() + mt_rand());
 		$bstr = $data . $key;

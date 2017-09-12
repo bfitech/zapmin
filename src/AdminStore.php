@@ -11,95 +11,9 @@ use BFITech\ZapStore\SQLError;
 /**
  * AdminStore class.
  *
- * Router-exposed public methods must be prefixed with `adm_*` in this
- * class or in its subclasses for clarity.
+ * This mostly connects routers with underlying databases.
  */
-abstract class AdminStore extends AdminStoreInit {
-
-	/**
-	 * Set user token.
-	 *
-	 * Token can be obtained from cookie or custom header.
-	 */
-	public function adm_set_user_token($user_token) {
-		$this->init();
-		$this->user_token = $user_token;
-	}
-
-	/**
-	 * Getter for expiration.
-	 *
-	 * Useful for client-side manipulation such as sending cookies.
-	 */
-	public function adm_get_expiration() {
-		$this->init();
-		return $this->expiration;
-	}
-
-	/**
-	 * Setter for byway expiration.
-	 *
-	 * Byway expiration is typically much longer than the standard
-	 * one. It also must be easily altered, allowing a subclass to
-	 * finetune the session specific to each 3rd-party provider it
-	 * authenticates against.
-	 *
-	 * @param int $expiration Byway expiration, in seconds.
-	 */
-	public function adm_set_byway_expiration($expiration) {
-		$this->init();
-		$this->byway_expiration = $this->store_check_expiration(
-			$expiration);
-	}
-
-	/**
-	 * Getter for byway expiration.
-	 */
-	public function adm_get_byway_expiration() {
-		$this->init();
-		return $this->byway_expiration;
-	}
-
-	/**
-	 * Retrieve session token name.
-	 *
-	 * Useful for e.g. setting cookie name or HTTP request header
-	 * on the client side.
-	 */
-	public function adm_get_token_name() {
-		return $this->token_name;
-	}
-
-	/**
-	 * Set sesion token name.
-	 *
-	 * @param string $token_name Session token name.
-	 */
-	public function adm_set_token_name($token_name) {
-		$this->token_name = $token_name;
-	}
-
-	/**
-	 * Get user login status.
-	 *
-	 * Call this early on in every HTTP request once session token
-	 * is available.
-	 */
-	public function adm_status() {
-		return $this->store_get_user_status();
-	}
-
-	/**
-	 * Get user data excluding sensitive info.
-	 */
-	public function adm_get_safe_user_data() {
-		if (!$this->store_is_logged_in())
-			return [AdminStoreError::USER_NOT_LOGGED_IN];
-		$data = $this->user_data;
-		foreach (['upass', 'usalt', 'sid', 'token', 'expire'] as $key)
-			unset($data[$key]);
-		return [0, $data];
-	}
+abstract class AdminStore extends AdminStorePrepare {
 
 	/**
 	 * Sign in.
@@ -220,9 +134,9 @@ abstract class AdminStore extends AdminStoreInit {
 	public function adm_change_password(
 		$args, $with_old_password=null
 	) {
+		$uid = $pass0 = $pass1 = $pass2 = null;
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
-
 		extract($this->user_data);
 
 		$logger = $this->logger;
@@ -519,6 +433,7 @@ abstract class AdminStore extends AdminStoreInit {
 		# check vars
 		if (!isset($args['service']))
 			return [AdminStoreError::DATA_INCOMPLETE];
+		$uname = $uservice = null;
 		$service = Common::check_idict($args['service'],
 			['uname', 'uservice']);
 		if (!$service)

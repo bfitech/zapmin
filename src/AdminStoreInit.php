@@ -246,14 +246,13 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 		$key = sprintf('%s:%s', $this->token_name, $token);
 		$this->redis->set($key, json_encode($data));
 
-		if ($expire !== null) {
-			$this->redis->expire($key, $expire);
-		} else {
+		if ($expire === null) {
 			$expire_at = str_replace(' ', 'T', $expire_at) . 'Z';
 			$expire_at = \DateTime::createFromFormat(
 				\DateTime::ATOM, $expire_at)->format("U");
-			$this->redis->expireat($key, $expire_at);
+			$expire = $expire_at;
 		}
+		$this->redis->expire($key, $expire);
 
 		$this->logger->debug(sprintf(
 			"Zapmin: session written to cache: '%s' <- '%s'.",

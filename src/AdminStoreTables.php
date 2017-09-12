@@ -117,6 +117,7 @@ class AdminStoreTables {
 	 */
 	public static function install($expiration=7200) {
 
+		$dtnow = $expire = null;
 		extract(self::fragments($expiration));
 		$sql = self::$sql;
 

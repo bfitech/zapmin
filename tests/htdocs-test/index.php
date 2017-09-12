@@ -3,13 +3,16 @@
 
 require __DIR__ .'/../../vendor/autoload.php';
 
+
+use BFITech\ZapCoreDev\CoreDev;
 use BFITech\ZapCore as zc;
 use BFITech\ZapStore as zs;
 use BFITech\ZapAdmin as za;
 
 
-$dbname = __DIR__ . '/zapmin-test-http.sq3';
-$logfile = __DIR__ . '/zapmin-test-http.log';
+CoreDev::testdir(__DIR__);
+$dbname = __TESTDIR__ . '/zapmin-http.sq3';
+$logfile = __TESTDIR__ . '/zapmin-http.log';
 $logger = new zc\Logger(zc\Logger::DEBUG, $logfile);
 
 # Remote test database. Use this on teardown.

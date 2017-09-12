@@ -2,6 +2,7 @@
 
 
 use PHPUnit\Framework\TestCase;
+use BFITech\ZapCoreDev\CoreDev;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapStore\Redis;
@@ -9,9 +10,6 @@ use BFITech\ZapStore\RedisError;
 use BFITech\ZapAdmin as za;
 use BFITech\ZapAdmin\AdminStoreError as Err;
 
-
-if (!defined('HTDOCS'))
-	define('HTDOCS', __DIR__ . '/htdocs-test');
 
 
 class AdminStore extends za\AdminStore {
@@ -67,7 +65,9 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
-		$logfile = HTDOCS . '/zapmin-test-sqlite3.log';
+		CoreDev::testdir(__FILE__);
+
+		$logfile = __TESTDIR__ . '/zapmin-sqlite3.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		$logger = new Logger(Logger::DEBUG, $logfile);
@@ -78,7 +78,7 @@ class AdminStoreTest extends TestCase {
 			->config('expiration', 600);
 
 		# redis-specific
-		$redisconf = HTDOCS . '/zapmin-test-redis.json';
+		$redisconf = __TESTDIR__ . '/zapmin-redis.json';
 		if (!file_exists($redisconf)) {
 			$conf = [
 				'redishost' => 'localhost',
@@ -113,11 +113,11 @@ class AdminStoreTest extends TestCase {
 		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
 			return;
 
-		$logfile = HTDOCS . '/zapmin-test-constructor.log';
+		$logfile = __TESTDIR__ . '/zapmin-constructor.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		$logger = new Logger(Logger::ERROR, $logfile);
-		$dbfile = HTDOCS . '/zapmin-test-constructor.sq3';
+		$dbfile = __TESTDIR__ . '/zapmin-constructor.sq3';
 		$sql = new SQLite3([
 			'dbname' => $dbfile,
 		], $logger);
@@ -163,8 +163,8 @@ class AdminStoreTest extends TestCase {
 		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
 			return;
 
-		$logfile = HTDOCS . '/zapmin-test-redis.log';
-		$dbfile = HTDOCS . '/zapmit-test-redis.sq3';
+		$logfile = __TESTDIR__ . '/zapmin-redis.log';
+		$dbfile = __TESTDIR__ . '/zapmit-redis.sq3';
 		foreach ([$logfile, $dbfile] as $fl)
 			if (file_exists($fl))
 				unlink($fl);
@@ -280,7 +280,7 @@ class AdminStoreTest extends TestCase {
 		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
 			return;
 
-		$logfile = HTDOCS . '/zapmin-test-table-update.log';
+		$logfile = __TESTDIR__ . '/zapmin-table-update.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		$logger = new Logger(Logger::DEBUG, $logfile);
@@ -574,7 +574,7 @@ class AdminStoreTest extends TestCase {
 		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
 			return;
 
-		$logfile = HTDOCS . '/zapmin-test-change-bio.log';
+		$logfile = __TESTDIR__ . '/zapmin-change-bio.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		$logger = new Logger(Logger::DEBUG, $logfile);

@@ -7,10 +7,6 @@ use BFITech\ZapCoreDev\CoreDev;
 use BFITech\ZapAdmin\AdminStoreError as Err;
 
 
-if (!defined('HTDOCS'))
-	define('HTDOCS', __DIR__ . '/htdocs-test');
-
-
 class AdminRouteHTTPTest extends TestCase {
 
 	public static $cookiefile;
@@ -59,11 +55,13 @@ class AdminRouteHTTPTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
-		$logfile_http = HTDOCS . '/zapmin-test-http.log';
+		CoreDev::testdir(__FILE__);
+		$htdocs = __DIR__ . '/htdocs-test';
+		$logfile_http = $htdocs . '/zapmin-test-http.log';
 		if (file_exists($logfile_http))
 			unlink($logfile_http);
-		self::$cookiefile = HTDOCS . '/zapmin-test-cookie.log';
-		self::$server_pid = CoreDev::server_up(HTDOCS);
+		self::$cookiefile = $htdocs. '/zapmin-test-cookie.log';
+		self::$server_pid = CoreDev::server_up($htdocs);
 	}
 
 	public static function tearDownAfterClass() {

@@ -3,6 +3,7 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
+use BFITech\ZapCoreDev\CoreDev;
 use BFITech\ZapCoreDev\RouterDev as Router;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapAdmin\AdminRouteDefault;
@@ -10,16 +11,14 @@ use BFITech\ZapAdmin\AdminStoreError as Err;
 use BFITech\ZapAdmin\AdminRouteError;
 
 
-if (!defined('HTDOCS'))
-	define('HTDOCS', __DIR__ . '/htdocs-test');
-
-
 class AdminRouteTest extends TestCase {
 
 	public static $logger;
 
 	public static function setUpBeforeClass() {
-		$logfile = HTDOCS . '/zapmin-test-route.log';
+		CoreDev::testdir(__FILE__);
+
+		$logfile = __TESTDIR__ . '/zapmin-route.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 
@@ -47,7 +46,7 @@ class AdminRouteTest extends TestCase {
 		# use 'foo' as token name
 		$_COOKIE['foo'] = 'test';
 
-		$logfile = HTDOCS . '/zapmin-test-route-constructor.log';
+		$logfile = __TESTDIR__ . '/zapmin-route.log';
 		$logger = new Logger(Logger::ERROR, $logfile);
 
 		$core = (new Router())

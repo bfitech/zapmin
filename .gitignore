@@ -10,8 +10,8 @@
 
 .DS_Store
 composer.lock
-zapmin-test*
 
 /docs/
 /vendor/
+/tests/testdata/
 

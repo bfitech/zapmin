@@ -1,7 +1,7 @@
 <?php
 
 
-require __DIR__ .'/../../vendor/autoload.php';
+require __DIR__ .'/../vendor/autoload.php';
 
 
 use BFITech\ZapCoreDev\CoreDev;
@@ -10,7 +10,7 @@ use BFITech\ZapStore as zs;
 use BFITech\ZapAdmin as za;
 
 
-CoreDev::testdir(__DIR__);
+CoreDev::testdir(__FILE__);
 $dbname = __TESTDIR__ . '/zapmin-http.sq3';
 $logfile = __TESTDIR__ . '/zapmin-http.log';
 $logger = new zc\Logger(zc\Logger::DEBUG, $logfile);
@@ -30,12 +30,9 @@ class Router extends zc\Router {
 	}
 
 }
-$core = new Router();
-$core->config('logger', $logger);
 
-$store = new zs\SQLite3([
-	'dbname' => $dbname,
-], $logger);
+$core = (new Router)->config('logger', $logger);
+$store = new zs\SQLite3(['dbname' => $dbname], $logger);
 
 $adm = new za\AdminRouteDefault($store, $logger, null, $core);
 

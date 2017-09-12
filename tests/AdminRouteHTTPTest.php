@@ -56,12 +56,11 @@ class AdminRouteHTTPTest extends TestCase {
 
 	public static function setUpBeforeClass() {
 		CoreDev::testdir(__FILE__);
-		$htdocs = __DIR__ . '/htdocs-test';
-		$logfile_http = $htdocs . '/zapmin-test-http.log';
+		$logfile_http = __TESTDIR__ . '/zapmin-http.log';
 		if (file_exists($logfile_http))
 			unlink($logfile_http);
-		self::$cookiefile = $htdocs. '/zapmin-test-cookie.log';
-		self::$server_pid = CoreDev::server_up($htdocs);
+		self::$cookiefile = __TESTDIR__ . '/zapmin-cookie.log';
+		self::$server_pid = CoreDev::server_up(__DIR__);
 	}
 
 	public static function tearDownAfterClass() {

@@ -221,7 +221,6 @@ class AdminStoreTables {
 	 */
 	private static function upgrade_tables($from_version=null) {
 
-		extract(self::fragments());
 		$sql = self::$sql;
 
 		if (!$from_version) {

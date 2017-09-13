@@ -102,4 +102,3 @@ abstract class AdminStorePrepare extends AdminStoreInit {
 	}
 
 }
-

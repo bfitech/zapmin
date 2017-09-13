@@ -261,6 +261,63 @@ abstract class AdminStore extends AdminStorePrepare {
 	}
 
 	/**
+	 * Verify username of new user.
+	 */
+	private function _add_user_verify_name($addname) {
+		$logger = $this->logger;
+
+		# check name, allow multi-byte chars but not whitespace
+		if (strlen($addname) > 64) {
+			# max 64 chars
+			$logger->warning(
+				"Zapmin: usradd: name invalid: '$addname'.");
+			return AdminStoreError::USERNAME_TOO_LONG;
+		}
+		foreach([" ", "\n", "\r", "\t"] as $white) {
+			# never allow whitespace in the middle
+			if (strpos($addname, $white) !== false) {
+				$logger->warning(
+					"Zapmin: usradd: name invalid: '$addname'.");
+				return AdminStoreError::USERNAME_HAS_WHITESPACE;
+			}
+		}
+		if ($addname[0] == '+') {
+			# leading '+' is reserved for passwordless accounts
+			$logger->warning(
+				"Zapmin: usradd: name invalid: '$addname'.");
+			return AdminStoreError::USERNAME_LEADING_PLUS;
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Verify email of new user.
+	 */
+	private function _add_user_verify_email($email, $addname) {
+		$logger = $this->logger;
+
+		if (!self::verify_email_address($email)) {
+			$logger->warning(sprintf(
+				"Zapmin: usradd: email invalid: '%s' <- '%s'.",
+				$addname, $email));
+			return AdminStoreError::EMAIL_INVALID;
+		}
+
+		if ($this->store->query(
+			"SELECT uid FROM udata WHERE email=? LIMIT 1",
+			[$email])
+		) {
+			$logger->warning(sprintf(
+				"Zapmin: usradd: email exists: '%s' <- '%s'.",
+				$addname, $email));
+			return AdminStoreError::EMAIL_EXISTS;
+		}
+
+		return 0;
+	}
+
+	/**
 	 * Register a new user.
 	 *
 	 * @param array $args Dict with keys: `addname`, `addpass1`,
@@ -277,6 +334,7 @@ abstract class AdminStore extends AdminStorePrepare {
 		$this->init();
 		$logger = $this->logger;
 
+		# check permission
 		if ($this->store_is_logged_in()) {
 			if (!$this->authz_add_user())
 				return [AdminStoreError::USER_NOT_AUTHORIZED];
@@ -296,72 +354,45 @@ abstract class AdminStore extends AdminStorePrepare {
 		$post = Common::check_idict($args['post'], $keys);
 		if (!$post)
 			return [AdminStoreError::DATA_INCOMPLETE];
+
+		$addname = $addpass1 = $addpass2 = $email = null;
 		extract($post);
 
-		# check name, allow unicode but not whitespace
-		if (strlen($addname) > 64) {
-			# max 64 chars
-			$logger->warning(
-				"Zapmin: usradd: name invalid: '$addname'.");
-			return [AdminStoreError::USERNAME_TOO_LONG];
-		}
-		foreach([" ", "\n", "\r", "\t"] as $white) {
-			# never allow whitespace in the middle
-			if (strpos($addname, $white) !== false) {
-				$logger->warning(
-					"Zapmin: usradd: name invalid: '$addname'.");
-				return [AdminStoreError::USERNAME_HAS_WHITESPACE];
-			}
-		}
-		if ($addname[0] == '+') {
-			# leading '+' is reserved for passwordless accounts
-			$logger->warning(
-				"Zapmin: usradd: name invalid: '$addname'.");
-			return [AdminStoreError::USERNAME_LEADING_PLUS];
-		}
+		$udata = [];
 
+		# verify new usename
+		if (0 !== $rv = $this->_add_user_verify_name($addname))
+			return [$rv];
+		$udata['uname'] = $addname;
+
+		# verify email address
 		if ($email_required) {
-			if (!self::verify_email_address($email)) {
-				$logger->warning(sprintf(
-					"Zapmin: usradd: email invalid: '%s' <- '%s'.",
-					$addname, $email));
-				return [AdminStoreError::EMAIL_INVALID];
-			}
-			if ($this->store->query(
-				"SELECT uid FROM udata WHERE email=? LIMIT 1",
-				[$email])
-			) {
-				$logger->warning(sprintf(
-					"Zapmin: usradd: email exists: '%s' <- '%s'.",
-					$addname, $email));
-				return [AdminStoreError::EMAIL_EXISTS];
-			}
+			if (0 !== $rv = $this->_add_user_verify_email(
+				$email, $addname)
+			)
+				return [$rv];
+			$udata['email'] = $email;
 		}
 
 		if (!$pass_twice)
 			$addpass2 = $addpass1;
-		$verify_password = $this->verify_password($addpass1, $addpass2);
-		if ($verify_password !== 0) {
+		# verify password
+		if (0 !== $rv = $this->verify_password($addpass1, $addpass2)) {
 			$logger->warning(
 				"Zapmin: usradd: passwd invalid: '$addname'.");
 			return [AdminStoreError::PASSWORD_INVALID,
-				$verify_password];
+				$rv];
 		}
 
-		# hashes generation
-		$usalt = $this->generate_secret($addname . $addpass1, null, 16);
-		$hpass = $this->hash_password($addname, $addpass1, $usalt);
+		# generate hashes
+		$udata['usalt'] = $this->generate_secret(
+			$addname . $addpass1, null, 16);
+		$udata['upass'] = $this->hash_password(
+			$addname, $addpass1, $udata['usalt']);
 
 		# insert
-		$udata = [
-			'uname' => $addname,
-			'upass' => $hpass,
-			'usalt' => $usalt,
-		];
-		if ($email_required)
-			$udata['email'] = $email;
 		try {
-			$this->store->insert('udata', $udata, 'uid');
+			$uid = $this->store->insert('udata', $udata, 'uid');
 		} catch(SQLError $e) {
 			# user exists
 			$logger->info("Zapmin: usradd: user exists: '$addname'.");
@@ -369,7 +400,7 @@ abstract class AdminStore extends AdminStorePrepare {
 		}
 
 		# success
-		$logger->info("Zapmin: usradd: OK: '$addname'.");
+		$logger->info("Zapmin: usradd: OK: $uid:'$addname'.");
 		return [0];
 	}
 
@@ -444,13 +475,11 @@ abstract class AdminStore extends AdminStorePrepare {
 		$check = $this->store->query(
 			"SELECT uid FROM udata WHERE uname=? LIMIT 1",
 			[$dbuname]);
-		if ($check) {
-			$uid = $check['uid'];
-		} else {
-			$uid = $this->store->insert("udata", [
-				'uname' => $dbuname,
-			], 'uid');
-		}
+		$uid = $check
+			? $check['uid']
+			: $this->store->insert("udata", [
+					'uname' => $dbuname,
+				], 'uid');
 
 		# token generation is a little different
 		$token = $this->generate_secret(
@@ -475,7 +504,7 @@ abstract class AdminStore extends AdminStorePrepare {
 		], 'sid');
 
 		# use token for next request
-		$this->logger->info("Zapmin: usradd: OK : '$dbuname'.");
+		$this->logger->info("Zapmin: usradd: OK: $uid:'$dbuname'.");
 		return [0, [
 			'uid' => $uid,
 			'uname' => $dbuname,

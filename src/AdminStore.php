@@ -361,27 +361,26 @@ abstract class AdminStore extends AdminStorePrepare {
 		$udata = [];
 
 		# verify new usename
-		if (0 !== $rv = $this->_add_user_verify_name($addname))
-			return [$rv];
+		if (0 !== $ret = $this->_add_user_verify_name($addname))
+			return [$ret];
 		$udata['uname'] = $addname;
 
 		# verify email address
 		if ($email_required) {
-			if (0 !== $rv = $this->_add_user_verify_email(
+			if (0 !== $ret = $this->_add_user_verify_email(
 				$email, $addname)
 			)
-				return [$rv];
+				return [$ret];
 			$udata['email'] = $email;
 		}
 
 		if (!$pass_twice)
 			$addpass2 = $addpass1;
 		# verify password
-		if (0 !== $rv = $this->verify_password($addpass1, $addpass2)) {
+		if (0 !== $ret = $this->verify_password($addpass1, $addpass2)) {
 			$logger->warning(
 				"Zapmin: usradd: passwd invalid: '$addname'.");
-			return [AdminStoreError::PASSWORD_INVALID,
-				$rv];
+			return [AdminStoreError::PASSWORD_INVALID, $ret];
 		}
 
 		# generate hashes

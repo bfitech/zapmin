@@ -60,7 +60,7 @@ class AdminStoreCommon {
 		$data, $key=null, $length=64
 	) {
 		if (!$key)
-			$key = dechex(time() + mt_rand());
+			$key = dechex(uniqid() + mt_rand());
 		$bstr = $data . $key;
 		$bstr = hash_hmac('sha256', $bstr, $key, true);
 		$bstr = base64_encode($bstr);

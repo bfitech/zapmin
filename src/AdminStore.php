@@ -482,7 +482,7 @@ abstract class AdminStore extends AdminStorePrepare {
 
 		# token generation is a little different
 		$token = $this->generate_secret(
-			$dbuname . time(), $uname);
+			$dbuname . uniqid(), $uname);
 
 		# explicitly use byway expiration, default column value
 		# is strictly for standard expiration

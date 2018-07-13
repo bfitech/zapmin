@@ -20,8 +20,9 @@ class AdminRoute extends AdminStore {
 	 * @param string $path Router path.
 	 * @param callable $callback Router callback.
 	 * @param string|array $method Router request method.
+	 * @param bool $is_raw If true, accept raw data instead of parsed
 	 */
-	public function route($path, $callback, $method='GET') {
+	public function route($path, $callback, $method='GET', $is_raw=null) {
 		$this->core->route($path, function($args) use($callback){
 			# set token if available
 			if (isset($args['cookie'][$this->token_name])) {
@@ -37,7 +38,7 @@ class AdminRoute extends AdminStore {
 			}
 			# execute calback
 			$callback($args);
-		}, $method);
+		}, $method, $is_raw);
 	}
 
 }

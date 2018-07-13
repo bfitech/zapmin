@@ -22,6 +22,10 @@ namespace BFITech\ZapAdmin;
  *
  * # run it with something like `php -S 0.0.0.0:8000`
  * @endcode
+ *
+ * Suppress all the PMD warnings in this class.
+ *
+ * @SuppressWarnings(PHPMD)
  */
 class AdminRouteDefault extends AdminRoute {
 

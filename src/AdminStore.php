@@ -12,6 +12,10 @@ use BFITech\ZapStore\SQLError;
  * AdminStore class.
  *
  * This mostly connects routers with underlying databases.
+ *
+ * Suppress all the PMD warnings in this class.
+ *
+ * @SuppressWarnings(PHPMD)
  */
 abstract class AdminStore extends AdminStorePrepare {
 

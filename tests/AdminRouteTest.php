@@ -3,7 +3,7 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
-use BFITech\ZapCoreDev\CoreDev;
+use BFITech\ZapCommonDev\CommonDev;
 use BFITech\ZapCoreDev\RouterDev as Router;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapAdmin\AdminRouteDefault;
@@ -16,7 +16,7 @@ class AdminRouteTest extends TestCase {
 	public static $logger;
 
 	public static function setUpBeforeClass() {
-		CoreDev::testdir(__FILE__);
+		CommonDev::testdir(__FILE__);
 
 		$logfile = __TESTDIR__ . '/zapmin-route.log';
 		if (file_exists($logfile))

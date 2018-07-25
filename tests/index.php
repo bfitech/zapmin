@@ -4,13 +4,13 @@
 require __DIR__ .'/../vendor/autoload.php';
 
 
-use BFITech\ZapCoreDev\CoreDev;
+use BFITech\ZapCommonDev\CommonDev;
 use BFITech\ZapCore as zc;
 use BFITech\ZapStore as zs;
 use BFITech\ZapAdmin as za;
 
 
-CoreDev::testdir(__FILE__);
+CommonDev::testdir(__FILE__);
 $dbname = __TESTDIR__ . '/zapmin-http.sq3';
 $logfile = __TESTDIR__ . '/zapmin-http.log';
 $logger = new zc\Logger(zc\Logger::DEBUG, $logfile);

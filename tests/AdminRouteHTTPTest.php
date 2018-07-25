@@ -3,7 +3,7 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Common;
-use BFITech\ZapCoreDev\CoreDev;
+use BFITech\ZapCommonDev\CommonDev;
 use BFITech\ZapAdmin\AdminStoreError as Err;
 
 
@@ -55,12 +55,12 @@ class AdminRouteHTTPTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
-		CoreDev::testdir(__FILE__);
+		CommonDev::testdir(__FILE__);
 		$logfile_http = __TESTDIR__ . '/zapmin-http.log';
 		if (file_exists($logfile_http))
 			unlink($logfile_http);
 		self::$cookiefile = __TESTDIR__ . '/zapmin-cookie.log';
-		self::$server_pid = CoreDev::server_up(__DIR__);
+		self::$server_pid = CommonDev::server_up(__DIR__);
 	}
 
 	public static function tearDownAfterClass() {
@@ -72,7 +72,7 @@ class AdminRouteHTTPTest extends TestCase {
 			'get' => ['reloaddb' => 1]
 		]);
 		if (self::$server_pid)
-			CoreDev::server_down(self::$server_pid);
+			CommonDev::server_down(self::$server_pid);
 	}
 
 	public function tearDown() {

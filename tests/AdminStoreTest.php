@@ -2,7 +2,7 @@
 
 
 use PHPUnit\Framework\TestCase;
-use BFITech\ZapCoreDev\CoreDev;
+use BFITech\ZapCommonDev\CommonDev;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapStore\Redis;
@@ -102,7 +102,7 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
-		CoreDev::testdir(__FILE__);
+		CommonDev::testdir(__FILE__);
 
 		$logfile = __TESTDIR__ . '/zapmin-sqlite3.log';
 		if (file_exists($logfile))

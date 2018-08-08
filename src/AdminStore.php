@@ -13,9 +13,10 @@ use BFITech\ZapStore\SQLError;
  *
  * This mostly connects routers with underlying databases.
  *
- * Suppress all the PMD warnings in this class.
- *
- * @SuppressWarnings(PHPMD)
+ * @manonly
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @endmanonly
  */
 abstract class AdminStore extends AdminStorePrepare {
 
@@ -194,6 +195,11 @@ abstract class AdminStore extends AdminStorePrepare {
 	 * Change user info.
 	 *
 	 * @param array $args Dict with keys: `fname`, `site`.
+	 *
+	 * @manonly
+	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+	 * @SuppressWarnings(PHPMD.NPathComplexity)
+	 * @endmanonly
 	 */
 	public function adm_change_bio($args) {
 		if (!$this->store_is_logged_in())
@@ -330,6 +336,11 @@ abstract class AdminStore extends AdminStorePrepare {
 	 * @param bool $allow_self_register Whether self-registration is
 	 *     allowed.
 	 * @param bool $email_required Whether email address is mandatory.
+	 *
+	 * @manonly
+	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+	 * @SuppressWarnings(PHPMD.NPathComplexity)
+	 * @endmanonly
 	 */
 	public function adm_add_user(
 		$args, $pass_twice=null, $allow_self_register=null,
@@ -594,6 +605,11 @@ abstract class AdminStore extends AdminStorePrepare {
 	 *
 	 * @param array $args Dict with keys: `page`, `limit`, `order`
 	 *     where `order` is `ASC` or `DESC`.
+	 *
+	 * @manonly
+	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+	 * @SuppressWarnings(PHPMD.NPathComplexity)
+	 * @endmanonly
 	 */
 	public function adm_list_user($args) {
 		$this->init();

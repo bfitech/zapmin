@@ -4,11 +4,11 @@
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapCommonDev\CommonDev;
-use BFITech\ZapCoreDev\RouterDev as Router;
+use BFITech\ZapCoreDev\RouterDev;
+use BFITech\ZapCoreDev\RoutingDev;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapAdmin\AdminRouteDefault;
 use BFITech\ZapAdmin\AdminStoreError as Err;
-use BFITech\ZapAdmin\AdminRouteError;
 
 
 class AdminRouteTest extends TestCase {
@@ -17,19 +17,11 @@ class AdminRouteTest extends TestCase {
 
 	public static function setUpBeforeClass() {
 		CommonDev::testdir(__FILE__);
-
 		$logfile = __TESTDIR__ . '/zapmin-route.log';
 		if (file_exists($logfile))
 			unlink($logfile);
-
 		self::$logger = new Logger(
 			Logger::DEBUG, $logfile);
-
-		$_SERVER['REQUEST_URI'] = '/';
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-	}
-
-	public static function tearDownAfterClass() {
 	}
 
 	public function setUp() {
@@ -49,7 +41,7 @@ class AdminRouteTest extends TestCase {
 		$logfile = __TESTDIR__ . '/zapmin-route.log';
 		$logger = new Logger(Logger::ERROR, $logfile);
 
-		$core = (new Router())
+		$core = (new RouterDev())
 			->config('home', '/usr')
 			->config('shutdown', false)
 			->config('logger', $logger);
@@ -84,366 +76,318 @@ class AdminRouteTest extends TestCase {
 			$store = new SQLite3(
 				['dbname' => ':memory:'], self::$logger);
 		# use new instance on every matching mock HTTP request
-		$core = (new Router())
+		$core = (new RouterDev())
 			->config('home', '/')
 			->config('logger', self::$logger);
+		# @note: AdminRoute->route is different from
+		# RouterDev->route.
 		return (new AdminRouteDefault(
 				$store, self::$logger, null, $core))
 			->config('token_name', 'test-zapmin');
 	}
 
 	/**
-	 * @depends test_constructor
+	 * Simulated request with a valid authentication cookie.
 	 */
+	private function request_authed(
+		$rdev, $url, $method, $args, $token
+	) {
+		$rdev->request($url, $method, $args, [
+			'test-zapmin' => $token
+		]);
+	}
+
 	public function test_home() {
-		$_SERVER['REQUEST_URI'] = '/';
 		$adm = $this->make_router();
 		$core = $adm->core;
+		$rdev = new RoutingDev($core);
 
 		$token_name = $adm->adm_get_token_name();
 		$this->assertEquals($token_name, 'test-zapmin');
 
-		$adm->route('/', [$adm, 'route_home']);
+		$rdev->request('/', 'GET');
+		$core->route('/', [$adm, 'route_home']);
 		$this->assertTrue(
 			strpos(strtolower($core::$body_raw), 'it wurks') > 0);
 	}
 
-	private function login_cleanup($core=null) {
-		$_SERVER['REQUEST_URI'] = '/';
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-		if (isset($_SERVER['HTTP_AUTHORIZATION']))
-			unset($_SERVER['HTTP_AUTHORIZATION']);
-		$_GET = $_POST = $_COOKIE = [];
-		if ($core) {
-			$core::$code = 200;
-			$core::$head = [];
-			$core::$body = null;
-		}
-	}
+	/**
+	 * Successful login for admin to further test user management.
+	 */
+	private function login_sequence($adm) {
 
-	private function login_sequence($store=null) {
-		$this->login_cleanup();
-
-		$_SERVER['REQUEST_URI'] = '/login';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_POST['uname'] = 'root';
-		$_POST['upass'] = 'admin';
-
-		$adm = $this->make_router($store);
 		$core = $adm->core;
+		$rdev = new RoutingDev($core);
 
+		$rdev
+			->request('/login', 'POST', [
+				'post' => [
+					'uname' => 'root',
+					'upass' => 'admin',
+				]
+			]);
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
-		extract($core::$body);
+
 		$this->assertEquals($core::$code, 200);
-		$this->assertEquals($errno, 0);
-		$this->assertEquals($data['uid'], 1);
-		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
-			'%s %s', $adm->adm_get_token_name(),
-			$data['token']);
-		$_GET = $_POST = $_COOKIE = [];
+		$this->assertEquals($core::$errno, 0);
+		$this->assertEquals($core::$data['uid'], 1);
+		return $core::$data['token'];
 	}
 
-	/**
-	 * @depends test_home
-	 */
 	public function test_status() {
-		$this->login_cleanup();
-
-		$_SERVER['REQUEST_URI'] = '/status';
 		$adm = $this->make_router();
 		$core = $adm->core;
+		$rdev = new RoutingDev($core);
 
+		# unauthed
+		$rdev->request('/status', 'GET');
 		$adm->route('/status', [$adm, 'route_status']);
-		extract($core::$body);
-
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, Err::USER_NOT_LOGGED_IN);
+		$this->assertEquals($core::$errno, Err::USER_NOT_LOGGED_IN);
 
-		###
+		$token = $this->login_sequence($adm, $adm->store);
 
-		$this->login_sequence($adm->store);
-
-		###
-
-		$_SERVER['REQUEST_URI'] = '/status';
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$adm = $this->make_router($adm->store);
-		$core = $adm->core;
-
+		# authed via cookie
+		$this->request_authed(
+			$rdev, '/status', 'GET', [], $token);
 		$adm->route('/status', [$adm, 'route_status']);
-		extract($core::$body);
-		$this->assertEquals($errno, 0);
+		$this->assertEquals($core::$errno, 0);
+		$this->assertEquals($core::$data['uid'], 1);
+
+		# authed via header
+		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
+			"%s %s", 'test-zapmin', $token);
+		$rdev->request('/status', 'GET');
+		$adm->route('/status', [$adm, 'route_status']);
+		$this->assertEquals($core::$errno, 0);
+		$this->assertEquals($core::$data['uid'], 1);
 	}
 
-	/**
-	 * @depends test_status
-	 */
 	public function test_login_logout() {
-		$this->login_cleanup();
 
-		$_SERVER['REQUEST_URI'] = '/login';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router();
 		$core = $adm->core;
+		$rdev = new RoutingDev($core);
 
+		$rdev->request('/login', 'POST', ['post' => []]);
 		$adm->route('/login', [$adm, 'route_login'], 'POST');
-		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
 
 		###
 
-		$this->login_sequence($adm->store);
+		$token = $this->login_sequence($adm);
 
 		###
 
-		$_SERVER['REQUEST_URI'] = '/logout';
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$adm = $this->make_router($adm->store);
-
+		$this->request_authed($rdev, '/logout', 'GET', [], $token);
 		$adm->route('/logout', [$adm, 'route_logout']);
-		extract($core::$body);
-		$this->assertEquals($errno, 0);
+		$this->assertEquals($core::$errno, 0);
 	}
 
-	/**
-	 * @depends test_login_logout
-	 */
 	public function test_chpasswd() {
 		$adm = $this->make_router();
-		$this->login_sequence($adm->store);
 		$core = $adm->core;
+		$rdev = new RoutingDev($core);
 
 		###
 
-		$_SERVER['REQUEST_URI'] = '/chpasswd';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm->store);
+		$token = $this->login_sequence($adm);
 
+		###
+
+		$post = [];
+
+		$this->request_authed(
+			$rdev, '/chpasswd', 'POST', ['post' => $post], $token);
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
-		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
 
 		###
 
-		$_POST['pass0'] = 'admin';
-		$_POST['pass1'] = 'admin1';
-		$_POST['pass2'] = 'admin1';
-		$adm = $this->make_router($adm->store);
+		$post = [
+			'pass0' => 'admin',
+			'pass1' => 'admin1',
+			'pass2' => 'admin1',
+		];
 
+		$this->request_authed(
+			$rdev, '/chpasswd', 'POST', ['post' => $post], $token);
 		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
-		extract($core::$body);
 		$this->assertEquals($core::$code, 200);
-		$this->assertEquals($errno, 0);
+		$this->assertEquals($core::$errno, 0);
 
 	}
 
-	/**
-	 * @depends test_chpasswd
-	 */
 	public function test_chbio() {
 		$adm = $this->make_router();
 		$core = $adm->core;
-		$this->login_sequence($adm->store);
+		$rdev = new RoutingDev($core);
+		$token = $this->login_sequence($adm);
 
 		###
 
-		$_SERVER['REQUEST_URI'] = '/chbio';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_POST['fname'] = 'The Handyman';
-		$adm = $this->make_router($adm->store);
-
+		$this->request_authed($rdev, '/chbio', 'POST',
+			['post' => ['fname' => 'The Handyman']], $token);
 		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
-		extract($core::$body);
 		$this->assertEquals($core::$code, 200);
-		$this->assertEquals($errno, 0);
+		$this->assertEquals($core::$errno, 0);
 
 		###
 
-		$_POST['site'] = 'Wrongurl';
-		$adm = $this->make_router($adm->store);
-
+		$this->request_authed($rdev, '/chbio', 'POST',
+			['post' => ['site' => 'Wrongurl']], $token);
 		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
-		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, Err::SITEURL_INVALID);
+		$this->assertEquals($core::$errno, Err::SITEURL_INVALID);
 
 		###
 
-		$_POST['site'] = 'http://www.bfinews.com';
-		$adm = $this->make_router($adm->store);
-
+		$this->request_authed($rdev, '/chbio', 'POST',
+			['post' => ['site' => 'http://www.bfinews.com']], $token);
 		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
-		extract($core::$body);
 		$this->assertEquals($core::$code, 200);
-		$this->assertEquals($errno, 0);
+		$this->assertEquals($core::$errno, 0);
 
 		###
 
-		$_SERVER['REQUEST_URI'] = '/status';
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$adm = $this->make_router($adm->store);
-
+		$this->request_authed($rdev, '/status', 'GET', [], $token);
 		$adm->route('/status', [$adm, 'route_status']);
-		extract($core::$body);
-		$this->assertEquals($data['fname'], 'The Handyman');
+		$this->assertEquals($core::$data['fname'], 'The Handyman');
 	}
 
-	/**
-	 * @depends test_chbio
-	 */
 	public function test_register() {
-		$this->login_cleanup();
-
-		$_SERVER['REQUEST_URI'] = '/register';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$adm = $this->make_router();
 		$core = $adm->core;
+		$rdev = new RoutingDev($core);
 
+		$rdev->request('/register', 'POST', []);
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
-		extract($core::$body);
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
 
 		###
 
-		$_POST = [
+		$post = [
 			'addname' => 'jim',
 			'addpass1' => '123456',
 			'addpass2' => '123456',
 			'email' => 'here@exampe.org',
 		];
-		$adm = $this->make_router($adm->store);
-
+		$rdev->request('/register', 'POST', ['post' => $post]);
 		$adm->route('/register', [$adm, 'route_register'], 'POST');
-		extract($core::$body);
-		$this->assertEquals($errno, 0);
+		$this->assertEquals($core::$errno, 0);
 	}
 
-	/**
-	 * @depends test_register
-	 */
 	public function test_useradd() {
 		$adm = $this->make_router();
 		$core = $adm->core;
-		$this->login_sequence($adm->store);
+		$rdev = new RoutingDev($core);
+		$token = $this->login_sequence($adm);
 
 		###
 
-		$_POST['x'] = '';
-		$_SERVER['REQUEST_URI'] = '/useradd';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm->store);
-
+		$post = ['x' => ''];
+		$this->request_authed($rdev, '/useradd', 'POST',
+			['post' => $post], $token);
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract($core::$body);
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
 
 		###
 
-		$_POST = [
+		$post = [
 			'addname' => 'jim',
 			'addpass1' => '123456',
 			'email' => 'here@exampe.org',
 		];
-		$_SERVER['REQUEST_URI'] = '/useradd';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm->store);
-
+		$this->request_authed($rdev, '/useradd', 'POST',
+			['post' => $post], $token);
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract($core::$body);
-		$this->assertEquals($errno, 0);
+		$this->assertEquals($core::$errno, 0);
 
 		###
 
-		$adm = $this->make_router($adm->store);
-
+		$this->request_authed($rdev, '/useradd', 'POST',
+			['post' => $post], $token);
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract($core::$body);
 		# cannot reuse email
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($errno, Err::EMAIL_EXISTS);
+		$this->assertEquals($core::$errno, Err::EMAIL_EXISTS);
 	}
 
-	/**
-	 * @depends test_useradd
-	 */
 	public function test_userdel() {
 		$adm = $this->make_router();
 		$core = $adm->core;
-		$this->login_sequence($adm->store);
+		$rdev = new RoutingDev($core);
+		$token = $this->login_sequence($adm);
 
 		###
 
-		$_POST['x'] = '';
-		$_SERVER['REQUEST_URI'] = '/userdel';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm->store);
-
+		$post = ['x' => ''];
+		$this->request_authed($rdev, '/userdel', 'POST',
+			['post' => $post], $token);
 		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
-		extract($core::$body);
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
 
 		###
 
-		$_POST = [
+		$post = [
 			'addname' => 'jimmy',
 			'addpass1' => '123456',
 			'email' => 'here@exampe.org',
 		];
-		$_SERVER['REQUEST_URI'] = '/useradd';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm->store);
-
+		$this->request_authed($rdev, '/useradd', 'POST',
+			['post' => $post], $token);
 		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract($core::$body);
-		$this->assertEquals($errno, 0);
+		$this->assertEquals($core::$errno, 0);
 
 		###
 
-		$adm = $this->make_router($adm->store);
-
-		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract($core::$body);
-		# cannot reuse email
-		$this->assertEquals($errno, Err::EMAIL_EXISTS);
+		$post = ['uid' => 3];
+		$this->request_authed($rdev, '/userdel', 'POST',
+			['post' => $post], $token);
+		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
+		$this->assertEquals($core::$errno, Err::USER_NOT_FOUND);
 
 		###
 
-		$_POST['addname'] = 'jimmy';
-		$adm = $this->make_router($adm->store);
-
-		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
-		extract($core::$body);
-		# cannot reuse uname
-		$this->assertEquals($errno, Err::EMAIL_EXISTS);
+		$post = ['uid' => 2];
+		$this->request_authed($rdev, '/userdel', 'POST',
+			['post' => $post], $token);
+		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
+		$this->assertEquals($core::$errno, 0);
 	}
 
-	/**
-	 * @depends test_userdel
-	 */
 	public function test_userlist() {
 		$adm = $this->make_router();
 		$core = $adm->core;
-		$this->login_sequence($adm->store);
+		$rdev = new RoutingDev($core);
+		$token = $this->login_sequence($adm);
 
 		###
 
-		$_SERVER['REQUEST_URI'] = '/userlist';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router($adm->store);
+		$post = [
+			'addname' => 'jimmy',
+			'addpass1' => '123456',
+			'email' => 'here@exampe.org',
+		];
+		$this->request_authed($rdev, '/useradd', 'POST',
+			['post' => $post], $token);
+		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
+		$this->assertEquals($core::$errno, 0);
 
+		###
+
+		$this->request_authed($rdev, '/userlist', 'POST', [], $token);
 		$adm->route('/userlist', [$adm, 'route_userlist'], 'POST');
-		extract($core::$body);
-		$this->assertEquals($errno, 0);
-		$this->assertEquals($data[0]['uname'], 'root');
+		$this->assertEquals($core::$errno, 0);
+		$this->assertEquals($core::$data[0]['uname'], 'root');
 	}
 
 	/**
-	 * @depends test_userdel
 	 * @fixme
 	 *   The underlying adm_self_add_user_passwordless() doesn't
 	 *   validate service.uname' and service.uservice'
@@ -462,23 +406,26 @@ class AdminRouteTest extends TestCase {
 		$this->assertEquals(
 			600, $adm->adm_get_byway_expiration());
 		$core = $adm->core;
+		$rdev = new RoutingDev($core);
 
+		$post = [
+			'service' => [
+				'uname' => 'someone',
+			],
+		];
+
+		$rdev->request('/byway', 'POST');
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
-		extract($core::$body);
-		$this->assertEquals($errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
 
 		###
 
-		$_POST['service'] = [
-			'uname' => 'someone',
-			'uservice' => 'github',
-		];
-		$adm = $this->make_router($adm->store);
+		$post['service']['uservice'] = 'github';
 
+		$rdev->request('/byway', 'POST', ['post' => $post]);
 		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
-		extract($core::$body);
-		$this->assertEquals($errno, 0);
-		$this->assertEquals($data['uname'], '+someone:github');
+		$this->assertEquals($core::$errno, 0);
+		$this->assertEquals($core::$data['uname'], '+someone:github');
 	}
 
 }

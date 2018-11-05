@@ -147,17 +147,23 @@ class AdminRouteTest extends TestCase {
 
 		$token = $this->login_sequence($adm, $adm->store);
 
-		# authed via cookie
-		$this->request_authed(
-			$rdev, '/status', 'GET', [], $token);
+		# authed via header
+		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
+			"%s-%s", 'test-zapmin', $token);
+		$rdev->request('/status', 'GET');
+		$adm->route('/status', [$adm, 'route_status']);
+		$this->assertEquals($core::$errno, Err::USER_NOT_LOGGED_IN);
+
+		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
+			"%s %s", 'test-zapmin', $token);
+		$rdev->request('/status', 'GET');
 		$adm->route('/status', [$adm, 'route_status']);
 		$this->assertEquals($core::$errno, 0);
 		$this->assertEquals($core::$data['uid'], 1);
 
-		# authed via header
-		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
-			"%s %s", 'test-zapmin', $token);
-		$rdev->request('/status', 'GET');
+		# authed via cookie
+		$this->request_authed(
+			$rdev, '/status', 'GET', [], $token);
 		$adm->route('/status', [$adm, 'route_status']);
 		$this->assertEquals($core::$errno, 0);
 		$this->assertEquals($core::$data['uid'], 1);

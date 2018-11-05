@@ -34,7 +34,7 @@ class AdminRoute extends AdminStore {
 			} elseif (isset($args['header']['authorization'])) {
 				# via request header
 				$auth = explode(' ', $args['header']['authorization']);
-				if ($auth[0] == $this->token_name) {
+				if (count($auth) == 2 && $auth[0] == $this->token_name) {
 					$this->adm_set_user_token($auth[1]);
 				}
 			}

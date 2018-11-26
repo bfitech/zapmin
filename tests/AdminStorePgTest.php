@@ -68,6 +68,11 @@ class AdminStorePgTest extends AdminStoreTest {
 			);
 			exit(1);
 		}
+		try {
+			foreach (['meta', 'usess', 'udata'] as $table)
+				self::$sql->query_raw("DROP TABLE $table CASCADE");
+		} catch (zs\SQLError $e) {
+		}
 		self::$adm = (new AdminStore(self::$sql, $logger))
 			->config('expiration', 600)
 			->config('force_create_table', true);

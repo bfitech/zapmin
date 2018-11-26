@@ -133,10 +133,6 @@ class AdminStoreTest extends TestCase {
 		self::$redis = $redis;
 	}
 
-	public static function tearDownAfterClass() {
-		#self::$sql = null;
-	}
-
 	public function tearDown() {
 		if (self::$adm->adm_get_safe_user_data())
 			self::$adm->adm_logout();

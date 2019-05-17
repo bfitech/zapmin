@@ -1,13 +1,13 @@
 <?php
 
 
-require_once(__DIR__ . '/AdminStoreTest.php');
+require_once(__DIR__ . '/AdminStoreWrapper.php');
 
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore as zs;
 
 
-class AdminStoreMyTest extends AdminStoreTest {
+class AdminStoreMyTest extends AdminStoreWrapper {
 
 	private static function prepare_config($dbconfig) {
 		if (file_exists($dbconfig))

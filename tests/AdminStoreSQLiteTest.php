@@ -94,10 +94,6 @@ class AdminStoreSQLiteTest extends AdminStoreWrapper {
 			->config('force_create_table', true);
 		$this->assertEquals($adm->adm_get_expiration(), 3600 * 2);
 
-		# table check statement should not be logged
-		$this->assertFalse(strpos(
-			file_get_contents($logfile), "SELECT 1 FROM udata"));
-
 		# minimum expiration
 		$adm = new AdminStore($sql);
 		$adm->config('expiration', 120);
@@ -121,7 +117,7 @@ class AdminStoreSQLiteTest extends AdminStoreWrapper {
 		} catch(za\AdminStoreError $e) {
 		}
 
-		// unlink($dbfile);
+		unlink($dbfile);
 	}
 
 	public function test_redis_cache() {

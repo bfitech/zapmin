@@ -40,7 +40,7 @@ class AdminRouteDefault extends AdminRoute {
 	}
 
 	/** `POST: /login` */
-	public function route_login($args) {
+	public function route_login(array $args) {
 		$retval = $this->adm_login($args);
 		if ($retval[0] === 0)
 			$this->core->send_cookie(
@@ -50,7 +50,7 @@ class AdminRouteDefault extends AdminRoute {
 	}
 
 	/** `GET|POST: /logout` */
-	public function route_logout($args) {
+	public function route_logout(array $args) {
 		$retval = $this->adm_logout($args);
 		if ($retval[0] === 0)
 			$this->core->send_cookie(
@@ -60,17 +60,17 @@ class AdminRouteDefault extends AdminRoute {
 	}
 
 	/** `POST: /chpasswd` */
-	public function route_chpasswd($args) {
+	public function route_chpasswd(array $args) {
 		return $this->core->pj($this->adm_change_password($args, true));
 	}
 
 	/** `POST: /chbio` */
-	public function route_chbio($args) {
+	public function route_chbio(array $args) {
 		return $this->core->pj($this->adm_change_bio($args));
 	}
 
 	/** `POST: /register` */
-	public function route_register($args) {
+	public function route_register(array $args) {
 		$retval = $this->adm_self_add_user($args, true, true);
 		if ($retval[0] !== 0)
 			# fail
@@ -86,18 +86,18 @@ class AdminRouteDefault extends AdminRoute {
 	}
 
 	/** `POST: /useradd` */
-	public function route_useradd($args) {
+	public function route_useradd(array $args) {
 		return $this->core->pj(
 			$this->adm_add_user($args, false, true, true), 403);
 	}
 
 	/** `POST: /userdel` */
-	public function route_userdel($args) {
+	public function route_userdel(array $args) {
 		return $this->core->pj($this->adm_delete_user($args), 403);
 	}
 
 	/** `POST: /userlist` */
-	public function route_userlist($args) {
+	public function route_userlist(array $args) {
 		return $this->core->pj($this->adm_list_user($args), 403);
 	}
 
@@ -109,7 +109,7 @@ class AdminRouteDefault extends AdminRoute {
 	 *     into containing `service` key that is not sent by client,
 	 *     but by 3rd-party.
 	 */
-	public function route_byway($args) {
+	public function route_byway(array $args) {
 		### start mock
 		if (isset($args['post']['service']))
 			$args['service'] = $args['post']['service'];

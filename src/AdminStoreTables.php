@@ -67,7 +67,7 @@ class AdminStoreTables {
 	 * @param bool $force_create_table Recreate tables if true.
 	 * @return bool True if tables exist.
 	 */
-	public static function exists($force_create_table=null) {
+	public static function exists(bool $force_create_table=null) {
 		$sql = self::$sql;
 		try {
 			$sql->query("SELECT 1 FROM udata LIMIT 1");
@@ -88,7 +88,7 @@ class AdminStoreTables {
 	 * @param int $expiration Regular session expiration duration,
 	 *     in second.
 	 */
-	public static function fragments($expiration=7200) {
+	public static function fragments(int $expiration=7200) {
 		$sql = self::$sql;
 		$args = [];
 		$args['index'] = $sql->stmt_fragment('index');
@@ -112,7 +112,7 @@ class AdminStoreTables {
 	 *   - Email verification must be held separately. Table only
 	 *     reserves a column for it.
 	 */
-	public static function install($expiration=7200) {
+	public static function install(int $expiration=7200) {
 
 		$dtnow = $expire = null;
 		extract(self::fragments($expiration));
@@ -213,7 +213,9 @@ class AdminStoreTables {
 	/**
 	 * Upgrade tables.
 	 */
-	private static function upgrade_tables($from_version=null) {
+	private static function upgrade_tables(
+		string $from_version=null
+	) {
 
 		$sql = self::$sql;
 

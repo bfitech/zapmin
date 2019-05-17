@@ -23,9 +23,10 @@ class AdminRoute extends AdminStore {
 	 * @param bool $is_raw If true, accept raw data instead of parsed
 	 */
 	public function route(
-		$path, $callback, $method='GET', $is_raw=null
+		string $path, callable $callback, $method='GET',
+		bool $is_raw=null
 	) {
-		$this->core->route($path, function($args) use($callback){
+		$this->core->route($path, function($args) use($callback) {
 			# set token if available
 			if (isset($args['cookie'][$this->token_name])) {
 				# via cookie
@@ -34,7 +35,9 @@ class AdminRoute extends AdminStore {
 			} elseif (isset($args['header']['authorization'])) {
 				# via request header
 				$auth = explode(' ', $args['header']['authorization']);
-				if (count($auth) == 2 && $auth[0] == $this->token_name) {
+				if (count($auth) == 2 &&
+					$auth[0] == $this->token_name
+				) {
 					$this->adm_set_user_token($auth[1]);
 				}
 			}

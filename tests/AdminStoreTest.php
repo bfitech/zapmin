@@ -32,7 +32,7 @@ class AdminStorePatched extends AdminStore {
 		return false;
 	}
 
-	public function authz_delete_user($uid) {
+	public function authz_delete_user(int $uid) {
 		$udata = $this->user_data;
 		if (in_array($udata['uname'], ['root', 'john']))
 			return true;

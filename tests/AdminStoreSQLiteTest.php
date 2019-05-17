@@ -121,7 +121,7 @@ class AdminStoreSQLiteTest extends AdminStoreWrapper {
 		} catch(za\AdminStoreError $e) {
 		}
 
-		unlink($dbfile);
+		// unlink($dbfile);
 	}
 
 	public function test_redis_cache() {

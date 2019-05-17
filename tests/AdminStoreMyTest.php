@@ -49,12 +49,12 @@ class AdminStoreMyTest extends AdminStoreTest {
 	}
 
 	public static function setUpBeforeClass() {
-		$logfile = __TESTDIR__ . '/zapmin-mysql.log';
+		$logfile = testdir() . '/zapmin-mysql.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 
 		$logger = new Logger(Logger::DEBUG, $logfile);
-		$dbconfig = __TESTDIR__ . '/zapmin-mysql.json';
+		$dbconfig = testdir() . '/zapmin-mysql.json';
 		$dbparams = self::prepare_config($dbconfig);
 		try {
 			self::$sql = new zs\MySQL($dbparams, $logger);

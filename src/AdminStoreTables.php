@@ -69,10 +69,8 @@ class AdminStoreTables {
 	 */
 	public static function exists($force_create_table=null) {
 		$sql = self::$sql;
-		$sql::$logger->deactivate();
 		try {
 			$sql->query("SELECT 1 FROM udata LIMIT 1");
-			$sql::$logger->activate();
 			if ($force_create_table) {
 				self::drop();
 				self::$logger->info("Zapmin: Recreating tables.");
@@ -81,7 +79,6 @@ class AdminStoreTables {
 			return true;
 		} catch (SQLError $e) {
 		}
-		$sql::$logger->activate();
 		return false;
 	}
 
@@ -199,15 +196,12 @@ class AdminStoreTables {
 	public static function upgrade() {
 		$sql = self::$sql;
 
-		$sql::$logger->deactivate();
 		try {
 			$version = $sql->query(
 				"SELECT version FROM meta LIMIT 1")['version'];
 		} catch(SQLError $e) {
-			$sql::$logger->activate();
 			return self::upgrade_tables();
 		}
-		$sql::$logger->activate();
 
 		if (0 <= version_compare($version, self::TABLE_VERSION))
 			return self::$logger->debug(

@@ -1,8 +1,9 @@
 <?php
 
+require_once __DIR__ . '/Common.php';
+
 
 use PHPUnit\Framework\TestCase;
-use BFITech\ZapCommonDev\CommonDev;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapStore\Redis;
@@ -102,9 +103,7 @@ class AdminStoreTest extends TestCase {
 	}
 
 	public static function setUpBeforeClass() {
-		CommonDev::testdir(__FILE__);
-
-		$logfile = __TESTDIR__ . '/zapmin-sqlite3.log';
+		$logfile = testdir() . '/zapmin-sqlite3.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		$logger = new Logger(Logger::DEBUG, $logfile);
@@ -115,7 +114,7 @@ class AdminStoreTest extends TestCase {
 			->config('expiration', 600);
 
 		# redis-specific
-		$redisconf = __TESTDIR__ . '/zapmin-redis.json';
+		$redisconf = testdir() . '/zapmin-redis.json';
 		$redisparams = self::prepare_redis_config($redisconf);
 		try {
 			$redis = new Redis($redisparams, $logger);
@@ -143,11 +142,11 @@ class AdminStoreTest extends TestCase {
 		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
 			return;
 
-		$logfile = __TESTDIR__ . '/zapmin-constructor.log';
+		$logfile = testdir() . '/zapmin-constructor.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		$logger = new Logger(Logger::ERROR, $logfile);
-		$dbfile = __TESTDIR__ . '/zapmin-constructor.sq3';
+		$dbfile = testdir() . '/zapmin-constructor.sq3';
 		$sql = new SQLite3([
 			'dbname' => $dbfile,
 		], $logger);
@@ -193,8 +192,8 @@ class AdminStoreTest extends TestCase {
 		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
 			return;
 
-		$logfile = __TESTDIR__ . '/zapmin-redis.log';
-		$dbfile = __TESTDIR__ . '/zapmit-redis.sq3';
+		$logfile = testdir() . '/zapmin-redis.log';
+		$dbfile = testdir() . '/zapmit-redis.sq3';
 		foreach ([$logfile, $dbfile] as $fl)
 			if (file_exists($fl))
 				unlink($fl);
@@ -310,7 +309,7 @@ class AdminStoreTest extends TestCase {
 		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
 			return;
 
-		$logfile = __TESTDIR__ . '/zapmin-table-update.log';
+		$logfile = testdir() . '/zapmin-table-update.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		$logger = new Logger(Logger::DEBUG, $logfile);
@@ -604,7 +603,7 @@ class AdminStoreTest extends TestCase {
 		if (self::$sql->get_connection_params()['dbtype'] != 'sqlite3')
 			return;
 
-		$logfile = __TESTDIR__ . '/zapmin-change-bio.log';
+		$logfile = testdir() . '/zapmin-change-bio.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		$logger = new Logger(Logger::DEBUG, $logfile);

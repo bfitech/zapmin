@@ -82,7 +82,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 *   - (bool)force_create_table: Force recreate table on start,
 	 *     even if tables already exist.
 	 */
-	public function config($key, $val) {
+	public function config(string $key, string $val=null) {
 		if ($this->initialized)
 			return $this;
 		switch ($key) {
@@ -137,7 +137,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 * @param int $expiration Session expiration, in seconds. This can
 	 *     be used for standard or byway session.
 	 */
-	protected function store_check_expiration($expiration=null) {
+	protected function store_check_expiration(int $expiration=null) {
 		if (!$expiration)
 			return 3600 * 2;
 		$expiration = (int)$expiration;
@@ -194,7 +194,9 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 *     data elements are subset of those returned by
 	 *     AdminStore::adm_get_safe_user_data.
 	 */
-	protected function store_match_password($uname, $upass, $usalt) {
+	protected function store_match_password(
+		string $uname, string $upass, string $usalt
+	) {
 		$udata = $this->store->query(
 			"SELECT uid, uname " .
 				"FROM udata WHERE upass=? LIMIT 1",
@@ -209,7 +211,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 *
 	 * @param string $token Session token.
 	 */
-	protected function store_redis_cache_read($token) {
+	protected function store_redis_cache_read(string $token) {
 		if (!$this->redis)
 			return null;
 		$key = sprintf('%s:%s', $this->token_name, $token);
@@ -238,7 +240,8 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 *     is set, $expire_at is ignored.
 	 */
 	protected function store_redis_cache_write(
-		$token, $data, $expire_at, $expire=null
+		string $token, array $data, string $expire_at=null,
+		int $expire=null
 	) {
 		if (!$this->redis)
 			return;
@@ -264,7 +267,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 *
 	 * @param string $token Session token.
 	 */
-	protected function store_redis_cache_del($token) {
+	protected function store_redis_cache_del(string $token) {
 		if (!$this->redis)
 			return;
 		$key = sprintf('%s:%s', $this->token_name, $token);
@@ -336,7 +339,7 @@ abstract class AdminStoreInit extends AdminStoreCommon {
 	 *
 	 * @param int $sid Session ID.
 	 */
-	protected function store_close_session($sid) {
+	protected function store_close_session(int $sid) {
 		$now = $this->store->stmt_fragment('datetime');
 		$this->store->query_raw(sprintf(
 			"UPDATE usess SET expire=(%s) WHERE sid='%s'",

@@ -1,9 +1,10 @@
 <?php
 
+require_once __DIR__ . '/Common.php';
+
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
-use BFITech\ZapCommonDev\CommonDev;
 use BFITech\ZapCoreDev\RouterDev;
 use BFITech\ZapCoreDev\RoutingDev;
 use BFITech\ZapStore\SQLite3;
@@ -16,8 +17,7 @@ class AdminRouteTest extends TestCase {
 	public static $logger;
 
 	public static function setUpBeforeClass() {
-		CommonDev::testdir(__FILE__);
-		$logfile = __TESTDIR__ . '/zapmin-route.log';
+		$logfile = testdir() . '/zapmin-route.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		self::$logger = new Logger(
@@ -38,7 +38,7 @@ class AdminRouteTest extends TestCase {
 		# use 'foo' as token name
 		$_COOKIE['foo'] = 'test';
 
-		$logfile = __TESTDIR__ . '/zapmin-route.log';
+		$logfile = testdir() . '/zapmin-route.log';
 		$logger = new Logger(Logger::ERROR, $logfile);
 
 		$core = (new RouterDev())

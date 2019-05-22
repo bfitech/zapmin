@@ -19,7 +19,9 @@ class AdminStoreCommon {
 	 * @param string $upass Password.
 	 * @param string $usalt Salt.
 	 */
-	public static function hash_password($uname, $upass, $usalt) {
+	public static function hash_password(
+		string $uname, string $upass, string $usalt
+	) {
 		// @codeCoverageIgnoreStart
 		if (strlen($usalt) > 16)
 			$usalt = substr($usalt, 0, 16);
@@ -36,7 +38,9 @@ class AdminStoreCommon {
 	 * @param string $pass1 First password.
 	 * @param string $pass2 Second password.
 	 */
-	public static function verify_password($pass1, $pass2) {
+	public static function verify_password(
+		string $pass1, string $pass2
+	) {
 		$pass1 = trim($pass1);
 		$pass2 = trim($pass2);
 		# type twice the same
@@ -57,7 +61,7 @@ class AdminStoreCommon {
 	 *     usage is 16 for user salt and 64 for hashed password.
 	 */
 	public static function generate_secret(
-		$data, $key=null, $length=64
+		string $data, string $key=null, int $length=64
 	) {
 		if (!$key)
 			$key = uniqid() . (string)mt_rand();
@@ -73,7 +77,7 @@ class AdminStoreCommon {
 	 *
 	 * @param string $url Site URL.
 	 */
-	public static function verify_site_url($url) {
+	public static function verify_site_url(string $url) {
 		$url = trim($url);
 		if (!$url || strlen($url) > 64)
 			return false;
@@ -85,7 +89,7 @@ class AdminStoreCommon {
 	 *
 	 * @param string $email Email address.
 	 */
-	public static function verify_email_address($email) {
+	public static function verify_email_address(string $email) {
 		$email = trim($email);
 		if (!$email || strlen($email) > 64)
 			return false;

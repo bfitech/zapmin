@@ -21,7 +21,7 @@ abstract class AdminStorePrepare extends AdminStoreInit {
 	 *
 	 * Token can be obtained from cookie or custom header.
 	 */
-	public function adm_set_user_token($user_token) {
+	public function adm_set_user_token(string $user_token) {
 		$this->init();
 		$this->user_token = $user_token;
 	}
@@ -46,7 +46,7 @@ abstract class AdminStorePrepare extends AdminStoreInit {
 	 *
 	 * @param int $expiration Byway expiration, in seconds.
 	 */
-	public function adm_set_byway_expiration($expiration) {
+	public function adm_set_byway_expiration(int $expiration) {
 		$this->init();
 		$this->byway_expiration = $this->store_check_expiration(
 			$expiration);
@@ -75,7 +75,7 @@ abstract class AdminStorePrepare extends AdminStoreInit {
 	 *
 	 * @param string $token_name Session token name.
 	 */
-	public function adm_set_token_name($token_name) {
+	public function adm_set_token_name(string $token_name) {
 		$this->token_name = $token_name;
 	}
 

@@ -1,13 +1,13 @@
 <?php
 
 
-require_once(__DIR__ . '/AdminStoreTest.php');
+require_once(__DIR__ . '/AdminStoreWrapper.php');
 
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore as zs;
 
 
-class AdminStoreMyTest extends AdminStoreTest {
+class AdminStoreMyTest extends AdminStoreWrapper {
 
 	private static function prepare_config($dbconfig) {
 		if (file_exists($dbconfig))
@@ -49,12 +49,12 @@ class AdminStoreMyTest extends AdminStoreTest {
 	}
 
 	public static function setUpBeforeClass() {
-		$logfile = __TESTDIR__ . '/zapmin-mysql.log';
+		$logfile = testdir() . '/zapmin-mysql.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 
 		$logger = new Logger(Logger::DEBUG, $logfile);
-		$dbconfig = __TESTDIR__ . '/zapmin-mysql.json';
+		$dbconfig = testdir() . '/zapmin-mysql.json';
 		$dbparams = self::prepare_config($dbconfig);
 		try {
 			self::$sql = new zs\MySQL($dbparams, $logger);

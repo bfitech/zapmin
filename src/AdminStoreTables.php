@@ -67,12 +67,10 @@ class AdminStoreTables {
 	 * @param bool $force_create_table Recreate tables if true.
 	 * @return bool True if tables exist.
 	 */
-	public static function exists($force_create_table=null) {
+	public static function exists(bool $force_create_table=null) {
 		$sql = self::$sql;
-		$sql::$logger->deactivate();
 		try {
 			$sql->query("SELECT 1 FROM udata LIMIT 1");
-			$sql::$logger->activate();
 			if ($force_create_table) {
 				self::drop();
 				self::$logger->info("Zapmin: Recreating tables.");
@@ -81,7 +79,6 @@ class AdminStoreTables {
 			return true;
 		} catch (SQLError $e) {
 		}
-		$sql::$logger->activate();
 		return false;
 	}
 
@@ -91,7 +88,7 @@ class AdminStoreTables {
 	 * @param int $expiration Regular session expiration duration,
 	 *     in second.
 	 */
-	public static function fragments($expiration=7200) {
+	public static function fragments(int $expiration=7200) {
 		$sql = self::$sql;
 		$args = [];
 		$args['index'] = $sql->stmt_fragment('index');
@@ -115,7 +112,7 @@ class AdminStoreTables {
 	 *   - Email verification must be held separately. Table only
 	 *     reserves a column for it.
 	 */
-	public static function install($expiration=7200) {
+	public static function install(int $expiration=7200) {
 
 		$dtnow = $expire = null;
 		extract(self::fragments($expiration));
@@ -199,15 +196,12 @@ class AdminStoreTables {
 	public static function upgrade() {
 		$sql = self::$sql;
 
-		$sql::$logger->deactivate();
 		try {
 			$version = $sql->query(
 				"SELECT version FROM meta LIMIT 1")['version'];
 		} catch(SQLError $e) {
-			$sql::$logger->activate();
 			return self::upgrade_tables();
 		}
-		$sql::$logger->activate();
 
 		if (0 <= version_compare($version, self::TABLE_VERSION))
 			return self::$logger->debug(
@@ -219,7 +213,9 @@ class AdminStoreTables {
 	/**
 	 * Upgrade tables.
 	 */
-	private static function upgrade_tables($from_version=null) {
+	private static function upgrade_tables(
+		string $from_version=null
+	) {
 
 		$sql = self::$sql;
 

@@ -36,7 +36,7 @@ abstract class AdminStore extends AdminStorePrepare {
 	 *     ]
 	 *     @endcode
 	 */
-	public function adm_login($args) {
+	public function adm_login(array $args) {
 		$this->init();
 		$logger = $this->logger;
 
@@ -137,7 +137,7 @@ abstract class AdminStore extends AdminStorePrepare {
 	 *     old password.
 	 */
 	public function adm_change_password(
-		$args, $with_old_password=null
+		array $args, bool $with_old_password=null
 	) {
 		$uid = $pass0 = $pass1 = $pass2 = null;
 		if (!$this->store_is_logged_in())
@@ -201,7 +201,7 @@ abstract class AdminStore extends AdminStorePrepare {
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
 	 * @endmanonly
 	 */
-	public function adm_change_bio($args) {
+	public function adm_change_bio(array $args) {
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
 
@@ -273,7 +273,7 @@ abstract class AdminStore extends AdminStorePrepare {
 	/**
 	 * Verify username of new user.
 	 */
-	private function _add_user_verify_name($addname) {
+	private function _add_user_verify_name(string $addname) {
 		$logger = $this->logger;
 
 		# check name, allow multi-byte chars but not whitespace
@@ -304,7 +304,9 @@ abstract class AdminStore extends AdminStorePrepare {
 	/**
 	 * Verify email of new user.
 	 */
-	private function _add_user_verify_email($email, $addname) {
+	private function _add_user_verify_email(
+		string $email, string $addname
+	) {
 		$logger = $this->logger;
 
 		if (!self::verify_email_address($email)) {
@@ -343,8 +345,8 @@ abstract class AdminStore extends AdminStorePrepare {
 	 * @endmanonly
 	 */
 	public function adm_add_user(
-		$args, $pass_twice=null, $allow_self_register=null,
-		$email_required=null
+		array $args, bool $pass_twice=null,
+		bool $allow_self_register=null, bool $email_required=null
 	) {
 		$this->init();
 		$logger = $this->logger;
@@ -431,7 +433,7 @@ abstract class AdminStore extends AdminStorePrepare {
 	 *     provided.
 	 */
 	public function adm_self_add_user(
-		$args, $pass_twice=null, $email_required=null
+		array $args, bool $pass_twice=null, bool $email_required=null
 	) {
 		if ($this->store_is_logged_in())
 			return [AdminStoreError::USER_ALREADY_LOGGED_IN];
@@ -471,7 +473,7 @@ abstract class AdminStore extends AdminStorePrepare {
 	 *     ]
 	 *     @endcode
 	 */
-	public function adm_self_add_user_passwordless($args) {
+	public function adm_self_add_user_passwordless(array $args) {
 		if ($this->store_is_logged_in())
 			return [AdminStoreError::USER_ALREADY_LOGGED_IN];
 
@@ -535,7 +537,7 @@ abstract class AdminStore extends AdminStorePrepare {
 	 *
 	 * @param int $uid User ID to delete.
 	 */
-	public function authz_delete_user($uid) {
+	public function authz_delete_user(int $uid) {
 		$udata = $this->user_data;
 		if ($udata['uid'] == 1 && $uid != 1)
 			return true;
@@ -549,7 +551,7 @@ abstract class AdminStore extends AdminStorePrepare {
 	 *
 	 * @param array $args Dict with key: `uid`.
 	 */
-	public function adm_delete_user($args) {
+	public function adm_delete_user(array $args) {
 		if (!$this->store_is_logged_in())
 			return [AdminStoreError::USER_NOT_LOGGED_IN];
 
@@ -611,7 +613,7 @@ abstract class AdminStore extends AdminStorePrepare {
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
 	 * @endmanonly
 	 */
-	public function adm_list_user($args) {
+	public function adm_list_user(array $args) {
 		$this->init();
 
 		if (!$this->store_is_logged_in())

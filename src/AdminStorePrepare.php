@@ -21,7 +21,7 @@ abstract class AdminStorePrepare extends AdminStoreInit {
 	 *
 	 * Token can be obtained from cookie or custom header.
 	 */
-	public function adm_set_user_token(string $user_token) {
+	public function adm_set_user_token(string $user_token=null) {
 		$this->init();
 		$this->user_token = $user_token;
 	}

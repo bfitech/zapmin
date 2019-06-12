@@ -19,8 +19,8 @@ class AdminStoreMyTest extends AdminStoreWrapper {
 			'MYSQL_HOST' => '127.0.0.1',
 			'MYSQL_PORT' => '3306',
 			'MYSQL_USER' => 'root',
-			'MYSQL_PASS' => '',
-			'MYSQL_DB' => 'zapstore_test_db',
+			'MYSQL_PASSWORD' => '',
+			'MYSQL_DATABASE' => 'zapstore_test_db',
 		];
 
 		# parse from environment
@@ -37,8 +37,8 @@ class AdminStoreMyTest extends AdminStoreWrapper {
 			'dbhost' => $MYSQL_HOST,
 			'dbport' => $MYSQL_PORT,
 			'dbuser' => $MYSQL_USER,
-			'dbpass' => $MYSQL_PASS,
-			'dbname' => $MYSQL_DB,
+			'dbpass' => $MYSQL_PASSWORD,
+			'dbname' => $MYSQL_DATABASE,
 		];
 
 		# save config

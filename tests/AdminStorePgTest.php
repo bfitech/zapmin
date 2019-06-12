@@ -19,7 +19,7 @@ class AdminStorePgTest extends AdminStoreWrapper {
 			'POSTGRES_HOST' => 'localhost',
 			'POSTGRES_PORT' => '5432',
 			'POSTGRES_USER' => 'postgres',
-			'POSTGRES_PASS' => '',
+			'POSTGRES_PASSWORD' => '',
 			'POSTGRES_DB' => 'zapstore_test_db',
 		];
 
@@ -37,7 +37,7 @@ class AdminStorePgTest extends AdminStoreWrapper {
 			'dbhost' => $POSTGRES_HOST,
 			'dbport' => $POSTGRES_PORT,
 			'dbuser' => $POSTGRES_USER,
-			'dbpass' => $POSTGRES_PASS,
+			'dbpass' => $POSTGRES_PASSWORD,
 			'dbname' => $POSTGRES_DB,
 		];
 

@@ -5,9 +5,14 @@ namespace BFITech\ZapAdmin;
 
 
 /**
- * Error Class
+ * Error class.
  */
-class AdminStoreError extends \Exception {
+class Error extends \Exception {
+
+	/** Token name not set. */
+	const ADM_TOKEN_NOT_SET = 0x0001;
+	/** Invalid expiration. */
+	const ADM_EXPIRATION_INVALID = 0x0002;
 
 	/** Password Invalid. */
 	const PASSWORD_INVALID = 0x0200;
@@ -21,7 +26,7 @@ class AdminStoreError extends \Exception {
 	const WRONG_PASSWORD = 0x0204;
 
 	/** User not signed in. */
-	const USER_NOT_LOGGED_IN = 0x03;
+	const USER_NOT_LOGGED_IN = 0x0300;
 	/** User already signed in. */
 	const USER_ALREADY_LOGGED_IN = 0x0301;
 	/** User not found. */
@@ -30,7 +35,7 @@ class AdminStoreError extends \Exception {
 	const USER_NOT_AUTHORIZED = 0x0305;
 
 	/** Self-registration not allowed. */
-	const SELF_REGISTER_NOT_ALLOWED = 0x04;
+	const SELF_REGISTER_NOT_ALLOWED = 0x0401;
 
 	/** Incomplete data, mostly from POST request. */
 	const DATA_INCOMPLETE = 0x0501;
@@ -48,4 +53,21 @@ class AdminStoreError extends \Exception {
 	const EMAIL_EXISTS = 0x0507;
 	/** User already exists. */
 	const USERNAME_EXISTS = 0x0508;
+
+	/** Error code. */
+	public $code;
+	/** Error message. */
+	public $message;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param int $code Errno. See the class constants.
+	 * @param string $message Errmsg.
+	 */
+	public function __construct(int $code, string $message) {
+		$this->code = $code;
+		$this->message = $message;
+		parent::__construct($message, $code, null);
+	}
 }

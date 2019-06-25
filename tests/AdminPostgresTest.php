@@ -1,26 +1,27 @@
 <?php
 
 
-require_once(__DIR__ . '/AdminStoreWrapper.php');
+require_once(__DIR__ . '/AdminTest.php');
+
 
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore as zs;
 
 
-class AdminStoreMyTest extends AdminStoreWrapper {
+class AdminStorePgTest extends AdminTest {
 
-	private static function prepare_config($dbconfig) {
+	private static function postgres_config($dbconfig) {
 		if (file_exists($dbconfig))
 			return json_decode(
 				file_get_contents($dbconfig), true);
 
 		# default
 		$params = [
-			'MYSQL_HOST' => '127.0.0.1',
-			'MYSQL_PORT' => '3306',
-			'MYSQL_USER' => 'root',
-			'MYSQL_PASSWORD' => '',
-			'MYSQL_DATABASE' => 'zapstore_test_db',
+			'POSTGRES_HOST' => 'localhost',
+			'POSTGRES_PORT' => '5432',
+			'POSTGRES_USER' => 'postgres',
+			'POSTGRES_PASSWORD' => '',
+			'POSTGRES_DB' => 'zapstore_test_db',
 		];
 
 		# parse from environment
@@ -34,11 +35,11 @@ class AdminStoreMyTest extends AdminStoreWrapper {
 
 		# set to standard zapstore params
 		$dbparams = [
-			'dbhost' => $MYSQL_HOST,
-			'dbport' => $MYSQL_PORT,
-			'dbuser' => $MYSQL_USER,
-			'dbpass' => $MYSQL_PASSWORD,
-			'dbname' => $MYSQL_DATABASE,
+			'dbhost' => $POSTGRES_HOST,
+			'dbport' => $POSTGRES_PORT,
+			'dbuser' => $POSTGRES_USER,
+			'dbpass' => $POSTGRES_PASSWORD,
+			'dbname' => $POSTGRES_DB,
 		];
 
 		# save config
@@ -49,19 +50,19 @@ class AdminStoreMyTest extends AdminStoreWrapper {
 	}
 
 	public static function setUpBeforeClass() {
-		$logfile = testdir() . '/zapmin-mysql.log';
+		$logfile = testdir() . '/zapmin-pgsql.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 
-		$logger = new Logger(Logger::DEBUG, $logfile);
-		$dbconfig = testdir() . '/zapmin-mysql.json';
-		$dbparams = self::prepare_config($dbconfig);
+		self::$logger = $logger = new Logger(Logger::DEBUG, $logfile);
+		$dbconfig = testdir() . '/zapmin-pgsql.json';
+		$dbparams = self::postgres_config($dbconfig);
 		try {
-			self::$sql = new zs\MySQL($dbparams, $logger);
+			self::$sql = new zs\PgSQL($dbparams, $logger);
 		} catch(zs\SQLError $e) {
 			printf(
 				"\n" .
-				"ERROR: Cannot connect to mysql test database.\n" .
+				"ERROR: Cannot connect to pgsql test database.\n" .
 				"       Please check configuration: '%s'.\n\n" .
 				"CURRENT CONFIGURATION:\n\n%s\n\n",
 				$dbconfig, json_encode($dbparams, JSON_PRETTY_PRINT)
@@ -69,15 +70,13 @@ class AdminStoreMyTest extends AdminStoreWrapper {
 			exit(1);
 		}
 		try {
-			# mysql doesn't cascade on views propperly
-			self::$sql->query_raw("DROP VIEW v_usess");
 			foreach (['meta', 'usess', 'udata'] as $table)
 				self::$sql->query_raw("DROP TABLE $table CASCADE");
 		} catch (zs\SQLError $e) {
 		}
-		self::$adm = (new AdminStore(self::$sql, $logger))
-			->config('expiration', 600)
-			->config('force_create_table', true);
+
+		$configfile = testdir() . '/zapmin-redis.json';
+		self::redis_open($configfile, $logger);
 	}
 
 }

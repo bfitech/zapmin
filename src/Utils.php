@@ -6,11 +6,11 @@ namespace BFITech\ZapAdmin;
 
 
 /**
- * AdminStoreCommon class.
+ * Utils class.
  *
  * This contains common stateless utilities.
  */
-class AdminStoreCommon {
+class Utils {
 
 	/**
 	 * Create hashed password.
@@ -26,7 +26,7 @@ class AdminStoreCommon {
 		if (strlen($usalt) > 16)
 			$usalt = substr($usalt, 0, 16);
 		// @codeCoverageIgnoreEnd
-		return self::generate_secret($upass . $uname, $usalt);
+		return static::generate_secret($upass . $uname, $usalt);
 	}
 
 	/**
@@ -44,11 +44,11 @@ class AdminStoreCommon {
 		$pass1 = trim($pass1);
 		$pass2 = trim($pass2);
 		# type twice the same
-		if ($pass1 != $pass2)
-			return AdminStoreError::PASSWORD_NOT_SAME;
+		if (!hash_equals($pass1, $pass2))
+			return Error::PASSWORD_NOT_SAME;
 		# must be longer than 3
 		if (strlen($pass1) < 4)
-			return AdminStoreError::PASSWORD_TOO_SHORT;
+			return Error::PASSWORD_TOO_SHORT;
 		return 0;
 	}
 

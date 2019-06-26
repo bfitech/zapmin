@@ -46,7 +46,7 @@ class AdminRouteTest extends TestCase {
 			->config('shutdown', false)
 			->config('logger', $logger);
 
-		$store = new SQLite3(['dbname' => ':memory:']);
+		$store = new SQLite3(['dbname' => ':memory:'], $logger);
 
 		# change token name via config
 		$adm = (new AdminRouteDefault($store, $logger, null, $core))

@@ -31,7 +31,7 @@ abstract class Auth {
 	/**
 	 * Set user token value.
 	 */
-	public function set_token_value(string $val) {
+	public function set_token_value(string $val=null) {
 		$this->token_value = $val;
 	}
 
@@ -89,7 +89,6 @@ abstract class Auth {
 			unset($data[$key]);
 		return [0, $data];
 	}
-
 
 	/**
 	 * Close session record in the database.

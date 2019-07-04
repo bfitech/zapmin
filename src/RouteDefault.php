@@ -56,7 +56,7 @@ class RouteDefault extends Route {
 		self::$manage = $manage;
 		self::$admin = $ctrl::$admin;
 
-		parent::__construct($core, self::$admin);
+		parent::__construct($core, $ctrl);
 	}
 
 	/** `GET: /` */
@@ -67,12 +67,12 @@ class RouteDefault extends Route {
 	/** `GET: /status` */
 	public function route_status() {
 		return static::$core->pj(
-			$this->ctrl->get_safe_user_data(), 401);
+			self::$ctrl->get_safe_user_data(), 401);
 	}
 
 	/** `POST: /login` */
 	public function route_login(array $args) {
-		$ctrl = $this->ctrl;
+		$ctrl = self::$ctrl;
 		$retval = $ctrl->login($args);
 		if ($retval[0] === 0)
 			static::$core->send_cookie(

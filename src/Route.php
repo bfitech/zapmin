@@ -19,17 +19,19 @@ class Route {
 
 	public static $core;
 	public static $admin;
+	public static $ctrl;
 	public static $auth;
 
 	protected $token_name;
 	protected $expiration;
 
-	public function __construct(Router $core, Admin $admin) {
+	public function __construct(Router $core, AuthCtrl $ctrl) {
 		self::$core = $core;
-		self::$admin = $admin;
+		self::$ctrl = $ctrl;
+		self::$admin = $ctrl::$admin;
 
-		$this->token_name = $admin->get_token_name();
-		$this->expiration = $admin->get_expiration();
+		$this->token_name = $ctrl::$admin->get_token_name();
+		$this->expiration = $ctrl::$admin->get_expiration();
 	}
 
 	/**
@@ -49,12 +51,12 @@ class Route {
 			# set token if available
 			if (isset($args['cookie'][$token_name])) {
 				# via cookie
-				$this->set_token_value($args['cookie'][$token_name]);
+				self::$ctrl->set_token_value($args['cookie'][$token_name]);
 			} elseif (isset($args['header']['authorization'])) {
 				# via request header
 				$auth = explode(' ', $args['header']['authorization']);
 				if (count($auth) == 2 && $auth[0] == $token_name)
-					$this->set_token_value($auth[1]);
+					self::$ctrl->set_token_value($auth[1]);
 			}
 			# execute calback
 			$callback($args);

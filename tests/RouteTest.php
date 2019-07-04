@@ -46,9 +46,6 @@ class AdminRouteTest extends TestCase {
 		# use 'foo' as token name
 		$_COOKIE['foo'] = 'test';
 
-		// $logfile = testdir() . '/zapmin-route.log';
-		// $logger = new Logger(Logger::ERROR, $logfile);
-
 		$core = (new RouterDev())
 			->config('home', '/usr')
 			->config('shutdown', false)
@@ -79,8 +76,6 @@ class AdminRouteTest extends TestCase {
 	}
 
 	private function make_router($sql=null) {
-		$_SERVER['REQUEST_URI'] = "/";
-
 		# use new instance on every matching mock HTTP request
 		$core = (new RouterDev())
 			->config('home', '/')
@@ -114,37 +109,44 @@ class AdminRouteTest extends TestCase {
 	}
 
 	public function test_home() {
+		$router = $this->make_router();
+		$core = $router::$core;
+		$rdev = new RoutingDev($core);
+		$token_name = $router::$admin->get_token_name();
 
-		$rdev = $this->make_router();
-		$token_name = $rdev::$admin->get_token_name();
 		$this->assertEquals($token_name, 'test-zapmin');
 
-		$rdev->route('/', function($args) use($rdev) {
-			$rdev->route_home();
+		$rdev->request('/', 'GET');
+		$router->route('/', function($args) use($router) {
+			$router->route_home();
 		}, 'GET');
 
 		$this->assertEquals(
-			'<h1>It wurks!</h1>', $rdev::$core::$body_raw);
+			'<h1>It wurks!</h1>', $core::$body_raw);
 		$this->assertTrue(strpos(
-			strtolower($rdev::$core::$body_raw), 'it wurks') > 0);
+			strtolower($core::$body_raw), 'it wurks') > 0);
 	}
 
 	/**
 	 * Successful login for admin to further test user management.
 	 */
-	private function login_sequence($adm) {
-
-		$core = $adm->core;
+	private function login_sequence($router) {
+		$core = $router::$core;
 		$rdev = new RoutingDev($core);
+		$login_data = [
+			'post' => [
+				'uname' => 'root',
+				'upass' => 'admin',
+			]
+		];
 
 		$rdev
-			->request('/login', 'POST', [
-				'post' => [
-					'uname' => 'root',
-					'upass' => 'admin',
-				]
-			]);
-		$adm->route('/login', [$adm, 'route_login'], 'POST');
+			->request('/login', 'POST', $login_data);
+		$router->route(
+			'/login', function($args) use($router, $login_data
+			) {
+				$router->route_login($login_data);
+		}, 'POST');
 
 		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($core::$errno, 0);
@@ -153,38 +155,45 @@ class AdminRouteTest extends TestCase {
 	}
 
 	public function test_status() {
-	 	$this->markTestIncomplete("Reworking ...");
-
-		$adm = $this->make_router();
-		$core = $adm->core;
+		$router = $this->make_router();
+		$core = $router::$core;
+		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
 
 		# unauthed
 		$rdev->request('/status', 'GET');
-		$adm->route('/status', [$adm, 'route_status']);
+		$router->route('/status', function($args) use($router) {
+			$router->route_status();
+		}, 'GET');
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Err::USER_NOT_LOGGED_IN);
+		$this->assertEquals($core::$errno, Error::USER_NOT_LOGGED_IN);
 
-		$token = $this->login_sequence($adm, $adm->store);
+		$token = $this->login_sequence($router);
 
 		# authed via header
 		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
 			"%s-%s", 'test-zapmin', $token);
 		$rdev->request('/status', 'GET');
-		$adm->route('/status', [$adm, 'route_status']);
-		$this->assertEquals($core::$errno, Err::USER_NOT_LOGGED_IN);
+		$router->route('/status', function($args) use($router) {
+			$router->route_status();
+		}, 'GET');
+		$this->assertEquals($core::$errno, Error::USER_NOT_LOGGED_IN);
 
 		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
 			"%s %s", 'test-zapmin', $token);
 		$rdev->request('/status', 'GET');
-		$adm->route('/status', [$adm, 'route_status']);
+		$router->route('/status', function($args) use($router) {
+			$router->route_status();
+		}, 'GET');
 		$this->assertEquals($core::$errno, 0);
 		$this->assertEquals($core::$data['uid'], 1);
 
 		# authed via cookie
 		$this->request_authed(
 			$rdev, '/status', 'GET', [], $token);
-		$adm->route('/status', [$adm, 'route_status']);
+		$router->route('/status', function($args) use($router) {
+			$router->route_status();
+		}, 'GET');
 		$this->assertEquals($core::$errno, 0);
 		$this->assertEquals($core::$data['uid'], 1);
 	}

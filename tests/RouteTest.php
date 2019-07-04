@@ -46,25 +46,25 @@ class AdminRouteTest extends TestCase {
 		# use 'foo' as token name
 		$_COOKIE['foo'] = 'test';
 
-		$logfile = testdir() . '/zapmin-route.log';
-		$logger = new Logger(Logger::ERROR, $logfile);
+		// $logfile = testdir() . '/zapmin-route.log';
+		// $logger = new Logger(Logger::ERROR, $logfile);
 
 		$core = (new RouterDev())
 			->config('home', '/usr')
 			->config('shutdown', false)
-			->config('logger', $logger);
+			->config('logger', self::$logger);
 
 		self::$sql = $sql = new SQLite3(
-			['dbname' => ':memory:'], $logger);
+			['dbname' => ':memory:'], self::$logger);
 
-		$admin = new Admin($sql, $logger);
+		$admin = new Admin($sql, self::$logger);
 		$admin
 			->config('expire', 3600)
 			->config('token_name', 'bar')
 			->config('check_tables', true);
 
-		$ctrl = new AuthCtrl($admin, $logger);
-		$manage = new AuthManage($admin, $logger);
+		$ctrl = new AuthCtrl($admin, self::$logger);
+		$manage = new AuthManage($admin, self::$logger);
 
 		# change token name via config
 		$rdev = (new RouteDefault($core, $ctrl, $manage));
@@ -78,19 +78,28 @@ class AdminRouteTest extends TestCase {
 		$this->assertEquals('HELLO, FRIEND', $core::$body_raw);
 	}
 
-	private function make_router($store=null) {
-		if (!$store)
-			$store = new SQLite3(
-				['dbname' => ':memory:'], self::$logger);
+	private function make_router($sql=null) {
+		$_SERVER['REQUEST_URI'] = "/";
+
 		# use new instance on every matching mock HTTP request
 		$core = (new RouterDev())
 			->config('home', '/')
 			->config('logger', self::$logger);
-		# @note: AdminRoute->route is different from
-		# RouterDev->route.
-		return (new AdminRouteDefault(
-				$store, self::$logger, null, $core))
-			->config('token_name', 'test-zapmin');
+
+		if (!$sql)
+			self::$sql = $sql = new SQLite3(
+				['dbname' => ':memory:'], self::$logger);
+
+		$admin = new Admin($sql, self::$logger);
+		$admin
+			->config('expire', 3600)
+			->config('token_name', 'test-zapmin')
+			->config('check_tables', true);
+
+		$ctrl = new AuthCtrl($admin, self::$logger);
+		$manage = new AuthManage($admin, self::$logger);
+
+		return (new RouteDefault($core, $ctrl, $manage));
 	}
 
 	/**
@@ -105,19 +114,19 @@ class AdminRouteTest extends TestCase {
 	}
 
 	public function test_home() {
-	 	$this->markTestIncomplete("Reworking ...");
 
-		$adm = $this->make_router();
-		$core = $adm->core;
-		$rdev = new RoutingDev($core);
-
-		$token_name = $adm->adm_get_token_name();
+		$rdev = $this->make_router();
+		$token_name = $rdev::$admin->get_token_name();
 		$this->assertEquals($token_name, 'test-zapmin');
 
-		$rdev->request('/', 'GET');
-		$core->route('/', [$adm, 'route_home']);
-		$this->assertTrue(
-			strpos(strtolower($core::$body_raw), 'it wurks') > 0);
+		$rdev->route('/', function($args) use($rdev) {
+			$rdev->route_home();
+		}, 'GET');
+
+		$this->assertEquals(
+			'<h1>It wurks!</h1>', $rdev::$core::$body_raw);
+		$this->assertTrue(strpos(
+			strtolower($rdev::$core::$body_raw), 'it wurks') > 0);
 	}
 
 	/**

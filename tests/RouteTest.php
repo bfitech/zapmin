@@ -199,25 +199,28 @@ class AdminRouteTest extends TestCase {
 	}
 
 	public function test_login_logout() {
-	 	$this->markTestIncomplete("Reworking ...");
-
-		$adm = $this->make_router();
-		$core = $adm->core;
+	 	$router = $this->make_router();
+		$core = $router::$core;
+		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
 
 		$rdev->request('/login', 'POST', ['post' => []]);
-		$adm->route('/login', [$adm, 'route_login'], 'POST');
+		$router->route('/login', function($args) use($router) {
+			$router->route_login(['post' => []]);
+		}, 'POST');
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
 		###
 
-		$token = $this->login_sequence($adm);
+		$token = $this->login_sequence($router);
 
 		###
 
 		$this->request_authed($rdev, '/logout', 'GET', [], $token);
-		$adm->route('/logout', [$adm, 'route_logout']);
+		$router->route('/logout', function($args) use($router) {
+			$router->route_logout([]);
+		}, 'GET');
 		$this->assertEquals($core::$errno, 0);
 	}
 

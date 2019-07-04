@@ -51,12 +51,12 @@ class Route {
 			# set token if available
 			if (isset($args['cookie'][$token_name])) {
 				# via cookie
-				self::$ctrl->set_token_value($args['cookie'][$token_name]);
+				static::$ctrl->set_token_value($args['cookie'][$token_name]);
 			} elseif (isset($args['header']['authorization'])) {
 				# via request header
 				$auth = explode(' ', $args['header']['authorization']);
 				if (count($auth) == 2 && $auth[0] == $token_name)
-					self::$ctrl->set_token_value($auth[1]);
+					static::$ctrl->set_token_value($auth[1]);
 			}
 			# execute calback
 			$callback($args);

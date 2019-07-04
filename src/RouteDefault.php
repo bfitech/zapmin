@@ -67,12 +67,12 @@ class RouteDefault extends Route {
 	/** `GET: /status` */
 	public function route_status() {
 		return static::$core->pj(
-			self::$ctrl->get_safe_user_data(), 401);
+			static::$ctrl->get_safe_user_data(), 401);
 	}
 
 	/** `POST: /login` */
 	public function route_login(array $args) {
-		$ctrl = self::$ctrl;
+		$ctrl = static::$ctrl;
 		$retval = $ctrl->login($args);
 		if ($retval[0] === 0)
 			static::$core->send_cookie(
@@ -83,11 +83,11 @@ class RouteDefault extends Route {
 
 	/** `GET|POST: /logout` */
 	public function route_logout(array $args) {
-		$retval = $this->ctrl->logout($args);
+		$retval = static::$ctrl->logout($args);
 		if ($retval[0] === 0)
 			static::$core->send_cookie(
 				$this->token_name, '', time() - (3600 * 48), '/');
-		return $this->core->pj($retval);
+		return static::$core->pj($retval);
 	}
 
 	/** `POST: /chpasswd` */

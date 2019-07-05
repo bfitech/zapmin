@@ -35,6 +35,9 @@ class AuthCtrl extends Auth {
 		if ($this->is_logged_in())
 			return [Error::USER_ALREADY_LOGGED_IN];
 
+		if (!isset($args['post']))
+			return [Error::DATA_INCOMPLETE];
+
 		if (!Common::check_idict($args['post'], ['uname', 'upass']))
 			return [Error::DATA_INCOMPLETE];
 		extract($args['post']);

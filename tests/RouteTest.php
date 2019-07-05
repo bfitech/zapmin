@@ -204,6 +204,17 @@ class AdminRouteTest extends TestCase {
 		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
 
+		###
+
+		$rdev->request('/login', 'POST', []);
+		$router->route('/login', function($args) use($router) {
+			$router->route_login([]);
+		}, 'POST');
+		$this->assertEquals($core::$code, 401);
+		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
+
+		###
+
 		$rdev->request('/login', 'POST', ['post' => []]);
 		$router->route('/login', function($args) use($router) {
 			$router->route_login(['post' => []]);
@@ -331,9 +342,20 @@ class AdminRouteTest extends TestCase {
 		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
 
+		###
+
 		$rdev->request('/register', 'POST', []);
 		$router->route('/register', function($args) use($router) {
 			$router->route_register([]);
+		}, 'POST');
+		$this->assertEquals($core::$code, 401);
+		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
+
+		###
+
+		$rdev->request('/register', 'POST', ['post' => []]);
+		$router->route('/register', function($args) use($router) {
+			$router->route_register(['post' => []]);
 		}, 'POST');
 		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);

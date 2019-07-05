@@ -93,7 +93,7 @@ class RouteDefault extends Route {
 	/** `POST: /chpasswd` */
 	public function route_chpasswd(array $args) {
 		return static::$core->pj(
-			$this->ctrl->change_password($args, true));
+			static::$ctrl->change_password($args, true));
 	}
 
 	/** `POST: /chbio` */

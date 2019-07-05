@@ -225,15 +225,14 @@ class AdminRouteTest extends TestCase {
 	}
 
 	public function test_chpasswd() {
-	 	$this->markTestIncomplete("Reworking ...");
-
-		$adm = $this->make_router();
-		$core = $adm->core;
+		$router = $this->make_router();
+		$core = $router::$core;
+		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
 
 		###
 
-		$token = $this->login_sequence($adm);
+		$token = $this->login_sequence($router);
 
 		###
 
@@ -241,9 +240,14 @@ class AdminRouteTest extends TestCase {
 
 		$this->request_authed(
 			$rdev, '/chpasswd', 'POST', ['post' => $post], $token);
-		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
+		$router->route(
+			'/chpasswd', function($args) use($router, $post
+			) {
+				$router->route_chpasswd(['post' => $post]);
+		}, 'POST');
+
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
 		###
 
@@ -255,7 +259,11 @@ class AdminRouteTest extends TestCase {
 
 		$this->request_authed(
 			$rdev, '/chpasswd', 'POST', ['post' => $post], $token);
-		$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
+		$router->route(
+			'/chpasswd', function($args) use($router, $post
+			) {
+				$router->route_chpasswd(['post' => $post]);
+		}, 'POST');
 		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($core::$errno, 0);
 

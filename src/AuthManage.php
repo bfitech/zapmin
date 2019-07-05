@@ -122,6 +122,9 @@ class AuthManage extends Auth {
 			$keys[] = 'addpass2';
 		if ($email_required)
 			$keys[] = 'email';
+
+		if (!isset($args['post']))
+			return [Error::DATA_INCOMPLETE];
 		$post = Common::check_idict($args['post'], $keys);
 		if (!$post)
 			return [Error::DATA_INCOMPLETE];

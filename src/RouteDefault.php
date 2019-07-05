@@ -104,7 +104,7 @@ class RouteDefault extends Route {
 	/** `POST: /register` */
 	public function route_register(array $args) {
 		$core = static::$core;
-		$retval = $this->manage->self_add($args, true, true);
+		$retval = static::$manage->self_add($args, true, true);
 		if ($retval[0] !== 0)
 			# fail
 			return $core->pj($retval);

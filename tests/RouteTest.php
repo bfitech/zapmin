@@ -326,16 +326,17 @@ class AdminRouteTest extends TestCase {
 	}
 
 	public function test_register() {
-	 	$this->markTestIncomplete("Reworking ...");
-
-		$adm = $this->make_router();
-		$core = $adm->core;
+		$router = $this->make_router();
+		$core = $router::$core;
+		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
 
 		$rdev->request('/register', 'POST', []);
-		$adm->route('/register', [$adm, 'route_register'], 'POST');
+		$router->route('/register', function($args) use($router) {
+			$router->route_register([]);
+		}, 'POST');
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
 		###
 
@@ -346,7 +347,12 @@ class AdminRouteTest extends TestCase {
 			'email' => 'here@exampe.org',
 		];
 		$rdev->request('/register', 'POST', ['post' => $post]);
-		$adm->route('/register', [$adm, 'route_register'], 'POST');
+		$router->route(
+			'/chbio', function($args) use($router, $post
+			) {
+				$router->route_register(['post' => $post]);
+		}, 'POST');
+
 		$this->assertEquals($core::$errno, 0);
 	}
 

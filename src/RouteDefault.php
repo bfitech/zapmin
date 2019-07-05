@@ -121,7 +121,7 @@ class RouteDefault extends Route {
 	/** `POST: /useradd` */
 	public function route_useradd(array $args) {
 		return static::$core->pj(
-			$this->manage->add($args, false, true, true), 403);
+			static::$manage->add($args, false, true, true), 403);
 	}
 
 	/** `POST: /userdel` */

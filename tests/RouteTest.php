@@ -379,21 +379,33 @@ class AdminRouteTest extends TestCase {
 	}
 
 	public function test_useradd() {
-	 	$this->markTestIncomplete("Reworking ...");
-
-		$adm = $this->make_router();
-		$core = $adm->core;
+		$router = $this->make_router();
+		$core = $router::$core;
+		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
-		$token = $this->login_sequence($adm);
+		$token = $this->login_sequence($router);
+
+		###
+
+		$this->request_authed($rdev, '/useradd', 'POST', [], $token);
+		$router->route('/useradd', function($args) use($router) {
+			$router->route_useradd([]);
+		}, 'POST');
+		$this->assertEquals($core::$code, 403);
+		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
 		###
 
 		$post = ['x' => ''];
 		$this->request_authed($rdev, '/useradd', 'POST',
 			['post' => $post], $token);
-		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
+		$router->route(
+			'/useradd', function($args) use($router, $post
+			) {
+				$router->route_useradd(['post' => $post]);
+		}, 'POST');
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
 		###
 
@@ -404,17 +416,25 @@ class AdminRouteTest extends TestCase {
 		];
 		$this->request_authed($rdev, '/useradd', 'POST',
 			['post' => $post], $token);
-		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
+		$router->route(
+			'/useradd', function($args) use($router, $post
+			) {
+				$router->route_useradd(['post' => $post]);
+		}, 'POST');
 		$this->assertEquals($core::$errno, 0);
 
 		###
 
 		$this->request_authed($rdev, '/useradd', 'POST',
 			['post' => $post], $token);
-		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
+		$router->route(
+			'/useradd', function($args) use($router, $post
+			) {
+				$router->route_useradd(['post' => $post]);
+		}, 'POST');
 		# cannot reuse email
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($core::$errno, Err::EMAIL_EXISTS);
+		$this->assertEquals($core::$errno, Error::EMAIL_EXISTS);
 	}
 
 	public function test_userdel() {

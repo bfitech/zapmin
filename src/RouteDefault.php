@@ -98,7 +98,7 @@ class RouteDefault extends Route {
 
 	/** `POST: /chbio` */
 	public function route_chbio(array $args) {
-		return static::$core->pj($this->ctrl->change_bio($args));
+		return static::$core->pj(static::$ctrl->change_bio($args));
 	}
 
 	/** `POST: /register` */

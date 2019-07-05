@@ -270,41 +270,58 @@ class AdminRouteTest extends TestCase {
 	}
 
 	public function test_chbio() {
-	 	$this->markTestIncomplete("Reworking ...");
-
-		$adm = $this->make_router();
-		$core = $adm->core;
+		$router = $this->make_router();
+		$core = $router::$core;
+		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
-		$token = $this->login_sequence($adm);
+		$token = $this->login_sequence($router);
 
 		###
 
+		$post = ['fname' => 'The Handyman'];
 		$this->request_authed($rdev, '/chbio', 'POST',
-			['post' => ['fname' => 'The Handyman']], $token);
-		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
+			['post' => $post], $token);
+		$router->route(
+			'/chbio', function($args) use($router, $post
+			) {
+				$router->route_chbio(['post' => $post]);
+		}, 'POST');
+
 		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($core::$errno, 0);
 
 		###
 
+		$post = ['site' => 'Wrongurl'];
 		$this->request_authed($rdev, '/chbio', 'POST',
-			['post' => ['site' => 'Wrongurl']], $token);
-		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
+			['post' => $post], $token);
+		$router->route(
+			'/chbio', function($args) use($router, $post
+			) {
+				$router->route_chbio(['post' => $post]);
+		}, 'POST');
 		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Err::SITEURL_INVALID);
+		$this->assertEquals($core::$errno, Error::SITEURL_INVALID);
 
 		###
 
+		$post = ['site' => 'http://www.bfinews.com'];
 		$this->request_authed($rdev, '/chbio', 'POST',
-			['post' => ['site' => 'http://www.bfinews.com']], $token);
-		$adm->route('/chbio', [$adm, 'route_chbio'], 'POST');
+			['post' => $post], $token);
+		$router->route(
+			'/chbio', function($args) use($router, $post
+			) {
+				$router->route_chbio(['post' => $post]);
+		}, 'POST');
 		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($core::$errno, 0);
 
 		###
 
 		$this->request_authed($rdev, '/status', 'GET', [], $token);
-		$adm->route('/status', [$adm, 'route_status']);
+		$router->route('/status', function($args) use($router) {
+			$router->route_status();
+		}, 'GET');
 		$this->assertEquals($core::$data['fname'], 'The Handyman');
 	}
 

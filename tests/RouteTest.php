@@ -522,15 +522,15 @@ class AdminRouteTest extends TestCase {
 	 *   service.uservice).
 	 */
 	public function test_byway() {
-	 	$this->markTestIncomplete("Reworking ...");
-
 		$_SERVER['REQUEST_URI'] = '/byway';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$adm = $this->make_router();
-		$adm->adm_set_byway_expiration(10);
+		$router = $this->make_router();
+		$admin = $router::$admin;
+
+		$admin->set_expiration(10);
 		$this->assertEquals(
-			600, $adm->adm_get_byway_expiration());
-		$core = $adm->core;
+			600, $admin->get_expiration());
+		$core = $router::$core;
 		$rdev = new RoutingDev($core);
 
 		$post = [
@@ -540,15 +540,22 @@ class AdminRouteTest extends TestCase {
 		];
 
 		$rdev->request('/byway', 'POST');
-		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
-		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
+		$router->route(
+			'/byway', function($args) use($router, $post
+			) {
+				$router->route_byway([]);
+		}, 'POST');
+		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
 		###
 
 		$post['service']['uservice'] = 'github';
-
 		$rdev->request('/byway', 'POST', ['post' => $post]);
-		$adm->route('/byway', [$adm, 'route_byway'], 'POST');
+		$router->route(
+			'/byway', function($args) use($router, $post
+			) {
+				$router->route_byway(['post' => $post]);
+		}, 'POST');
 		$this->assertEquals($core::$errno, 0);
 		$this->assertEquals($core::$data['uname'], '+someone:github');
 	}

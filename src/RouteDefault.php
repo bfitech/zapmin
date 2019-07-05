@@ -151,15 +151,15 @@ class RouteDefault extends Route {
 		if (isset($args['post']['service']))
 			$args['service'] = $args['post']['service'];
 		### end mock
-		$retval = $this->manage->self_add_passwordless($args);
+		$retval = static::$manage->self_add_passwordless($args);
 		if ($retval[0] !== 0)
 			return $core->pj($retval, 403);
 		# alway autologin on success
 		$token = $retval[1]['token'];
-		$this->ctrl->set_token_value($token);
+		static::$ctrl->set_token_value($token);
 		$core->send_cookie(
 			$this->token_name, $token,
-			time() + $this->byway_expiration, '/'
+			time() + static::$admin->get_expiration(), '/'
 		);
 		return $core->pj($retval);
 	}

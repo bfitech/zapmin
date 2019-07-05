@@ -194,6 +194,17 @@ class Admin {
 			"Zapmin: session removed from cache: '%s'.", $val));
 	}
 
+
+	/* setters */
+
+	/**
+	 *
+	 */
+	final public function set_expiration(int $exp) {
+		if ($exp < 600)
+			$this->expiration = 600;
+	}
+
 	/* getters */
 
 	/**

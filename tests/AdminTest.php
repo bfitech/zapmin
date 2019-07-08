@@ -53,7 +53,10 @@ class Manage extends AuthManage {
 
 }
 
-class AdminTest extends TestCase {
+/**
+ * Use tests under respective database backends.
+ */
+abstract class AdminTest extends TestCase {
 
 	protected static $sql;
 	protected static $redis;
@@ -121,14 +124,7 @@ class AdminTest extends TestCase {
 	}
 
 	public function setUp() {
-		if (!self::$logger)
-			self::$logger = new Logger(Logger::ERROR, '/dev/null');
 		$logger = self::$logger;
-
-		if (!self::$sql)
-			self::$sql = new SQLite3(
-				['dbname' => ':memory:'], $logger);
-
 
 		$admin = new Admin(self::$sql, self::$logger, self::$redis);
 		$admin
@@ -167,10 +163,16 @@ class AdminTest extends TestCase {
 			$au->get_user_data();
 		}
 		if (self::$redis)
-			self::$redis->get_connection()->flushall();
+			self::$redis->get_connection()->flushdb();
 	}
 
 	public function test_admin() {
+		# only run this on one database backend
+		if (get_class($this) != 'AdminSQLiteTest') {
+			$this->assertTrue(true);
+			return;
+		}
+
 		$logger = new Logger(Logger::ERROR, '/dev/null');
 		$sql = new SQLite3(['dbname' => ':memory:'], $logger);
 
@@ -370,8 +372,6 @@ class AdminTest extends TestCase {
 	}
 
 	public function test_change_bio() {
-	 	$this->markTestIncomplete("Reworking ...");
-
 		$ctrl = self::$ctrl;
 
 		# not logged in
@@ -607,8 +607,6 @@ class AdminTest extends TestCase {
 		$ctrl->reset();
 		$manage->reset();
 
-		return;
-
 		# use patched Manage
 
 		# as 'john'
@@ -694,6 +692,8 @@ class AdminTest extends TestCase {
 
 		# use patched AdminStore
 		$pm = self::$p_manage;
+
+		return;
 
 		# as josh
 		self::loginOK('josh', 'asdf');

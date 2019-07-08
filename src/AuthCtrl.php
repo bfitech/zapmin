@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 
 namespace BFITech\ZapAdmin;
@@ -100,7 +100,7 @@ class AuthCtrl extends Auth {
 
 		# this just close sessions with current sid, whether it exists
 		# or not, including the case of account self-deletion
-		$this->close_session($this->get_user_data()['sid']);
+		$this->close_session(intval($this->get_user_data()['sid']));
 
 		# reset status
 		$this->reset();
@@ -187,11 +187,6 @@ class AuthCtrl extends Auth {
 	 * Change user info.
 	 *
 	 * @param array $args Dict with keys: `fname`, `site`.
-	 *
-	 * @manonly
-	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
-	 * @SuppressWarnings(PHPMD.NPathComplexity)
-	 * @endmanonly
 	 */
 	public function change_bio(array $args) {
 		if (!$this->is_logged_in())
@@ -221,26 +216,14 @@ class AuthCtrl extends Auth {
 			return [Error::SITEURL_INVALID];
 		}
 
-		$sql = self::$admin::$store;
+		# update database
 		$udata = $this->get_user_data();
 		$token = $udata['token'];
+		self::$admin::$store->update(
+			'udata', $vars, ['uid' => $udata['uid']]);
 
-		$sql->update('udata', $vars, ['uid' => $udata['uid']]);
-
-		# also update redis cache
-		$expire = $sql->stmt_fragment('datetime');
-		$session = $sql->query(
-			sprintf(
-				"SELECT * FROM v_usess " .
-				"WHERE token=? AND expire>%s " .
-				"LIMIT 1",
-				$expire
-			), [$token]);
-		# update cache value
-		$updated_data = array_merge($udata, $vars);
-		if ($session)
-			self::$admin->cache_write($token,
-				$updated_data, $session['expire']);
+		# empty redis cache; let it lazy-reloaded by get_user_data
+		self::$admin->cache_del($token);
 
 		# reset user data but not user token
 		$this->reset();
@@ -248,12 +231,8 @@ class AuthCtrl extends Auth {
 		$udata = $this->get_user_data();
 
 		# ok
-		$log->info(sprintf(
-			"Zapmin: chbio: OK: '%s'.",
-			$udata['uname']
-		));
+		$log->info("Zapmin: chbio: OK: '${udata['uname']}.");
 		return [0];
 	}
-
 
 }

@@ -2,14 +2,12 @@
 
 require_once __DIR__ . '/AdminTest.php';
 
+
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQLite3;
-use BFITech\ZapStore\Redis;
-use BFITech\ZapAdmin as za;
-use BFITech\ZapAdmin\AdminStoreError as Err;
 
 
-class AdminStoreSQLiteTest extends AdminTest {
+class AdminSQLiteTest extends AdminTest {
 
 	public static function setUpBeforeClass() {
 		$logfile = testdir() . '/zapmin-sqlite3.log';
@@ -24,7 +22,9 @@ class AdminStoreSQLiteTest extends AdminTest {
 		self::redis_open($configfile, $logger);
 	}
 
-	public function xtest_upgrade_tables() {
+	public function test_upgrade_tables() {
+		$this->markTestIncomplete('Reworking ...');
+
 		$logfile = testdir() . '/zapmin-table-update.log';
 		if (file_exists($logfile))
 			unlink($logfile);

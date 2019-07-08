@@ -70,4 +70,5 @@ class Error extends \Exception {
 		$this->message = $message;
 		parent::__construct($message, $code, null);
 	}
+
 }

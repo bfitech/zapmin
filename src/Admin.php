@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 
 namespace BFITech\ZapAdmin;
@@ -26,7 +26,7 @@ class Admin {
 	public static $store;
 	/** Logging service. */
 	public static $logger;
-	/** Redis instance for session caching. */
+	/** Redis instance for session caching. No caching if not set. */
 	public static $redis;
 
 	private $expiration = 7200;
@@ -46,11 +46,11 @@ class Admin {
 		SQL $store, Logger $logger=null, RedisConn $redis=null
 	) {
 		# database
-		static::$store = $store;
+		self::$store = $store;
 		# logger
-		static::$logger = $logger ?? new Logger();
+		self::$logger = $logger ?? new Logger;
 		# redis
-		static::$redis = $redis;
+		self::$redis = $redis;
 	}
 
 	/**
@@ -106,7 +106,7 @@ class Admin {
 			new Tables($this);
 
 		if (!self::$redis)
-			static::$logger->warning(
+			self::$logger->warning(
 				"Zapmin: Redis connection not set. Cache disabled.");
 
 		$this->initialized = true;
@@ -138,13 +138,13 @@ class Admin {
 	/**
 	 * Read session data from cache.
 	 *
-	 * @param string $token Session token.
+	 * @param string $token_value Session token value.
 	 */
-	final public function cache_read(string $token) {
+	final public function cache_read(string $token_value) {
 		if (!self::$redis)
 			return null;
 
-		$key = sprintf('%s:%s', $this->token_name, $token);
+		$key = sprintf('%s:%s', $this->token_name, $token_value);
 		$data = self::$redis->get($key);
 		if ($data === false)
 			# key not fund
@@ -155,45 +155,46 @@ class Admin {
 			$data = ['uid' => -2];
 		self::$logger->debug(sprintf(
 			"Zapmin: session read from cache: '%s' <- '%s'.",
-			$token, json_encode($data)));
+			$token_value, json_encode($data)));
 		return $data;
 	}
 
 	/**
 	 * Write session to cache.
 	 *
-	 * @param string $val Token value.
+	 * @param string $token_value Token value.
 	 * @param array $data User data.
 	 */
-	final public function cache_write(string $val, array $data) {
+	final public function cache_write(
+		string $token_value, array $data
+	) {
 		if (!self::$redis)
 			return null;
 		$redis = self::$redis;
 
-		$key = sprintf('%s:%s', $this->token_name, $val);
+		$key = sprintf('%s:%s', $this->token_name, $token_value);
 		$jdata = json_encode($data);
 		$redis->set($key, $jdata);
 		$redis->expire($key, $this->expiration);
 		self::$logger->debug(sprintf(
 			"Zapmin: session written to cache: '%s' <- '%s'.",
-			$val, $jdata));
+			$token_value, $jdata));
 	}
 
 	/**
 	 * Remove session cache.
 	 *
-	 * @param string $val Token value.
+	 * @param string $token_value Token value.
 	 */
-	final public function cache_del(string $val) {
+	final public function cache_del(string $token_value) {
 		if (!self::$redis)
 			return null;
 
-		$key = sprintf('%s:%s', $this->token_name, $val);
+		$key = sprintf('%s:%s', $this->token_name, $token_value);
 		self::$redis->del($key);
 		self::$logger->debug(sprintf(
-			"Zapmin: session removed from cache: '%s'.", $val));
+			"Zapmin: session removed from cache: '%s'.", $token_value));
 	}
-
 
 	/* setters */
 
@@ -220,4 +221,5 @@ class Admin {
 	final public function get_token_name() {
 		return $this->token_name;
 	}
+
 }

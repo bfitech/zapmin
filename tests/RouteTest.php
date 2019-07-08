@@ -16,7 +16,7 @@ use BFITech\ZapAdmin\RouteDefault;
 use BFITech\ZapAdmin\Error;
 
 
-class AdminRouteTest extends TestCase {
+class RouteTest extends TestCase {
 
 	public static $logger;
 	public static $sql;

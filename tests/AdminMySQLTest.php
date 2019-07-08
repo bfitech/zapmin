@@ -4,10 +4,11 @@
 require_once(__DIR__ . '/AdminTest.php');
 
 use BFITech\ZapCore\Logger;
-use BFITech\ZapStore as zs;
+use BFITech\ZapStore\MySQL;
+use BFITech\ZapStore\SQLError;
 
 
-class AdminStoreMyTest extends AdminTest {
+class AdminMyTest extends AdminTest {
 
 	private static function mysql_config($dbconfig) {
 		if (file_exists($dbconfig))
@@ -57,8 +58,8 @@ class AdminStoreMyTest extends AdminTest {
 		$configfile = testdir() . '/zapmin-mysql.json';
 		$params = self::mysql_config($configfile);
 		try {
-			self::$sql = new zs\MySQL($params, $logger);
-		} catch(zs\SQLError $e) {
+			self::$sql = new MySQL($params, $logger);
+		} catch(SQLError $e) {
 			printf(
 				"\n" .
 				"ERROR: Cannot connect to mysql test database.\n" .
@@ -73,7 +74,7 @@ class AdminStoreMyTest extends AdminTest {
 			self::$sql->query_raw("DROP VIEW v_usess");
 			foreach (['meta', 'usess', 'udata'] as $table)
 				self::$sql->query_raw("DROP TABLE $table CASCADE");
-		} catch (zs\SQLError $e) {
+		} catch (SQLError $e) {
 		}
 
 		$configfile = testdir() . '/zapmin-redis.json';

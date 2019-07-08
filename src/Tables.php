@@ -40,9 +40,9 @@ class Tables {
 	public function exists() {
 		try {
 			$this->store->query("SELECT 1 FROM udata LIMIT 1");
-	 		// @codeCoverageIgnoreStart
+			// @codeCoverageIgnoreStart
 			$this->upgrade();
-	 		// @codeCoverageIgnoreEnd
+			// @codeCoverageIgnoreEnd
 		} catch (SQLError $e) {
 			$this->install();
 		}

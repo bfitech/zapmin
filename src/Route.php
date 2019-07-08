@@ -51,7 +51,8 @@ class Route {
 			# set token if available
 			if (isset($args['cookie'][$token_name])) {
 				# via cookie
-				static::$ctrl->set_token_value($args['cookie'][$token_name]);
+				static::$ctrl->set_token_value(
+					$args['cookie'][$token_name]);
 			} elseif (isset($args['header']['authorization'])) {
 				# via request header
 				$auth = explode(' ', $args['header']['authorization']);

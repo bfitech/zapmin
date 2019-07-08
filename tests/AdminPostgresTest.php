@@ -5,10 +5,11 @@ require_once(__DIR__ . '/AdminTest.php');
 
 
 use BFITech\ZapCore\Logger;
-use BFITech\ZapStore as zs;
+use BFITech\ZapStore\PgSQL;
+use BFITech\ZapStore\SQLError;
 
 
-class AdminStorePgTest extends AdminTest {
+class AdminPgTest extends AdminTest {
 
 	private static function postgres_config($dbconfig) {
 		if (file_exists($dbconfig))
@@ -58,8 +59,8 @@ class AdminStorePgTest extends AdminTest {
 		$dbconfig = testdir() . '/zapmin-pgsql.json';
 		$dbparams = self::postgres_config($dbconfig);
 		try {
-			self::$sql = new zs\PgSQL($dbparams, $logger);
-		} catch(zs\SQLError $e) {
+			self::$sql = new PgSQL($dbparams, $logger);
+		} catch(SQLError $e) {
 			printf(
 				"\n" .
 				"ERROR: Cannot connect to pgsql test database.\n" .
@@ -72,7 +73,7 @@ class AdminStorePgTest extends AdminTest {
 		try {
 			foreach (['meta', 'usess', 'udata'] as $table)
 				self::$sql->query_raw("DROP TABLE $table CASCADE");
-		} catch (zs\SQLError $e) {
+		} catch (SQLError $e) {
 		}
 
 		$configfile = testdir() . '/zapmin-redis.json';

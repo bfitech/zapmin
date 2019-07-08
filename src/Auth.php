@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 
 namespace BFITech\ZapAdmin;
@@ -12,14 +12,23 @@ use BFITech\ZapCore\Logger;
  */
 abstract class Auth {
 
+	/** Admin class instance. */
 	public static $admin;
+	/** Logger instance. */
 	public static $logger;
 
+	/** In-memory user data cache. */
 	private $user_data;
+	/** Token value normally set via HTTP header or cookie. */
 	private $token_value;
+	/** Mark if authentication has been performed. */
+	private $authed = false;
 
 	/**
 	 * Constructor.
+	 *
+	 * @param Admin $admin Admin instance.
+	 * @param Logger $logger Logger instance.
 	 */
 	public function __construct(
 		Admin $admin, Logger $logger=null
@@ -39,12 +48,17 @@ abstract class Auth {
 	 * Get user data.
 	 */
 	final public function get_user_data() {
-		if ($this->token_value === null)
-			return null;
+		if ($this->token_value === null) {
+			if ($this->authed)
+				return null;
+			$this->authed = true;
+		}
 		if ($this->user_data !== null)
 			return $this->user_data;
 
 		$token = $this->token_value;
+		if (!$token)
+			return null;
 
 		# cache validation
 		$cached = self::$admin->cache_read($token);
@@ -119,6 +133,7 @@ abstract class Auth {
 	final public function reset() {
 		$this->token_value = null;
 		$this->user_data = null;
+		$this->authed = false;
 	}
 
 }

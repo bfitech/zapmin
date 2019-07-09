@@ -148,10 +148,10 @@ abstract class AdminTest extends TestCase {
 	}
 
 	public static function loginOK($uname='root', $upass='admin') {
-		$result = self::$ctrl->login(['post' => [
+		$result = self::$ctrl->login([
 			'uname' => $uname,
 			'upass' => $upass,
-		]]);
+		]);
 		$token = $result[1]['token'];
 
 		foreach ([
@@ -164,6 +164,7 @@ abstract class AdminTest extends TestCase {
 		}
 		if (self::$redis)
 			self::$redis->get_connection()->flushdb();
+		return $token;
 	}
 
 	public function test_admin() {
@@ -202,7 +203,7 @@ abstract class AdminTest extends TestCase {
 		$ctrl = self::$ctrl;
 
 		# invalid post data
-		$args = ['post' => ['uname' => 'admin']];
+		$args = ['uname' => 'admin'];
 		$this->assertEquals(
 			$ctrl->login($args)[0], Error::DATA_INCOMPLETE);
 
@@ -211,12 +212,12 @@ abstract class AdminTest extends TestCase {
 			$ctrl->login($args)[0], Error::DATA_INCOMPLETE);
 
 		# invalid user
-		$args['post']['upass'] = '1243';
+		$args['upass'] = '1243';
 		$this->assertEquals(
 			$ctrl->login($args)[0], Error::USER_NOT_FOUND);
 
 		# invalid password
-		$args['post']['uname'] = 'root';
+		$args['uname'] = 'root';
 		$this->assertEquals(
 			$ctrl->login($args)[0], Error::WRONG_PASSWORD);
 
@@ -225,7 +226,7 @@ abstract class AdminTest extends TestCase {
 			$ctrl->set_token_value(false), null);
 
 		# success
-		$args['post']['upass'] = 'admin';
+		$args['upass'] = 'admin';
 		$login_data = $ctrl->login($args);
 		$this->assertEquals($login_data[0], 0);
 		$token = $login_data[1]['token'];
@@ -238,6 +239,37 @@ abstract class AdminTest extends TestCase {
 		# re-login will fail
 		$this->assertEquals(
 			$ctrl->login($args)[0], Error::USER_ALREADY_LOGGED_IN);
+
+	}
+
+	public function test_cache() {
+		if (!self::$redis) {
+			$this->assertTrue(true);
+			return;
+		}
+
+		$redis = self::$redis;
+		$ctrl = self::$ctrl;
+		$token_name = $ctrl::$admin->get_token_name();
+		$token_value = self::loginOK();
+
+		# break the cache
+		$rkey = sprintf('%s:%s', $token_name, $token_value);
+		$redis->set($rkey, '3%!#%#U^#!$%^');
+		$ctrl->reset();
+		$ctrl->set_token_value($token_value);
+		$this->assertSame($ctrl->get_user_data(), null);
+
+		# get cache from token not obtained from valid login process
+		$ctrl->reset();
+		$token_bogus = $token_value . 'xxxxxxxxxxx';
+		$ctrl->set_token_value($token_bogus);
+		$this->assertSame($ctrl->get_user_data(), null);
+		$rkey = sprintf('%s:%s', $token_name, $token_bogus);
+		$this->assertSame(json_decode($redis->get($rkey), true),
+			['uid' => -1]);
+		$this->assertSame(
+			$redis->ttl($rkey), $ctrl::$admin->get_expiration());
 	}
 
 	private function _expiration_sequence(
@@ -247,10 +279,8 @@ abstract class AdminTest extends TestCase {
 		$ctrl->reset();
 
 		$login_data = $ctrl->login([
-			'post' => [
-				'uname' => 'root',
-				'upass' => 'admin',
-			],
+			'uname' => 'root',
+			'upass' => 'admin',
 		]);
 		$this->assertEquals($login_data[0], 0);
 		$token = $login_data[1]['token'];
@@ -311,12 +341,11 @@ abstract class AdminTest extends TestCase {
 		$this->assertEquals($ctrl->logout()[0], 0);
 	}
 
-
 	public function test_change_password() {
 		$ctrl = self::$ctrl;
 
 		# not logged in
-		$args = ['post' => ['pass1' => '123']];
+		$args = ['pass1' => '123'];
 		$this->assertEquals($ctrl->change_password($args)[0],
 			Error::USER_NOT_LOGGED_IN);
 
@@ -327,30 +356,29 @@ abstract class AdminTest extends TestCase {
 			$ctrl->change_password($args)[0], Error::DATA_INCOMPLETE);
 
 		# incomplete data
-		$args['post']['pass2'] = '1234';
+		$args['pass2'] = '1234';
 		$result = $ctrl->change_password($args, true);
 		$this->assertEquals($result[0], Error::DATA_INCOMPLETE);
 
 		# wrong old password
-		$args['post']['pass0'] = '1234';
+		$args['pass0'] = '1234';
 		$result = $ctrl->change_password($args, true);
 		$this->assertEquals($result[0], Error::OLD_PASSWORD_INVALID);
 
 		# new passwords don't verify
-		$args['post']['pass0'] = 'admin';
+		$args['pass0'] = 'admin';
 		$result = $ctrl->change_password($args, true);
 		$this->assertEquals($result[0], Error::PASSWORD_INVALID);
-		// $this->assertEquals($result[0], Error::PASSWORD_NOT_SAME);
 
 		# new password too short
-		$args['post']['pass2'] = '123';
+		$args['pass2'] = '123';
 		$result = $ctrl->change_password($args, true);
 		$this->assertEquals($result[0], Error::PASSWORD_INVALID);
 		$this->assertEquals($result[1], Error::PASSWORD_TOO_SHORT);
 
 		# success
-		$args['post']['pass1'] = '1234';
-		$args['post']['pass2'] = '1234';
+		$args['pass1'] = '1234';
+		$args['pass2'] = '1234';
 		$this->assertEquals($ctrl->change_password($args, true)[0], 0);
 
 		# logout
@@ -367,7 +395,7 @@ abstract class AdminTest extends TestCase {
 		self::loginOK('root', '1234');
 
 		# change password back without old password requirement
-		$args['post']['pass1'] = $args['post']['pass2'] = 'admin';
+		$args['pass1'] = $args['pass2'] = 'admin';
 		$this->assertEquals($ctrl->change_password($args)[0], 0);
 	}
 
@@ -377,8 +405,6 @@ abstract class AdminTest extends TestCase {
 		# not logged in
 		$result = $ctrl->change_bio([]);
 		$this->assertEquals($result[0], Error::USER_NOT_LOGGED_IN);
-
-		# begin process
 
 		self::loginOK();
 
@@ -390,15 +416,13 @@ abstract class AdminTest extends TestCase {
 		$this->assertEquals($result[0], 0);
 
 		# fname empty value
-		$result = $ctrl->change_bio([
-			'post' => ['fname' => '']]);
+		$result = $ctrl->change_bio(['fname' => '']);
 
 		$safe_data = $ctrl->get_safe_user_data()[1];
 		$this->assertEquals($safe_data['fname'], '');
 
 		# change fname
-		$result = $ctrl->change_bio([
-			'post' => ['fname' => 'The Administrator']]);
+		$result = $ctrl->change_bio(['fname' => 'The Administrator']);
 
 		$safe_data = $ctrl->get_safe_user_data()[1];
 		$this->assertEquals($safe_data['site'], '');
@@ -406,13 +430,12 @@ abstract class AdminTest extends TestCase {
 
 		# site too long
 		$test_site = 'http://' . str_repeat('jonathan', 12) . '.co';
-		$result = $ctrl->change_bio([
-			'post' => ['site' => $test_site]]);
+		$result = $ctrl->change_bio(['site' => $test_site]);
 		$this->assertEquals($result[0], Error::SITEURL_INVALID);
 
 		# change site url
 		$result = $ctrl->change_bio([
-			'post' => ['site' => 'http://www.bfinews.com']]);
+			'site' => 'http://www.bfinews.com']);
 
 		$safe_data = $ctrl->get_safe_user_data()[1];
 		$this->assertEquals($safe_data['site'],
@@ -424,26 +447,25 @@ abstract class AdminTest extends TestCase {
 		$manage = self::$manage;
 
 		# missing post arguments
-		$this->assertEquals(
-			$manage->add(['post' => []], true, true)[0],
+		$this->assertEquals($manage->add([], true, true)[0],
 			Error::DATA_INCOMPLETE);
 
-		$args = ['post' => [
+		$args = [
 			'addname' => 'root',
 			'addpass1' => 'asdf',
-			'addpass2' => 'asdf']];
+			'addpass2' => 'asdf',
+		];
 
 		# user exists
 		$this->assertEquals(
-			$manage->add($args, true, true)[0],
-			Error::USERNAME_EXISTS);
+			$manage->add($args, true, true)[0], Error::USERNAME_EXISTS);
 
 		# success
-		$args['post']['addname'] = 'john';
+		$args['addname'] = 'john';
 		$this->assertEquals(
 			$manage->add($args, true, true)[0], 0);
-		# autologin, this should happen immediately prior to
-		# sending anything to client
+		### autologin, this should happen immediately prior to
+		### sending anything to client
 		self::loginOK('john', 'asdf');
 		$udata = $manage->get_user_data();
 		$this->assertEquals($udata['uname'], 'john');
@@ -454,37 +476,37 @@ abstract class AdminTest extends TestCase {
 		$manage->reset();
 
 		# using shorthand, with email required
-		$args['post']['addname'] = 'jack';
-		$args['post']['addpass1'] = 'qwer';
+		$args['addname'] = 'jack';
+		$args['addpass1'] = 'qwer';
 		# not typing password twice and no email
 		unset($args['post']['addpass2']);
 		$result = $manage->self_add($args, true, true);
 		$this->assertEquals($result[0], Error::DATA_INCOMPLETE);
 
 		# invalid email
-		$args['post']['addpass2'] = 'qwer';
-		$args['post']['email'] = '#qwer';
+		$args['addpass2'] = 'qwer';
+		$args['email'] = '#qwer';
 		$result = $manage->self_add($args, true, true);
 		$this->assertEquals($result[0], Error::EMAIL_INVALID);
 
 		# success
-		$args['post']['email'] = 'test+bed@example.org';
+		$args['email'] = 'test+bed@example.org';
 		$this->assertEquals($manage->self_add($args, true, true)[0], 0);
 
 		# email exists
-		$args['post']['addname'] = 'jonathan';
+		$args['addname'] = 'jonathan';
 		$result = $manage->self_add($args, true, true);
 		$this->assertEquals($result[0], Error::EMAIL_EXISTS);
 
 		# uname too long
-		$args['post']['addname'] = str_repeat('jonathan', 24);
+		$args['addname'] = str_repeat('jonathan', 24);
 		$this->assertEquals(
 			$manage->self_add($args, true, true)[0],
 			Error::USERNAME_TOO_LONG);
 
 		# email too long
-		$args['post']['addname'] = 'jonathan';
-		$args['post']['email'] = str_repeat('jonathan', 12) . '@l.co';
+		$args['addname'] = 'jonathan';
+		$args['email'] = str_repeat('jonathan', 12) . '@l.co';
 		$result = $manage->self_add($args, true, true);
 		$this->assertEquals($result[0], Error::EMAIL_INVALID);
 	}
@@ -494,22 +516,24 @@ abstract class AdminTest extends TestCase {
 		$manage = self::$manage;
 
 		# add new
-		$args = ['post' => [
+		$args = [
 			'addname' => 'john',
 			'addpass1' => 'asdf',
-			'addpass2' => 'asdf']];
+			'addpass2' => 'asdf',
+		];
 		$this->assertEquals($manage->add($args, true, true)[0], 0);
 
-		$args = ['post' => [
+		$args = [
 			'addname' => 'john',
-			'addpass1' => 'asdf']];
+			'addpass1' => 'asdf',
+		];
 
 		# no authn, self-registration disabled
 		$this->assertEquals(
 			$manage->add($args, false, false)[0],
 			Error::SELF_REGISTER_NOT_ALLOWED);
 
-		# as 'john'
+		### as 'john'
 		self::loginOK('john', 'asdf');
 
 		# no authz
@@ -519,14 +543,15 @@ abstract class AdminTest extends TestCase {
 		$ctrl->reset();
 		$manage->reset();
 
-		# as root, with unavailable name
+		### as root, with unavailable name
 		self::loginOK();
-		# user exists
+
+		# user exists, with addname=john
 		$this->assertEquals($manage->add($args)[0],
 			Error::USERNAME_EXISTS);
 
-		# as root, with available name
-		$args['post']['addname'] = 'jocelyn';
+		# as root, with addname=jocelyn
+		$args['addname'] = 'jocelyn';
 		# success, no autologin
 		$this->assertEquals($manage->add($args)[0], 0);
 
@@ -534,10 +559,10 @@ abstract class AdminTest extends TestCase {
 		$manage->reset();
 
 		# try to add 'jonah'
-		$args['post']['addname'] = 'jonah';
-		$args['post']['addpass1'] = '123';
+		$args['addname'] = 'jonah';
+		$args['addpass1'] = '123';
 
-		# as 'jocelyn'
+		### as 'jocelyn'
 		self::loginOK('jocelyn', 'asdf');
 
 		# no authz
@@ -548,174 +573,152 @@ abstract class AdminTest extends TestCase {
 		$ctrl->reset();
 		$manage->reset();
 
-		# use patched Manage
+		### use patched AuthManage ###
 
-		# as 'john'
+		### as 'john'
 		self::loginOK('john', 'asdf');
 
 		# pass authz but password doesn't check out
 		$result = self::$p_manage->add($args, false, false, false);
 		$this->assertEquals($result[0], Error::PASSWORD_TOO_SHORT);
 
-		# as 'john'
-		$args['post']['addpass1'] = 'asdfgh';
-		# success
+		# success, with correct password
+		$args['addpass1'] = 'asdfgh';
 		$this->assertEquals(
 			self::$p_manage->add($args, false, false, false)[0], 0);
+
 		# name contains white space
-		$args['post']['addname'] = 'john smith';
+		$args['addname'] = 'john smith';
 		$this->assertEquals(
 			self::$p_manage->add($args, false, false, false)[0],
 				Error::USERNAME_HAS_WHITESPACE);
+
 		# name starts with plus sign
-		$args['post']['addname'] = '+jacqueline';
+		$args['addname'] = '+jacqueline';
 		$this->assertEquals(
 			self::$p_manage->add($args, false, false, false)[0],
 				Error::USERNAME_LEADING_PLUS);
-		# add 'jessica'
-		$args['post']['addname'] = 'jessica';
-		self::$p_manage->add($args, false, false, false);
 
+		# success, as 'john' adding 'jessica'
+		$args['addname'] = 'jessica';
+		$this->assertEquals(
+			self::$p_manage->add($args, false, false, false)[0], 0);
 	}
 
 	public function test_delete() {
 		$ctrl = self::$ctrl;
 		$manage = self::$manage;
 
-		# add new
+		### add new
 		foreach (['john', 'jocelyn', 'jonah', 'josh'] as $name) {
-			$args = ['post' => [
+			$manage->add([
 				'addname' => $name,
 				'addpass1' => 'asdf',
-				'addpass2' => 'asdf']];
-			$manage->add($args, true, true);
+				'addpass2' => 'asdf',
+			], true, true);
 		}
 
-		$args = ['post' => ['uid' => '0']];
 		# cannot list user when not signed in
+		$args = ['uid' => '0'];
 		$this->assertEquals(
 			$manage->list($args)[0], Error::USER_NOT_LOGGED_IN);
 
+		### as 'jonah'
 		self::loginOK('jonah', 'asdf');
 
-		$args['post']['uid'] = '0';
 		# cannot list user when not authorized
+		$args['uid'] = '0';
 		$this->assertEquals(
 			$manage->list($args)[0], Error::USER_NOT_AUTHORIZED);
 
-		# sign out
+		### sign out
 		$ctrl->reset();
 		$manage->reset();
 
-		# use patched Manage
+		### use patched AuthManage ###
 
-		# as 'john'
+		### as 'john'
 		self::loginOK('john', 'asdf');
 
 		$sql = $ctrl::$admin::$store;
 
 		# check number of users
-		$user_count = $sql->query(
-			"SELECT count(uid) AS count FROM udata"
-			)['count'];
+		$user_count = $sql->query("
+			SELECT count(uid) AS count FROM udata
+		")['count'];
+
 		# invalid page and limit on user listing will be silently
 		# set to their defaults
-		$args['post']['page'] = -1e3;
-		$args['post']['limit'] = 1e3;
+		$args['page'] = -1e3;
+		$args['limit'] = 1e3;
 		$user_list = self::$p_manage->list($args)[1];
 		$this->assertEquals(count($user_list), $user_count);
 
 		# authorized user can delete anyone including herself
-		$jessica_uid = $sql->query(
-			"SELECT uid FROM udata WHERE uname=? LIMIT 1",
-			['john'])['uid'];
-		$args['post']['uid'] = $jessica_uid;
+		$jessica_uid = $sql->query("
+			SELECT uid FROM udata WHERE uname=? LIMIT 1
+		", ['john'])['uid'];
+		$args['uid'] = $jessica_uid;
 		$this->assertEquals(self::$p_manage->delete($args)[0], 0);
 
 		$ctrl->reset();
 		$manage->reset();
 
-		# as 'root' with default AuthManage
+		### use default AuthManage ###
+
+		# as 'root'
 		self::loginOK();
 
 		# check number of users
-		$user_count = $sql->query(
-			"SELECT count(uid) AS count FROM udata"
-			)['count'];
-		# invalid page and limit on user listing will be silently
-		# set to their defaults
-		$args['post']['page'] = -1e3;
-		$args['post']['limit'] = 1e3;
-		$user_list = $manage->list($args)[1];
-		$this->assertEquals(count($user_list), $user_count);
+		$user_count = $sql->query("
+			SELECT count(uid) AS count FROM udata
+		")['count'];
 
 		# root user can delete anyone except herself
-		$jocelyn_uid = $sql->query(
-			"SELECT uid FROM udata WHERE uname=? LIMIT 1",
-			['jocelyn'])['uid'];
-		$args['post']['uid'] = $jocelyn_uid;
+		$jocelyn_uid = $sql->query("
+			SELECT uid FROM udata WHERE uname=? LIMIT 1
+		", ['jocelyn'])['uid'];
+		$args['uid'] = $jocelyn_uid;
 		$this->assertEquals($manage->delete($args)[0], 0);
+		$this->assertEquals($manage->delete(['uid' => 1])[0],
+			Error::USER_NOT_AUTHORIZED);
 
-		# logout
+		### logout
 		$ctrl->reset();
 		$manage->reset();
 
-		# create uid arrays
-		$uids = array_map(function($_arr){
-			return (string)$_arr['uid'];
+		### create uid arrays
+		$uids = array_map(function($arr){
+			return (string)$arr['uid'];
 		}, $user_list);
 
 		# no authn
 		$this->assertEquals(
 			$manage->delete($args)[0], Error::USER_NOT_LOGGED_IN);
 
-		# as 'jonah'
+		### as 'jonah'
 		self::loginOK('jonah', 'asdf');
 
 		# missing post arguments
 		$this->assertEquals(
-			$manage->delete(['post' => []])[0], Error::DATA_INCOMPLETE);
-		# with default authz, any user cannot delete another user
-		# except root
+			$manage->delete([])[0], Error::DATA_INCOMPLETE);
+
+		# with default AuthManage::authz_delete, only root can delete
+		# other users
 		$this->assertEquals(
 			$manage->delete($args)[0], Error::USER_NOT_AUTHORIZED);
-		# but s/he can self-delete
-		$args['post']['uid'] = $manage->get_user_data()['uid'];
+
+		# non-root user can self-delete
+		$args['uid'] = $manage->get_user_data()['uid'];
 		$this->assertEquals($manage->delete($args)[0], 0);
-		# logout is still allowed since it doesn't check sid
+		### logout is still allowed since it doesn't check sid
 		$ctrl->logout();
+
 		# unable to re-login because user is no longer found
-		$this->assertEquals($ctrl->login(['post' => [
+		$this->assertEquals($ctrl->login([
 			'uname' => 'jonah',
 			'upass' => 'asdfgh',
-		]])[0], Error::USER_NOT_FOUND);
-
-		# use patched AdminStore
-		$pm = self::$p_manage;
-
-		return;
-
-		# as josh
-		self::loginOK('josh', 'asdf');
-		# deleting jonah's ID, user no longer exists
-		#$this->assertEquals(
-		#	$pm->delete($args)[0], Error::USER_NOT_FOUND);
-		# cannot delete 'root'
-		$args['post']['uid'] = '1';
-		$this->assertEquals(
-			$pm->delete($args)[0], Error::USER_NOT_AUTHORIZED);
-		# success, self-deleting 'josh', uid=5
-		$args['post']['uid'] = '5';
-		$this->assertEquals($pm->delete($args)[0], 0);
-
-		$ctrl->reset();
-
-		# sign in as 'josh' fails
-		try {
-			self::loginOK('jocelyn', '1234');
-		} catch (Exception $e) {
-			$this->assertNull($ctrl->get_user_data());
-		}
+		])[0], Error::USER_NOT_FOUND);
 
 	}
 
@@ -723,16 +726,16 @@ abstract class AdminTest extends TestCase {
 		$ctrl = self::$ctrl;
 		$manage = self::$manage;
 
-		# add new
+		### add new
 		foreach (['john', 'jocelyn'] as $name) {
-			$args = ['post' => [
+			$manage->add([
 				'addname' => $name,
 				'addpass1' => 'asdf',
-				'addpass2' => 'asdf']];
-			$manage->add($args, true, true);
+				'addpass2' => 'asdf',
+			], true, true);
 		}
 
-		$args = ['post' => []];
+		$args = [];
 
 		self::loginOK();
 		$result = $manage->self_add_passwordless($args);
@@ -741,17 +744,17 @@ abstract class AdminTest extends TestCase {
 		$ctrl->reset();
 		$manage->reset();
 
-		# no 'service' in args
+		# empty args
 		$result = $manage->self_add_passwordless($args);
 		$this->assertEquals($result[0], Error::DATA_INCOMPLETE);
 
-		# not enough args
-		$args['service'] = ['uname' => '1234'];
+		# no 'uservice' in args
+		$args = ['uname' => '1234'];
 		$result = $manage->self_add_passwordless($args);
 		$this->assertEquals($result[0], Error::DATA_INCOMPLETE);
 
 		# success
-		$args['service']['uservice'] = 'github';
+		$args['uservice'] = 'github';
 		$result = $manage->self_add_passwordless($args);
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:github');
@@ -764,7 +767,6 @@ abstract class AdminTest extends TestCase {
 		$result = $manage->get_safe_user_data();
 		$this->assertEquals($result[0], 0);
 		$this->assertEquals($result[1]['uname'], '+1234:github');
-
 	}
 
 	public function test_login_passwordless() {
@@ -772,10 +774,8 @@ abstract class AdminTest extends TestCase {
 		$manage = self::$manage;
 
 		$args = [
-			'service' => [
-				'uname' => '1234',
-				'uservice' => 'google',
-			]
+			'uname' => '1234',
+			'uservice' => 'google',
 		];
 		$manage->reset();
 		$result = $manage->self_add_passwordless($args);
@@ -790,29 +790,27 @@ abstract class AdminTest extends TestCase {
 		$this->assertEquals($result[1]['uid'], $uid);
 		$token = $result[1]['token'];
 
-		# set token
+		### set token
 		$ctrl->set_token_value($token);
 		$ctrl->get_user_data();
 
 		# passwordless login can't change password
-		$args['post']['pass1'] = $args['post']['pass2'] = 'blablabla';
+		$args['pass1'] = $args['pass2'] = 'blablabla';
 		$this->assertEquals(
 			$ctrl->change_password($args)[0], Error::USER_NOT_FOUND);
 
 		$sql = $ctrl::$admin::$store;
 
 		# check expiration
-		$tnow = $sql->query(sprintf(
-			"SELECT (%s) AS now",
-			$sql->stmt_fragment('datetime')
-		))['now'];
+		$tnow = $sql->query(sprintf("
+			SELECT (%s) AS now
+		", $sql->stmt_fragment('datetime')))['now'];
 		$dtnow = strtotime($tnow);
-		$texp = $sql->query(
-			"SELECT expire FROM usess " .
-			"WHERE token=? ORDER BY sid DESC " .
-			"LIMIT 1",
-			[$token]
-		)['expire'];
+		$texp = $sql->query("
+			SELECT expire FROM usess
+			WHERE token=? ORDER BY sid DESC
+			LIMIT 1
+		", [$token])['expire'];
 		$dtexp = strtotime($texp);
 
 		# difference must be small, say, 2 seconds at most

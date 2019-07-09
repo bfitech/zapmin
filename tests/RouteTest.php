@@ -75,15 +75,16 @@ class RouteTest extends TestCase {
 		$this->assertEquals('HELLO, FRIEND', $core::$body_raw);
 	}
 
+	/** Mocker router. */
 	private function make_router($sql=null) {
-		# use new instance on every matching mock HTTP request
+		### use new instance on every matching mock HTTP request
 		$core = (new RouterDev())
 			->config('home', '/')
 			->config('logger', self::$logger);
 
-		if (!$sql)
-			self::$sql = $sql = new SQLite3(
-				['dbname' => ':memory:'], self::$logger);
+		### always renew database from scratch
+		self::$sql = $sql = new SQLite3(
+			['dbname' => ':memory:'], self::$logger);
 
 		$admin = new Admin($sql, self::$logger);
 		$admin
@@ -94,12 +95,10 @@ class RouteTest extends TestCase {
 		$ctrl = new AuthCtrl($admin, self::$logger);
 		$manage = new AuthManage($admin, self::$logger);
 
-		return (new RouteDefault($core, $ctrl, $manage));
+		return new RouteDefault($core, $ctrl, $manage);
 	}
 
-	/**
-	 * Simulated request with a valid authentication cookie.
-	 */
+	/** Simulated request with a valid authentication cookie. */
 	private function request_authed(
 		$rdev, $url, $method, $args, $token
 	) {
@@ -108,12 +107,19 @@ class RouteTest extends TestCase {
 		]);
 	}
 
-	public function test_home() {
+	/** Common test instances. */
+	private function make_tester() {
 		$router = $this->make_router();
 		$core = $router::$core;
+		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
-		$token_name = $router::$admin->get_token_name();
+		return [$router, $router::$core, $router::$admin, $rdev];
+	}
 
+	public function test_home() {
+		list($router, $core, $_, $rdev) = $this->make_tester();
+
+		$token_name = $router::$admin->get_token_name();
 		$this->assertEquals($token_name, 'test-zapmin');
 
 		$rdev->request('/', 'GET');
@@ -131,8 +137,8 @@ class RouteTest extends TestCase {
 	 * Successful login for admin to further test user management.
 	 */
 	private function login_sequence($router) {
-		$core = $router::$core;
-		$rdev = new RoutingDev($core);
+		list($router, $core, $_, $rdev) = $this->make_tester();
+
 		$login_data = [
 			'post' => [
 				'uname' => 'root',
@@ -140,11 +146,9 @@ class RouteTest extends TestCase {
 			]
 		];
 
-		$rdev
-			->request('/login', 'POST', $login_data);
+		$rdev->request('/login', 'POST', $login_data);
 		$router->route(
-			'/login', function($args) use($router, $login_data
-			) {
+			'/login', function($args) use($router, $login_data) {
 				$router->route_login($login_data);
 		}, 'POST');
 
@@ -155,10 +159,7 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_status() {
-		$router = $this->make_router();
-		$core = $router::$core;
-		$admin = $router::$admin;
-		$rdev = new RoutingDev($core);
+		list($router, $core, $admin, $rdev) = $this->make_tester();
 
 		# unauthed
 		$rdev->request('/status', 'GET');
@@ -168,6 +169,7 @@ class RouteTest extends TestCase {
 		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($core::$errno, Error::USER_NOT_LOGGED_IN);
 
+		### login
 		$token = $this->login_sequence($router);
 
 		# authed via header
@@ -199,35 +201,20 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_login_logout() {
-	 	$router = $this->make_router();
-		$core = $router::$core;
-		$admin = $router::$admin;
-		$rdev = new RoutingDev($core);
+		list($router, $core, $admin, $rdev) = $this->make_tester();
 
-		###
-
-		$rdev->request('/login', 'POST', []);
-		$router->route('/login', function($args) use($router) {
-			$router->route_login([]);
-		}, 'POST');
-		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
-
-		###
-
-		$rdev->request('/login', 'POST', ['post' => []]);
+		# login incomplete data
+		$rdev->request('/login', 'POST');
 		$router->route('/login', function($args) use($router) {
 			$router->route_login(['post' => []]);
 		}, 'POST');
 		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
-		###
-
+		### login
 		$token = $this->login_sequence($router);
 
-		###
-
+		# logout success
 		$this->request_authed($rdev, '/logout', 'GET', [], $token);
 		$router->route('/logout', function($args) use($router) {
 			$router->route_logout([]);
@@ -236,123 +223,87 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_chpasswd() {
-		$router = $this->make_router();
-		$core = $router::$core;
-		$admin = $router::$admin;
-		$rdev = new RoutingDev($core);
+		list($router, $core, $admin, $rdev) = $this->make_tester();
 
-		###
-
+		### login
 		$token = $this->login_sequence($router);
 
-		###
-
-		$post = [];
-
-		$this->request_authed(
-			$rdev, '/chpasswd', 'POST', ['post' => $post], $token);
+		# incomplete data
+		$this->request_authed($rdev, '/chpasswd', 'POST', [], $token);
 		$router->route(
-			'/chpasswd', function($args) use($router, $post
-			) {
-				$router->route_chpasswd(['post' => $post]);
+			'/chpasswd', function($args) use($router) {
+				$router->route_chpasswd(['post' => []]);
 		}, 'POST');
-
 		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
-		###
-
+		# success
 		$post = [
-			'pass0' => 'admin',
-			'pass1' => 'admin1',
-			'pass2' => 'admin1',
+			'post' => [
+				'pass0' => 'admin',
+				'pass1' => 'admin1',
+				'pass2' => 'admin1',
+			],
 		];
-
 		$this->request_authed(
-			$rdev, '/chpasswd', 'POST', ['post' => $post], $token);
+			$rdev, '/chpasswd', 'POST', $post, $token);
 		$router->route(
-			'/chpasswd', function($args) use($router, $post
-			) {
-				$router->route_chpasswd(['post' => $post]);
+			'/chpasswd', function($args) use($router, $post) {
+				$router->route_chpasswd($post);
 		}, 'POST');
 		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($core::$errno, 0);
-
 	}
 
 	public function test_chbio() {
-		$router = $this->make_router();
-		$core = $router::$core;
-		$admin = $router::$admin;
-		$rdev = new RoutingDev($core);
+		list($router, $core, $admin, $rdev) = $this->make_tester();
+
+		### login
 		$token = $this->login_sequence($router);
 
-		###
-
-		$post = ['fname' => 'The Handyman'];
-		$this->request_authed($rdev, '/chbio', 'POST',
-			['post' => $post], $token);
+		# success
+		$post = ['post' => ['fname' => 'The Handyman']];
+		$this->request_authed($rdev, '/chbio', 'POST', $post, $token);
 		$router->route(
-			'/chbio', function($args) use($router, $post
-			) {
-				$router->route_chbio(['post' => $post]);
+			'/chbio', function($args) use($router, $post) {
+				$router->route_chbio($post);
 		}, 'POST');
-
 		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($core::$errno, 0);
 
-		###
-
-		$post = ['site' => 'Wrongurl'];
-		$this->request_authed($rdev, '/chbio', 'POST',
-			['post' => $post], $token);
+		# invalid url
+		$post = ['post' => ['site' => 'Wrongurl']];
+		$this->request_authed($rdev, '/chbio', 'POST', $post, $token);
 		$router->route(
-			'/chbio', function($args) use($router, $post
-			) {
-				$router->route_chbio(['post' => $post]);
+			'/chbio', function($args) use($router, $post) {
+				$router->route_chbio($post);
 		}, 'POST');
 		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($core::$errno, Error::SITEURL_INVALID);
 
-		###
-
-		$post = ['site' => 'http://www.bfinews.com'];
-		$this->request_authed($rdev, '/chbio', 'POST',
-			['post' => $post], $token);
+		# success
+		$post = ['post' => ['site' => 'http://bfi.io']];
+		$this->request_authed($rdev, '/chbio', 'POST', $post, $token);
 		$router->route(
-			'/chbio', function($args) use($router, $post
-			) {
-				$router->route_chbio(['post' => $post]);
+			'/chbio', function($args) use($router, $post) {
+				$router->route_chbio($post);
 		}, 'POST');
 		$this->assertEquals($core::$code, 200);
 		$this->assertEquals($core::$errno, 0);
 
-		###
-
+		### check new value via /status
 		$this->request_authed($rdev, '/status', 'GET', [], $token);
 		$router->route('/status', function($args) use($router) {
 			$router->route_status();
 		}, 'GET');
 		$this->assertEquals($core::$data['fname'], 'The Handyman');
+		$this->assertEquals($core::$data['site'], 'http://bfi.io');
 	}
 
 	public function test_register() {
-		$router = $this->make_router();
-		$core = $router::$core;
-		$admin = $router::$admin;
-		$rdev = new RoutingDev($core);
+		list($router, $core, $admin, $rdev) = $this->make_tester();
 
-		###
-
-		$rdev->request('/register', 'POST', []);
-		$router->route('/register', function($args) use($router) {
-			$router->route_register([]);
-		}, 'POST');
-		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
-
-		###
-
+		# incomplete data
 		$rdev->request('/register', 'POST', ['post' => []]);
 		$router->route('/register', function($args) use($router) {
 			$router->route_register(['post' => []]);
@@ -360,225 +311,171 @@ class RouteTest extends TestCase {
 		$this->assertEquals($core::$code, 401);
 		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
-		###
-
+		# success
 		$post = [
-			'addname' => 'jim',
-			'addpass1' => '123456',
-			'addpass2' => '123456',
-			'email' => 'here@exampe.org',
+			'post' => [
+				'addname' => 'jim',
+				'addpass1' => '123456',
+				'addpass2' => '123456',
+				'email' => 'here@exampe.org',
+			],
 		];
-		$rdev->request('/register', 'POST', ['post' => $post]);
+		$rdev->request('/register', 'POST', $post);
 		$router->route(
-			'/chbio', function($args) use($router, $post
-			) {
-				$router->route_register(['post' => $post]);
+			'/chbio', function($args) use($router, $post) {
+				$router->route_register($post);
 		}, 'POST');
-
 		$this->assertEquals($core::$errno, 0);
 	}
 
 	public function test_useradd() {
-		$router = $this->make_router();
-		$core = $router::$core;
-		$admin = $router::$admin;
-		$rdev = new RoutingDev($core);
+		list($router, $core, $admin, $rdev) = $this->make_tester();
+
+		### login
 		$token = $this->login_sequence($router);
 
-		###
-
-		$this->request_authed($rdev, '/useradd', 'POST', [], $token);
-		$router->route('/useradd', function($args) use($router) {
-			$router->route_useradd([]);
-		}, 'POST');
-		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
-
-		###
-
-		$post = ['x' => ''];
-		$this->request_authed($rdev, '/useradd', 'POST',
-			['post' => $post], $token);
+		# incomplete data
+		$post = ['post' => ['x' => '']];
+		$this->request_authed($rdev, '/useradd', 'POST', $post, $token);
 		$router->route(
-			'/useradd', function($args) use($router, $post
-			) {
-				$router->route_useradd(['post' => $post]);
+			'/useradd', function($args) use($router, $post) {
+				$router->route_useradd($post);
 		}, 'POST');
 		$this->assertEquals($core::$code, 403);
 		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
-		###
-
+		# success
 		$post = [
-			'addname' => 'jim',
-			'addpass1' => '123456',
-			'email' => 'here@exampe.org',
+			'post' => [
+				'addname' => 'jim',
+				'addpass1' => '123456',
+				'email' => 'here@exampe.org',
+			],
 		];
-		$this->request_authed($rdev, '/useradd', 'POST',
-			['post' => $post], $token);
+		$this->request_authed($rdev, '/useradd', 'POST', $post, $token);
 		$router->route(
-			'/useradd', function($args) use($router, $post
-			) {
-				$router->route_useradd(['post' => $post]);
+			'/useradd', function($args) use($router, $post) {
+				$router->route_useradd($post);
 		}, 'POST');
 		$this->assertEquals($core::$errno, 0);
 
-		###
-
-		$this->request_authed($rdev, '/useradd', 'POST',
-			['post' => $post], $token);
+		# re-adding fails because of non-unique email
+		$this->request_authed($rdev, '/useradd', 'POST', $post, $token);
 		$router->route(
-			'/useradd', function($args) use($router, $post
-			) {
-				$router->route_useradd(['post' => $post]);
+			'/useradd', function($args) use($router, $post) {
+				$router->route_useradd($post);
 		}, 'POST');
-		# cannot reuse email
 		$this->assertEquals($core::$code, 403);
 		$this->assertEquals($core::$errno, Error::EMAIL_EXISTS);
 	}
 
 	public function test_userdel() {
-		$router = $this->make_router();
-		$core = $router::$core;
-		$admin = $router::$admin;
-		$rdev = new RoutingDev($core);
+		list($router, $core, $admin, $rdev) = $this->make_tester();
+
+		### login
 		$token = $this->login_sequence($router);
 
-		###
-
-		$post = ['x' => ''];
-		$this->request_authed($rdev, '/userdel', 'POST',
-			['post' => $post], $token);
+		# incomplete data
+		$post = ['post' => ['x' => '']];
+		$this->request_authed($rdev, '/userdel', 'POST', $post, $token);
 		$router->route(
-			'/userdel', function($args) use($router, $post
-			) {
-				$router->route_userdel(['post' => $post]);
+			'/userdel', function($args) use($router, $post) {
+				$router->route_userdel($post);
 		}, 'POST');
 		$this->assertEquals($core::$code, 403);
 		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
-		###
-
+		### adding
 		$post = [
-			'addname' => 'jimmy',
-			'addpass1' => '123456',
-			'email' => 'here@exampe.org',
+			'post' => [
+				'addname' => 'jimmy',
+				'addpass1' => '123456',
+				'email' => 'here@exampe.org',
+			],
 		];
-		$this->request_authed($rdev, '/useradd', 'POST',
-			['post' => $post], $token);
+		$this->request_authed($rdev, '/useradd', 'POST', $post, $token);
 		$router->route(
-			'/useradd', function($args) use($router, $post
-			) {
-				$router->route_useradd(['post' => $post]);
+			'/useradd', function($args) use($router, $post) {
+				$router->route_useradd($post);
 		}, 'POST');
 		$this->assertEquals($core::$errno, 0);
 
-		###
-
-		$post = ['uid' => 3];
-		$this->request_authed($rdev, '/userdel', 'POST',
-			['post' => $post], $token);
+		# uid=3 not found
+		$post = ['post' => ['uid' => 3]];
+		$this->request_authed($rdev, '/userdel', 'POST', $post, $token);
 		$router->route(
-			'/userdel', function($args) use($router, $post
-			) {
-				$router->route_userdel(['post' => $post]);
+			'/userdel', function($args) use($router, $post) {
+				$router->route_userdel($post);
 		}, 'POST');
 		$this->assertEquals($core::$errno, Error::USER_NOT_FOUND);
 
-		###
-
-		$post = ['uid' => 2];
-		$this->request_authed($rdev, '/userdel', 'POST',
-			['post' => $post], $token);
+		# success for uid=2
+		$post = ['post' => ['uid' => 2]];
+		$this->request_authed($rdev, '/userdel', 'POST', $post, $token);
 		$router->route(
-			'/userdel', function($args) use($router, $post
-			) {
-				$router->route_userdel(['post' => $post]);
+			'/userdel', function($args) use($router, $post) {
+				$router->route_userdel($post);
 		}, 'POST');
 		$this->assertEquals($core::$errno, 0);
 	}
 
 	public function test_userlist() {
-		$router = $this->make_router();
-		$core = $router::$core;
-		$admin = $router::$admin;
-		$rdev = new RoutingDev($core);
+		list($router, $core, $admin, $rdev) = $this->make_tester();
+
+		### login
 		$token = $this->login_sequence($router);
 
-		###
-
+		### adding
 		$post = [
-			'addname' => 'jimmy',
-			'addpass1' => '123456',
-			'email' => 'here@exampe.org',
-		];
-		$this->request_authed($rdev, '/useradd', 'POST',
-			['post' => $post], $token);
-		$router->route(
-			'/useradd', function($args) use($router, $post
-			) {
-				$router->route_useradd(['post' => $post]);
-		}, 'POST');
-		$this->assertEquals($core::$errno, 0);
-
-		###
-
-		$this->request_authed(
-			$rdev, '/userlist', 'POST', ['post' => []], $token);
-		$router->route('/userlist', function($args) use($router) {
-			$router->route_userlist(['post' => []]);
-		}, 'POST');
-		$this->assertEquals($core::$errno, 0);
-		$this->assertEquals($core::$data[0]['uname'], 'root');
-	}
-
-	/**
-	 * @fixme
-	 *   The underlying adm_self_add_user_passwordless() doesn't
-	 *   validate service.uname' and service.uservice'
-	 *   whatsoever. This can end up in strange generated uname
-	 *   such as '+myname::#mys3rv!ce'. Fix this. Never trust
-	 *   3rd-party provider (responsible for service.uname) and
-	 *   subclass implementation (responsible for
-	 *   service.uservice).
-	 */
-	public function test_byway() {
-		$_SERVER['REQUEST_URI'] = '/byway';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$router = $this->make_router();
-		$admin = $router::$admin;
-
-		$admin->set_expiration(10);
-		$this->assertEquals(
-			600, $admin->get_expiration());
-		$core = $router::$core;
-		$rdev = new RoutingDev($core);
-
-		$post = [
-			'service' => [
-				'uname' => 'someone',
+			'post' => [
+				'addname' => 'jimmy',
+				'addpass1' => '123456',
+				'email' => 'here@exampe.org',
 			],
 		];
-
-		$rdev->request('/byway', 'POST');
+		$this->request_authed($rdev, '/useradd', 'POST', $post, $token);
 		$router->route(
-			'/byway', function($args) use($router, $post
-			) {
-				$router->route_byway([]);
+			'/useradd', function($args) use($router, $post) {
+				$router->route_useradd($post);
+		}, 'POST');
+		$this->assertEquals($core::$errno, 0);
+
+		# success
+		$this->request_authed(
+			$rdev, '/userlist', 'GET', [], $token);
+		$router->route('/userlist', function($args) use($router) {
+			$router->route_userlist(['get' => []]);
+		});
+		$this->assertEquals($core::$errno, 0);
+		$this->assertEquals($core::$data[1]['uname'], 'jimmy');
+	}
+
+	public function test_byway() {
+		list($router, $core, $admin, $rdev) = $this->make_tester();
+
+		# minimum expiration is hardcoded 60 sec
+		$admin->set_expiration(10);
+		$this->assertEquals(600, $admin->get_expiration());
+
+		$post = ['post' => ['uname' => 'someone']];
+
+		# incomplete data
+		$rdev->request('/byway', 'POST', $post);
+		$router->route(
+			'/byway', function($args) use($router, $post) {
+				$router->route_byway($post);
 		}, 'POST');
 		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
-		###
-
-		$post['service']['uservice'] = 'github';
-		$rdev->request('/byway', 'POST', ['post' => $post]);
+		# success
+		$post['post']['uservice'] = '[github]';
+		$rdev->request('/byway', 'POST', $post);
 		$router->route(
-			'/byway', function($args) use($router, $post
-			) {
-				$router->route_byway(['post' => $post]);
+			'/byway', function($args) use($router, $post) {
+				$router->route_byway($post);
 		}, 'POST');
 		$this->assertEquals($core::$errno, 0);
-		$this->assertEquals($core::$data['uname'], '+someone:github');
+		$this->assertEquals($core::$data['uname'], '+someone:[github]');
 	}
 
 }

@@ -50,14 +50,14 @@ class AuthSQLite3Test extends AuthCommon {
 		# fake table upgrading from no version
 		$sql->query_raw("DROP TABLE IF EXISTS meta");
 		$adm = $open_adm();
-		$this->assertEquals($adm->get_table_version(),
+		$this->eq($adm->get_table_version(),
 			$tab::TABLE_VERSION);
 
 		# fake table upgrading from 0.1
 		$sql->update('meta', ['version' => '0.1']);
-		$this->assertEquals($adm->get_table_version(), '0.1');
+		$this->eq($adm->get_table_version(), '0.1');
 		$adm = $open_adm();
-		$this->assertEquals($adm->get_table_version(),
+		$this->eq($adm->get_table_version(),
 			$tab::TABLE_VERSION);
 
 		# no table updates

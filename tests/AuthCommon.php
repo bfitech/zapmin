@@ -3,8 +3,6 @@
 require_once __DIR__ . '/Common.php';
 
 
-use PHPUnit\Framework\TestCase;
-
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\Redis;
 use BFITech\ZapStore\RedisError;
@@ -56,7 +54,7 @@ class Manage extends AuthManage {
 /**
  * Use tests under respective database backends.
  */
-abstract class AuthCommon extends TestCase {
+abstract class AuthCommon extends Common {
 
 	protected static $sql;
 	protected static $redis;
@@ -67,18 +65,6 @@ abstract class AuthCommon extends TestCase {
 
 	protected static $p_ctrl;
 	protected static $p_manage;
-
-	public function eq($a, $b) {
-		$this->assertEquals($a, $b);
-	}
-
-	public function tr($a, $b) {
-		$this->assertTrue($a, $b);
-	}
-
-	public function sm($a, $b) {
-		$this->assertSame($a, $b);
-	}
 
 	public static function redis_open($configfile, $logger) {
 		$params = self::redis_config($configfile);
@@ -180,9 +166,10 @@ abstract class AuthCommon extends TestCase {
 	}
 
 	public function test_admin() {
+		$tr = $this->tr();
 		# only run this on one database backend
 		if (get_class($this) != 'AuthSQLite3Test') {
-			$this->assertTrue(true);
+			$tr(true);
 			return;
 		}
 
@@ -196,7 +183,7 @@ abstract class AuthCommon extends TestCase {
 		} catch(Error $e) {
 			$expire_invalid = true;
 		}
-		$this->assertTrue($expire_invalid);
+		$tr($expire_invalid);
 
 		$token_name_not_set = false;
 		try {
@@ -204,62 +191,57 @@ abstract class AuthCommon extends TestCase {
 		} catch(Error $e) {
 			$token_name_not_set = true;
 		}
-		$this->assertTrue($token_name_not_set);
+		$tr($token_name_not_set);
 
 		$admin = (new Admin($sql, $logger))->init();
 		$admin->config('token_name', 'quux')->init();
-		$this->assertEquals($admin->get_token_name(), 'zapmin');
+		$this->eq()($admin->get_token_name(), 'zapmin');
 	}
 
 	public function test_login() {
+		$eq = $this->eq();
 		$ctrl = self::$ctrl;
 
 		# invalid post data
 		$args = ['uname' => 'admin'];
-		$this->assertEquals(
-			$ctrl->login($args)[0], Error::DATA_INCOMPLETE);
+		$eq($ctrl->login($args)[0], Error::DATA_INCOMPLETE);
 
 		# incomplete post data
-		$this->assertEquals(
-			$ctrl->login($args)[0], Error::DATA_INCOMPLETE);
+		$eq($ctrl->login($args)[0], Error::DATA_INCOMPLETE);
 
 		# invalid user
 		$args['upass'] = '1243';
-		$this->assertEquals(
-			$ctrl->login($args)[0], Error::USER_NOT_FOUND);
+		$eq($ctrl->login($args)[0], Error::USER_NOT_FOUND);
 
 		# invalid password
 		$args['uname'] = 'root';
-		$this->assertEquals(
-			$ctrl->login($args)[0], Error::WRONG_PASSWORD);
+		$eq($ctrl->login($args)[0], Error::WRONG_PASSWORD);
 
 		# missing token
-		$this->assertEquals(
-			$ctrl->set_token_value(false), null);
+		$eq($ctrl->set_token_value(false), null);
 
 		# success
 		$args['upass'] = 'admin';
 		$login_data = $ctrl->login($args);
-		$this->assertEquals($login_data[0], 0);
+		$eq($login_data[0], 0);
 		$token = $login_data[1]['token'];
 		# unlike passwordless login, this has no sid
-		$this->assertEquals(isset($login_data['sid']), false);
+		$eq(isset($login_data['sid']), false);
 
 		# simulating next load
 		$ctrl->set_token_value($token);
 		$ctrl->get_user_data();
 		# re-login will fail
-		$this->assertEquals(
-			$ctrl->login($args)[0], Error::USER_ALREADY_LOGGED_IN);
-
+		$eq($ctrl->login($args)[0], Error::USER_ALREADY_LOGGED_IN);
 	}
 
 	public function test_cache() {
 		if (!self::$redis) {
-			$this->assertTrue(true);
+			$this->tr()(true);
 			return;
 		}
 
+		$sm = $this->sm();
 		$redis = self::$redis;
 		$ctrl = self::$ctrl;
 		$token_name = $ctrl::$admin->get_token_name();
@@ -270,18 +252,16 @@ abstract class AuthCommon extends TestCase {
 		$redis->set($rkey, '3%!#%#U^#!$%^');
 		$ctrl->reset();
 		$ctrl->set_token_value($token_value);
-		$this->assertSame($ctrl->get_user_data(), null);
+		$sm($ctrl->get_user_data(), null);
 
 		# get cache from token not obtained from valid login process
 		$ctrl->reset();
 		$token_bogus = $token_value . 'xxxxxxxxxxx';
 		$ctrl->set_token_value($token_bogus);
-		$this->assertSame($ctrl->get_user_data(), null);
+		$sm($ctrl->get_user_data(), null);
 		$rkey = sprintf('%s:%s', $token_name, $token_bogus);
-		$this->assertSame(json_decode($redis->get($rkey), true),
-			['uid' => -1]);
-		$this->assertSame(
-			$redis->ttl($rkey), $ctrl::$admin->get_expiration());
+		$sm(json_decode($redis->get($rkey), true), ['uid' => -1]);
+		$sm($redis->ttl($rkey), $ctrl::$admin->get_expiration());
 	}
 
 	private function _expiration_sequence(
@@ -294,7 +274,7 @@ abstract class AuthCommon extends TestCase {
 			'uname' => 'root',
 			'upass' => 'admin',
 		]);
-		$this->assertEquals($login_data[0], 0);
+		$this->eq()($login_data[0], 0);
 		$token = $login_data[1]['token'];
 		if (self::$redis)
 			$ctrl::$admin->cache_del($token);
@@ -308,19 +288,18 @@ abstract class AuthCommon extends TestCase {
 	}
 
 	public function test_session_expiration() {
+		$eq = $this->eq();
 		$ctrl = self::$ctrl;
 
 		# normal login
 		$this->_expiration_sequence();
-		$this->assertEquals(
-			$ctrl->get_safe_user_data()[0], 0);
-		$this->assertEquals($ctrl->logout()[0], 0);
+		$eq($ctrl->get_safe_user_data()[0], 0);
+		$eq($ctrl->logout()[0], 0);
 
 		$ctrl->reset();
 		$this->_expiration_sequence();
-		$this->assertEquals(
-			$ctrl->get_safe_user_data()[0], 0);
-		$this->assertEquals($ctrl->logout()[0], 0);
+		$eq($ctrl->get_safe_user_data()[0], 0);
+		$eq($ctrl->logout()[0], 0);
 
 		# simulate expired session
 		$fake_expire_callback = function($token) use($ctrl) {
@@ -332,75 +311,70 @@ abstract class AuthCommon extends TestCase {
 			, $token));
 		};
 		$this->_expiration_sequence($fake_expire_callback);
-		$this->assertEquals(
-			$ctrl->get_safe_user_data()[0],
-			Error::USER_NOT_LOGGED_IN);
-		$this->assertEquals($ctrl->logout()[0],
-			Error::USER_NOT_LOGGED_IN);
+		$eq($ctrl->get_safe_user_data()[0], Error::USER_NOT_LOGGED_IN);
+		$eq($ctrl->logout()[0], Error::USER_NOT_LOGGED_IN);
 
 		# normal login again
 		$this->_expiration_sequence();
-		$this->assertEquals(
-			$ctrl->get_safe_user_data()[0], 0);
-		$this->assertEquals($ctrl->logout()[0], 0);
+		$eq($ctrl->get_safe_user_data()[0], 0);
+		$eq($ctrl->logout()[0], 0);
 	}
 
 	public function test_logout() {
 		$ctrl = self::$ctrl;
-		$this->assertEquals($ctrl->logout()[0],
-			Error::USER_NOT_LOGGED_IN);
+		$this->eq()($ctrl->logout()[0], Error::USER_NOT_LOGGED_IN);
 		self::loginOK();
-		$this->assertEquals($ctrl->logout()[0], 0);
+		$this->eq()($ctrl->logout()[0], 0);
 	}
 
 	public function test_change_password() {
+		$eq = $this->eq();
 		$ctrl = self::$ctrl;
 
 		# not logged in
 		$args = ['pass1' => '123'];
-		$this->assertEquals($ctrl->change_password($args)[0],
+		$eq($ctrl->change_password($args)[0],
 			Error::USER_NOT_LOGGED_IN);
 
 		self::loginOK();
 
 		# invalid data
-		$this->assertEquals(
-			$ctrl->change_password($args)[0], Error::DATA_INCOMPLETE);
+		$eq($ctrl->change_password($args)[0], Error::DATA_INCOMPLETE);
 
 		# incomplete data
 		$args['pass2'] = '1234';
 		$result = $ctrl->change_password($args, true);
-		$this->assertEquals($result[0], Error::DATA_INCOMPLETE);
+		$eq($result[0], Error::DATA_INCOMPLETE);
 
 		# wrong old password
 		$args['pass0'] = '1234';
 		$result = $ctrl->change_password($args, true);
-		$this->assertEquals($result[0], Error::OLD_PASSWORD_INVALID);
+		$eq($result[0], Error::OLD_PASSWORD_INVALID);
 
 		# new passwords don't verify
 		$args['pass0'] = 'admin';
 		$result = $ctrl->change_password($args, true);
-		$this->assertEquals($result[0], Error::PASSWORD_INVALID);
+		$eq($result[0], Error::PASSWORD_INVALID);
 
 		# new password too short
 		$args['pass2'] = '123';
 		$result = $ctrl->change_password($args, true);
-		$this->assertEquals($result[0], Error::PASSWORD_INVALID);
-		$this->assertEquals($result[1], Error::PASSWORD_TOO_SHORT);
+		$eq($result[0], Error::PASSWORD_INVALID);
+		$eq($result[1], Error::PASSWORD_TOO_SHORT);
 
 		# success
 		$args['pass1'] = '1234';
 		$args['pass2'] = '1234';
-		$this->assertEquals($ctrl->change_password($args, true)[0], 0);
+		$eq($ctrl->change_password($args, true)[0], 0);
 
 		# logout
-		$this->assertEquals($ctrl->logout()[0], 0);
+		$eq($ctrl->logout()[0], 0);
 
 		# relogin with old password will fail
 		try {
 			self::loginOK();
 		} catch (Exception $e) {
-			$this->assertEquals($ctrl->get_user_data(), null);
+			$eq($ctrl->get_user_data(), null);
 		}
 
 		# login with new password
@@ -408,58 +382,59 @@ abstract class AuthCommon extends TestCase {
 
 		# change password back without old password requirement
 		$args['pass1'] = $args['pass2'] = 'admin';
-		$this->assertEquals($ctrl->change_password($args)[0], 0);
+		$eq($ctrl->change_password($args)[0], 0);
 	}
 
 	public function test_change_bio() {
+		$eq = $this->eq();
 		$ctrl = self::$ctrl;
 
 		# not logged in
 		$result = $ctrl->change_bio([]);
-		$this->assertEquals($result[0], Error::USER_NOT_LOGGED_IN);
+		$eq($result[0], Error::USER_NOT_LOGGED_IN);
 
 		self::loginOK();
 
 		$safe_data = $ctrl->get_safe_user_data()[1];
-		$this->assertEquals($safe_data['fname'], '');
+		$eq($safe_data['fname'], '');
 
 		# no change
 		$result = $ctrl->change_bio(['post' => []]);
-		$this->assertEquals($result[0], 0);
+		$eq($result[0], 0);
 
 		# fname empty value
 		$result = $ctrl->change_bio(['fname' => '']);
 
 		$safe_data = $ctrl->get_safe_user_data()[1];
-		$this->assertEquals($safe_data['fname'], '');
+		$eq($safe_data['fname'], '');
 
 		# change fname
 		$result = $ctrl->change_bio(['fname' => 'The Administrator']);
 
 		$safe_data = $ctrl->get_safe_user_data()[1];
-		$this->assertEquals($safe_data['site'], '');
-		$this->assertEquals($safe_data['fname'], 'The Administrator');
+		$eq($safe_data['site'], '');
+		$eq($safe_data['fname'], 'The Administrator');
 
 		# site too long
 		$test_site = 'http://' . str_repeat('jonathan', 12) . '.co';
 		$result = $ctrl->change_bio(['site' => $test_site]);
-		$this->assertEquals($result[0], Error::SITEURL_INVALID);
+		$eq($result[0], Error::SITEURL_INVALID);
 
 		# change site url
 		$result = $ctrl->change_bio([
 			'site' => 'http://www.bfinews.com']);
 
 		$safe_data = $ctrl->get_safe_user_data()[1];
-		$this->assertEquals($safe_data['site'],
-			'http://www.bfinews.com');
-		$this->assertEquals($safe_data['fname'], 'The Administrator');
+		$eq($safe_data['site'], 'http://www.bfinews.com');
+		$eq($safe_data['fname'], 'The Administrator');
 	}
 
 	public function test_self_register() {
+		$eq = $this->eq();
 		$manage = self::$manage;
 
 		# missing post arguments
-		$this->assertEquals($manage->add([], true, true)[0],
+		$eq($manage->add([], true, true)[0],
 			Error::DATA_INCOMPLETE);
 
 		$args = [
@@ -469,21 +444,19 @@ abstract class AuthCommon extends TestCase {
 		];
 
 		# user exists
-		$this->assertEquals(
-			$manage->add($args, true, true)[0], Error::USERNAME_EXISTS);
+		$eq($manage->add($args, true, true)[0], Error::USERNAME_EXISTS);
 
 		# success
 		$args['addname'] = 'john';
-		$this->assertEquals(
-			$manage->add($args, true, true)[0], 0);
+		$eq($manage->add($args, true, true)[0], 0);
 		### autologin, this should happen immediately prior to
 		### sending anything to client
 		self::loginOK('john', 'asdf');
 		$udata = $manage->get_user_data();
-		$this->assertEquals($udata['uname'], 'john');
+		$eq($udata['uname'], 'john');
 
 		$result = $manage->self_add($args, true, true);
-		$this->assertEquals($result[0], Error::USER_ALREADY_LOGGED_IN);
+		$eq($result[0], Error::USER_ALREADY_LOGGED_IN);
 
 		$manage->reset();
 
@@ -493,37 +466,37 @@ abstract class AuthCommon extends TestCase {
 		# not typing password twice and no email
 		unset($args['post']['addpass2']);
 		$result = $manage->self_add($args, true, true);
-		$this->assertEquals($result[0], Error::DATA_INCOMPLETE);
+		$eq($result[0], Error::DATA_INCOMPLETE);
 
 		# invalid email
 		$args['addpass2'] = 'qwer';
 		$args['email'] = '#qwer';
 		$result = $manage->self_add($args, true, true);
-		$this->assertEquals($result[0], Error::EMAIL_INVALID);
+		$eq($result[0], Error::EMAIL_INVALID);
 
 		# success
 		$args['email'] = 'test+bed@example.org';
-		$this->assertEquals($manage->self_add($args, true, true)[0], 0);
+		$eq($manage->self_add($args, true, true)[0], 0);
 
 		# email exists
 		$args['addname'] = 'jonathan';
 		$result = $manage->self_add($args, true, true);
-		$this->assertEquals($result[0], Error::EMAIL_EXISTS);
+		$eq($result[0], Error::EMAIL_EXISTS);
 
 		# uname too long
 		$args['addname'] = str_repeat('jonathan', 24);
-		$this->assertEquals(
-			$manage->self_add($args, true, true)[0],
+		$eq($manage->self_add($args, true, true)[0],
 			Error::USERNAME_TOO_LONG);
 
 		# email too long
 		$args['addname'] = 'jonathan';
 		$args['email'] = str_repeat('jonathan', 12) . '@l.co';
 		$result = $manage->self_add($args, true, true);
-		$this->assertEquals($result[0], Error::EMAIL_INVALID);
+		$eq($result[0], Error::EMAIL_INVALID);
 	}
 
 	public function test_register() {
+		$eq = $this->eq();
 		$ctrl = self::$ctrl;
 		$manage = self::$manage;
 
@@ -533,7 +506,7 @@ abstract class AuthCommon extends TestCase {
 			'addpass1' => 'asdf',
 			'addpass2' => 'asdf',
 		];
-		$this->assertEquals($manage->add($args, true, true)[0], 0);
+		$eq($manage->add($args, true, true)[0], 0);
 
 		$args = [
 			'addname' => 'john',
@@ -541,7 +514,7 @@ abstract class AuthCommon extends TestCase {
 		];
 
 		# no authn, self-registration disabled
-		$this->assertEquals(
+		$eq(
 			$manage->add($args, false, false)[0],
 			Error::SELF_REGISTER_NOT_ALLOWED);
 
@@ -550,7 +523,7 @@ abstract class AuthCommon extends TestCase {
 
 		# no authz
 		$result = $manage->add($args);
-		$this->assertEquals($result[0], Error::USER_NOT_AUTHORIZED);
+		$eq($result[0], Error::USER_NOT_AUTHORIZED);
 
 		$ctrl->reset();
 		$manage->reset();
@@ -559,13 +532,12 @@ abstract class AuthCommon extends TestCase {
 		self::loginOK();
 
 		# user exists, with addname=john
-		$this->assertEquals($manage->add($args)[0],
-			Error::USERNAME_EXISTS);
+		$eq($manage->add($args)[0], Error::USERNAME_EXISTS);
 
 		# as root, with addname=jocelyn
 		$args['addname'] = 'jocelyn';
 		# success, no autologin
-		$this->assertEquals($manage->add($args)[0], 0);
+		$eq($manage->add($args)[0], 0);
 
 		$ctrl->reset();
 		$manage->reset();
@@ -580,7 +552,7 @@ abstract class AuthCommon extends TestCase {
 		# no authz
 		$result = $manage->add(
 			$args, false, false, false);
-		$this->assertEquals($result[0], Error::USER_NOT_AUTHORIZED);
+		$eq($result[0], Error::USER_NOT_AUTHORIZED);
 
 		$ctrl->reset();
 		$manage->reset();
@@ -592,32 +564,32 @@ abstract class AuthCommon extends TestCase {
 
 		# pass authz but password doesn't check out
 		$result = self::$p_manage->add($args, false, false, false);
-		$this->assertEquals($result[0], Error::PASSWORD_TOO_SHORT);
+		$eq($result[0], Error::PASSWORD_TOO_SHORT);
 
 		# success, with correct password
 		$args['addpass1'] = 'asdfgh';
-		$this->assertEquals(
-			self::$p_manage->add($args, false, false, false)[0], 0);
+		$eq(self::$p_manage->add($args, false, false, false)[0], 0);
 
 		# name contains white space
 		$args['addname'] = 'john smith';
-		$this->assertEquals(
+		$eq(
 			self::$p_manage->add($args, false, false, false)[0],
-				Error::USERNAME_HAS_WHITESPACE);
+			Error::USERNAME_HAS_WHITESPACE);
 
 		# name starts with plus sign
 		$args['addname'] = '+jacqueline';
-		$this->assertEquals(
+		$eq(
 			self::$p_manage->add($args, false, false, false)[0],
-				Error::USERNAME_LEADING_PLUS);
+			Error::USERNAME_LEADING_PLUS);
 
 		# success, as 'john' adding 'jessica'
 		$args['addname'] = 'jessica';
-		$this->assertEquals(
+		$eq(
 			self::$p_manage->add($args, false, false, false)[0], 0);
 	}
 
 	public function test_delete() {
+		$eq = $this->eq();
 		$ctrl = self::$ctrl;
 		$manage = self::$manage;
 
@@ -632,16 +604,14 @@ abstract class AuthCommon extends TestCase {
 
 		# cannot list user when not signed in
 		$args = ['uid' => '0'];
-		$this->assertEquals(
-			$manage->list($args)[0], Error::USER_NOT_LOGGED_IN);
+		$eq($manage->list($args)[0], Error::USER_NOT_LOGGED_IN);
 
 		### as 'jonah'
 		self::loginOK('jonah', 'asdf');
 
 		# cannot list user when not authorized
 		$args['uid'] = '0';
-		$this->assertEquals(
-			$manage->list($args)[0], Error::USER_NOT_AUTHORIZED);
+		$eq($manage->list($args)[0], Error::USER_NOT_AUTHORIZED);
 
 		### sign out
 		$ctrl->reset();
@@ -664,14 +634,14 @@ abstract class AuthCommon extends TestCase {
 		$args['page'] = -1e3;
 		$args['limit'] = 1e3;
 		$user_list = self::$p_manage->list($args)[1];
-		$this->assertEquals(count($user_list), $user_count);
+		$eq(count($user_list), $user_count);
 
 		# authorized user can delete anyone including herself
 		$jessica_uid = $sql->query("
 			SELECT uid FROM udata WHERE uname=? LIMIT 1
 		", ['john'])['uid'];
 		$args['uid'] = $jessica_uid;
-		$this->assertEquals(self::$p_manage->delete($args)[0], 0);
+		$eq(self::$p_manage->delete($args)[0], 0);
 
 		$ctrl->reset();
 		$manage->reset();
@@ -691,8 +661,8 @@ abstract class AuthCommon extends TestCase {
 			SELECT uid FROM udata WHERE uname=? LIMIT 1
 		", ['jocelyn'])['uid'];
 		$args['uid'] = $jocelyn_uid;
-		$this->assertEquals($manage->delete($args)[0], 0);
-		$this->assertEquals($manage->delete(['uid' => 1])[0],
+		$eq($manage->delete($args)[0], 0);
+		$eq($manage->delete(['uid' => 1])[0],
 			Error::USER_NOT_AUTHORIZED);
 
 		### logout
@@ -705,29 +675,26 @@ abstract class AuthCommon extends TestCase {
 		}, $user_list);
 
 		# no authn
-		$this->assertEquals(
-			$manage->delete($args)[0], Error::USER_NOT_LOGGED_IN);
+		$eq($manage->delete($args)[0], Error::USER_NOT_LOGGED_IN);
 
 		### as 'jonah'
 		self::loginOK('jonah', 'asdf');
 
 		# missing post arguments
-		$this->assertEquals(
-			$manage->delete([])[0], Error::DATA_INCOMPLETE);
+		$eq($manage->delete([])[0], Error::DATA_INCOMPLETE);
 
 		# with default AuthManage::authz_delete, only root can delete
 		# other users
-		$this->assertEquals(
-			$manage->delete($args)[0], Error::USER_NOT_AUTHORIZED);
+		$eq($manage->delete($args)[0], Error::USER_NOT_AUTHORIZED);
 
 		# non-root user can self-delete
 		$args['uid'] = $manage->get_user_data()['uid'];
-		$this->assertEquals($manage->delete($args)[0], 0);
+		$eq($manage->delete($args)[0], 0);
 		### logout is still allowed since it doesn't check sid
 		$ctrl->logout();
 
 		# unable to re-login because user is no longer found
-		$this->assertEquals($ctrl->login([
+		$eq($ctrl->login([
 			'uname' => 'jonah',
 			'upass' => 'asdfgh',
 		])[0], Error::USER_NOT_FOUND);
@@ -735,6 +702,7 @@ abstract class AuthCommon extends TestCase {
 	}
 
 	public function test_self_register_passwordless() {
+		$eq = $this->eq();
 		$ctrl = self::$ctrl;
 		$manage = self::$manage;
 
@@ -751,25 +719,25 @@ abstract class AuthCommon extends TestCase {
 
 		self::loginOK();
 		$result = $manage->self_add_passwordless($args);
-		$this->assertEquals($result[0], Error::USER_ALREADY_LOGGED_IN);
+		$eq($result[0], Error::USER_ALREADY_LOGGED_IN);
 
 		$ctrl->reset();
 		$manage->reset();
 
 		# empty args
 		$result = $manage->self_add_passwordless($args);
-		$this->assertEquals($result[0], Error::DATA_INCOMPLETE);
+		$eq($result[0], Error::DATA_INCOMPLETE);
 
 		# no 'uservice' in args
 		$args = ['uname' => '1234'];
 		$result = $manage->self_add_passwordless($args);
-		$this->assertEquals($result[0], Error::DATA_INCOMPLETE);
+		$eq($result[0], Error::DATA_INCOMPLETE);
 
 		# success
 		$args['uservice'] = 'github';
 		$result = $manage->self_add_passwordless($args);
-		$this->assertEquals($result[0], 0);
-		$this->assertEquals($result[1]['uname'], '+1234:github');
+		$eq($result[0], 0);
+		$eq($result[1]['uname'], '+1234:github');
 
 		# use token
 		$token = $result[1]['token'];
@@ -777,11 +745,12 @@ abstract class AuthCommon extends TestCase {
 
 		# signing in success
 		$result = $manage->get_safe_user_data();
-		$this->assertEquals($result[0], 0);
-		$this->assertEquals($result[1]['uname'], '+1234:github');
+		$eq($result[0], 0);
+		$eq($result[1]['uname'], '+1234:github');
 	}
 
 	public function test_login_passwordless() {
+		$eq = $this->eq();
 		$ctrl = self::$ctrl;
 		$manage = self::$manage;
 
@@ -791,15 +760,15 @@ abstract class AuthCommon extends TestCase {
 		];
 		$manage->reset();
 		$result = $manage->self_add_passwordless($args);
-		$this->assertEquals($result[0], 0);
-		$this->assertEquals($result[1]['uname'], '+1234:google');
+		$eq($result[0], 0);
+		$eq($result[1]['uname'], '+1234:google');
 		$uid = $result[1]['uid'];
 
 		# uid shouldn't increment
 		$result = $manage->self_add_passwordless($args);
-		$this->assertEquals($result[0], 0);
-		$this->assertEquals($result[1]['uname'], '+1234:google');
-		$this->assertEquals($result[1]['uid'], $uid);
+		$eq($result[0], 0);
+		$eq($result[1]['uname'], '+1234:google');
+		$eq($result[1]['uid'], $uid);
 		$token = $result[1]['token'];
 
 		### set token
@@ -808,8 +777,7 @@ abstract class AuthCommon extends TestCase {
 
 		# passwordless login can't change password
 		$args['pass1'] = $args['pass2'] = 'blablabla';
-		$this->assertEquals(
-			$ctrl->change_password($args)[0], Error::USER_NOT_FOUND);
+		$eq($ctrl->change_password($args)[0], Error::USER_NOT_FOUND);
 
 		$sql = $ctrl::$admin::$store;
 
@@ -830,7 +798,7 @@ abstract class AuthCommon extends TestCase {
 			$ctrl::$admin->get_expiration() -
 			($dtexp - $dtnow)
 		);
-		$this->assertTrue($diff < 1);
+		$this->tr($diff < 1);
 	}
 
 }

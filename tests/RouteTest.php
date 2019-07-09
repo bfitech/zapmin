@@ -3,7 +3,6 @@
 require_once __DIR__ . '/Common.php';
 
 
-use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapCoreDev\RouterDev;
 use BFITech\ZapCoreDev\RoutingDev;
@@ -16,7 +15,7 @@ use BFITech\ZapAdmin\RouteDefault;
 use BFITech\ZapAdmin\Error;
 
 
-class RouteTest extends TestCase {
+class RouteTest extends Common {
 
 	public static $logger;
 	public static $sql;
@@ -63,16 +62,17 @@ class RouteTest extends TestCase {
 		$ctrl = new AuthCtrl($admin, self::$logger);
 		$manage = new AuthManage($admin, self::$logger);
 
+		$eq = $this->eq();
+
 		# change token name via config
 		$rdev = (new RouteDefault($core, $ctrl, $manage));
-		$this->assertEquals($rdev::$admin->get_token_name(), 'bar');
+		$eq($rdev::$admin->get_token_name(), 'bar');
 
-		$rdev->route('/test', function($args) use($rdev){
-			$this->assertEquals(
-				$args['cookie']['foo'], 'test');
+		$rdev->route('/test', function($args) use($rdev, $eq){
+			$eq($args['cookie']['foo'], 'test');
 			echo "HELLO, FRIEND";
 		}, 'GET');
-		$this->assertEquals('HELLO, FRIEND', $core::$body_raw);
+		$eq('HELLO, FRIEND', $core::$body_raw);
 	}
 
 	/** Mocker router. */
@@ -117,20 +117,20 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_home() {
+		$eq = $this->eq();
 		list($router, $core, $_, $rdev) = $this->make_tester();
 
 		$token_name = $router::$admin->get_token_name();
-		$this->assertEquals($token_name, 'test-zapmin');
+		$eq($token_name, 'test-zapmin');
 
 		$rdev->request('/', 'GET');
 		$router->route('/', function($args) use($router) {
 			$router->route_home();
 		}, 'GET');
 
-		$this->assertEquals(
-			'<h1>It wurks!</h1>', $core::$body_raw);
-		$this->assertTrue(strpos(
-			strtolower($core::$body_raw), 'it wurks') > 0);
+		$eq('<h1>It wurks!</h1>', $core::$body_raw);
+		$this->tr()(
+			strpos(	strtolower($core::$body_raw), 'it wurks') > 0);
 	}
 
 	/**
@@ -152,13 +152,15 @@ class RouteTest extends TestCase {
 				$router->route_login($login_data);
 		}, 'POST');
 
-		$this->assertEquals($core::$code, 200);
-		$this->assertEquals($core::$errno, 0);
-		$this->assertEquals($core::$data['uid'], 1);
+		$eq = $this->eq();
+		$eq($core::$code, 200);
+		$eq($core::$errno, 0);
+		$eq($core::$data['uid'], 1);
 		return $core::$data['token'];
 	}
 
 	public function test_status() {
+		$eq = $this->eq();
 		list($router, $core, $admin, $rdev) = $this->make_tester();
 
 		# unauthed
@@ -166,8 +168,8 @@ class RouteTest extends TestCase {
 		$router->route('/status', function($args) use($router) {
 			$router->route_status();
 		}, 'GET');
-		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Error::USER_NOT_LOGGED_IN);
+		$eq($core::$code, 401);
+		$eq($core::$errno, Error::USER_NOT_LOGGED_IN);
 
 		### login
 		$token = $this->login_sequence($router);
@@ -179,7 +181,7 @@ class RouteTest extends TestCase {
 		$router->route('/status', function($args) use($router) {
 			$router->route_status();
 		}, 'GET');
-		$this->assertEquals($core::$errno, Error::USER_NOT_LOGGED_IN);
+		$eq($core::$errno, Error::USER_NOT_LOGGED_IN);
 
 		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
 			"%s %s", 'test-zapmin', $token);
@@ -187,8 +189,8 @@ class RouteTest extends TestCase {
 		$router->route('/status', function($args) use($router) {
 			$router->route_status();
 		}, 'GET');
-		$this->assertEquals($core::$errno, 0);
-		$this->assertEquals($core::$data['uid'], 1);
+		$eq($core::$errno, 0);
+		$eq($core::$data['uid'], 1);
 
 		# authed via cookie
 		$this->request_authed(
@@ -196,11 +198,12 @@ class RouteTest extends TestCase {
 		$router->route('/status', function($args) use($router) {
 			$router->route_status();
 		}, 'GET');
-		$this->assertEquals($core::$errno, 0);
-		$this->assertEquals($core::$data['uid'], 1);
+		$eq($core::$errno, 0);
+		$eq($core::$data['uid'], 1);
 	}
 
 	public function test_login_logout() {
+		$eq = $this->eq();
 		list($router, $core, $admin, $rdev) = $this->make_tester();
 
 		# login incomplete data
@@ -208,8 +211,8 @@ class RouteTest extends TestCase {
 		$router->route('/login', function($args) use($router) {
 			$router->route_login(['post' => []]);
 		}, 'POST');
-		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
+		$eq($core::$code, 401);
+		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
 		### login
 		$token = $this->login_sequence($router);
@@ -219,10 +222,11 @@ class RouteTest extends TestCase {
 		$router->route('/logout', function($args) use($router) {
 			$router->route_logout([]);
 		}, 'GET');
-		$this->assertEquals($core::$errno, 0);
+		$eq($core::$errno, 0);
 	}
 
 	public function test_chpasswd() {
+		$eq = $this->eq();
 		list($router, $core, $admin, $rdev) = $this->make_tester();
 
 		### login
@@ -234,8 +238,8 @@ class RouteTest extends TestCase {
 			'/chpasswd', function($args) use($router) {
 				$router->route_chpasswd(['post' => []]);
 		}, 'POST');
-		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
+		$eq($core::$code, 401);
+		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
 		# success
 		$post = [
@@ -251,11 +255,12 @@ class RouteTest extends TestCase {
 			'/chpasswd', function($args) use($router, $post) {
 				$router->route_chpasswd($post);
 		}, 'POST');
-		$this->assertEquals($core::$code, 200);
-		$this->assertEquals($core::$errno, 0);
+		$eq($core::$code, 200);
+		$eq($core::$errno, 0);
 	}
 
 	public function test_chbio() {
+		$eq = $this->eq();
 		list($router, $core, $admin, $rdev) = $this->make_tester();
 
 		### login
@@ -268,8 +273,8 @@ class RouteTest extends TestCase {
 			'/chbio', function($args) use($router, $post) {
 				$router->route_chbio($post);
 		}, 'POST');
-		$this->assertEquals($core::$code, 200);
-		$this->assertEquals($core::$errno, 0);
+		$eq($core::$code, 200);
+		$eq($core::$errno, 0);
 
 		# invalid url
 		$post = ['post' => ['site' => 'Wrongurl']];
@@ -278,8 +283,8 @@ class RouteTest extends TestCase {
 			'/chbio', function($args) use($router, $post) {
 				$router->route_chbio($post);
 		}, 'POST');
-		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Error::SITEURL_INVALID);
+		$eq($core::$code, 401);
+		$eq($core::$errno, Error::SITEURL_INVALID);
 
 		# success
 		$post = ['post' => ['site' => 'http://bfi.io']];
@@ -288,19 +293,20 @@ class RouteTest extends TestCase {
 			'/chbio', function($args) use($router, $post) {
 				$router->route_chbio($post);
 		}, 'POST');
-		$this->assertEquals($core::$code, 200);
-		$this->assertEquals($core::$errno, 0);
+		$eq($core::$code, 200);
+		$eq($core::$errno, 0);
 
 		### check new value via /status
 		$this->request_authed($rdev, '/status', 'GET', [], $token);
 		$router->route('/status', function($args) use($router) {
 			$router->route_status();
 		}, 'GET');
-		$this->assertEquals($core::$data['fname'], 'The Handyman');
-		$this->assertEquals($core::$data['site'], 'http://bfi.io');
+		$eq($core::$data['fname'], 'The Handyman');
+		$eq($core::$data['site'], 'http://bfi.io');
 	}
 
 	public function test_register() {
+		$eq = $this->eq();
 		list($router, $core, $admin, $rdev) = $this->make_tester();
 
 		# incomplete data
@@ -308,8 +314,8 @@ class RouteTest extends TestCase {
 		$router->route('/register', function($args) use($router) {
 			$router->route_register(['post' => []]);
 		}, 'POST');
-		$this->assertEquals($core::$code, 401);
-		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
+		$eq($core::$code, 401);
+		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
 		# success
 		$post = [
@@ -325,10 +331,11 @@ class RouteTest extends TestCase {
 			'/chbio', function($args) use($router, $post) {
 				$router->route_register($post);
 		}, 'POST');
-		$this->assertEquals($core::$errno, 0);
+		$eq($core::$errno, 0);
 	}
 
 	public function test_useradd() {
+		$eq = $this->eq();
 		list($router, $core, $admin, $rdev) = $this->make_tester();
 
 		### login
@@ -341,8 +348,8 @@ class RouteTest extends TestCase {
 			'/useradd', function($args) use($router, $post) {
 				$router->route_useradd($post);
 		}, 'POST');
-		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
+		$eq($core::$code, 403);
+		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
 		# success
 		$post = [
@@ -357,7 +364,7 @@ class RouteTest extends TestCase {
 			'/useradd', function($args) use($router, $post) {
 				$router->route_useradd($post);
 		}, 'POST');
-		$this->assertEquals($core::$errno, 0);
+		$eq($core::$errno, 0);
 
 		# re-adding fails because of non-unique email
 		$this->request_authed($rdev, '/useradd', 'POST', $post, $token);
@@ -365,11 +372,12 @@ class RouteTest extends TestCase {
 			'/useradd', function($args) use($router, $post) {
 				$router->route_useradd($post);
 		}, 'POST');
-		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($core::$errno, Error::EMAIL_EXISTS);
+		$eq($core::$code, 403);
+		$eq($core::$errno, Error::EMAIL_EXISTS);
 	}
 
 	public function test_userdel() {
+		$eq = $this->eq();
 		list($router, $core, $admin, $rdev) = $this->make_tester();
 
 		### login
@@ -382,8 +390,8 @@ class RouteTest extends TestCase {
 			'/userdel', function($args) use($router, $post) {
 				$router->route_userdel($post);
 		}, 'POST');
-		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
+		$eq($core::$code, 403);
+		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
 		### adding
 		$post = [
@@ -398,7 +406,7 @@ class RouteTest extends TestCase {
 			'/useradd', function($args) use($router, $post) {
 				$router->route_useradd($post);
 		}, 'POST');
-		$this->assertEquals($core::$errno, 0);
+		$eq($core::$errno, 0);
 
 		# uid=3 not found
 		$post = ['post' => ['uid' => 3]];
@@ -407,7 +415,7 @@ class RouteTest extends TestCase {
 			'/userdel', function($args) use($router, $post) {
 				$router->route_userdel($post);
 		}, 'POST');
-		$this->assertEquals($core::$errno, Error::USER_NOT_FOUND);
+		$eq($core::$errno, Error::USER_NOT_FOUND);
 
 		# success for uid=2
 		$post = ['post' => ['uid' => 2]];
@@ -416,10 +424,11 @@ class RouteTest extends TestCase {
 			'/userdel', function($args) use($router, $post) {
 				$router->route_userdel($post);
 		}, 'POST');
-		$this->assertEquals($core::$errno, 0);
+		$eq($core::$errno, 0);
 	}
 
 	public function test_userlist() {
+		$eq = $this->eq();
 		list($router, $core, $admin, $rdev) = $this->make_tester();
 
 		### login
@@ -438,7 +447,7 @@ class RouteTest extends TestCase {
 			'/useradd', function($args) use($router, $post) {
 				$router->route_useradd($post);
 		}, 'POST');
-		$this->assertEquals($core::$errno, 0);
+		$eq($core::$errno, 0);
 
 		# success
 		$this->request_authed(
@@ -446,16 +455,17 @@ class RouteTest extends TestCase {
 		$router->route('/userlist', function($args) use($router) {
 			$router->route_userlist(['get' => []]);
 		});
-		$this->assertEquals($core::$errno, 0);
-		$this->assertEquals($core::$data[1]['uname'], 'jimmy');
+		$eq($core::$errno, 0);
+		$eq($core::$data[1]['uname'], 'jimmy');
 	}
 
 	public function test_byway() {
+		$eq = $this->eq();
 		list($router, $core, $admin, $rdev) = $this->make_tester();
 
 		# minimum expiration is hardcoded 60 sec
 		$admin->set_expiration(10);
-		$this->assertEquals(600, $admin->get_expiration());
+		$eq(600, $admin->get_expiration());
 
 		$post = ['post' => ['uname' => 'someone']];
 
@@ -465,7 +475,7 @@ class RouteTest extends TestCase {
 			'/byway', function($args) use($router, $post) {
 				$router->route_byway($post);
 		}, 'POST');
-		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
+		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
 		# success
 		$post['post']['uservice'] = '[github]';
@@ -474,8 +484,8 @@ class RouteTest extends TestCase {
 			'/byway', function($args) use($router, $post) {
 				$router->route_byway($post);
 		}, 'POST');
-		$this->assertEquals($core::$errno, 0);
-		$this->assertEquals($core::$data['uname'], '+someone:[github]');
+		$eq($core::$errno, 0);
+		$eq($core::$data['uname'], '+someone:[github]');
 	}
 
 }

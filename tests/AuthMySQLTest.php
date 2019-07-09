@@ -1,14 +1,14 @@
 <?php
 
+require_once(__DIR__ . '/AuthCommon.php');
 
-require_once(__DIR__ . '/AdminTest.php');
 
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\MySQL;
 use BFITech\ZapStore\SQLError;
 
 
-class AdminMyTest extends AdminTest {
+class AuthMySQLTest extends AuthCommon {
 
 	private static function mysql_config($dbconfig) {
 		if (file_exists($dbconfig))

@@ -56,7 +56,7 @@ class Manage extends AuthManage {
 /**
  * Use tests under respective database backends.
  */
-abstract class AdminTest extends TestCase {
+abstract class AuthCommon extends TestCase {
 
 	protected static $sql;
 	protected static $redis;
@@ -67,6 +67,18 @@ abstract class AdminTest extends TestCase {
 
 	protected static $p_ctrl;
 	protected static $p_manage;
+
+	public function eq($a, $b) {
+		$this->assertEquals($a, $b);
+	}
+
+	public function tr($a, $b) {
+		$this->assertTrue($a, $b);
+	}
+
+	public function sm($a, $b) {
+		$this->assertSame($a, $b);
+	}
 
 	public static function redis_open($configfile, $logger) {
 		$params = self::redis_config($configfile);
@@ -169,7 +181,7 @@ abstract class AdminTest extends TestCase {
 
 	public function test_admin() {
 		# only run this on one database backend
-		if (get_class($this) != 'AdminSQLiteTest') {
+		if (get_class($this) != 'AuthSQLite3Test') {
 			$this->assertTrue(true);
 			return;
 		}

@@ -1,13 +1,13 @@
 <?php
 
-require_once __DIR__ . '/AdminTest.php';
+require_once __DIR__ . '/AuthCommon.php';
 
 
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQLite3;
 
 
-class AdminSQLiteTest extends AdminTest {
+class AuthSQLite3Test extends AuthCommon {
 
 	public static function setUpBeforeClass() {
 		$logfile = testdir() . '/zapmin-sqlite3.log';
@@ -44,7 +44,7 @@ class AdminSQLiteTest extends AdminTest {
 		# dummy drop
 		$sql->query_raw("CREATE TABLE udata (key VARCHAR(20))");
 		$adm = $open_adm(true);
-		$this->assertEquals($adm->get_table_version(),
+		$this->ae($adm->get_table_version(),
 			$tab::TABLE_VERSION);
 
 		# fake table upgrading from no version

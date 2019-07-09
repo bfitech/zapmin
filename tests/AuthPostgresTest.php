@@ -1,7 +1,6 @@
 <?php
 
-
-require_once(__DIR__ . '/AdminTest.php');
+require_once(__DIR__ . '/AuthCommon.php');
 
 
 use BFITech\ZapCore\Logger;
@@ -9,7 +8,7 @@ use BFITech\ZapStore\PgSQL;
 use BFITech\ZapStore\SQLError;
 
 
-class AdminPgTest extends AdminTest {
+class AuthPostgresTest extends AuthCommon {
 
 	private static function postgres_config($dbconfig) {
 		if (file_exists($dbconfig))

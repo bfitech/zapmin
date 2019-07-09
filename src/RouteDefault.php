@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 
 namespace BFITech\ZapAdmin;
@@ -8,47 +8,26 @@ use BFITech\ZapCore\Router;
 
 
 /**
- * Default routes.
+ * Default routing implementation.
  *
- * See each method documentation for more precise control.
+ * See each underlying method documentation for more precise control.
+ * By convention, routing method is always prefixed `route_*`.
  *
- * ### Example:
- * @code
- * # index.php
+ * @see WebDefault for sample dispatcher.
  *
- * namespace BFITech\ZapAdmin;
- *
- * use BFITech\ZapCore\Logger;
- * use BFITech\ZapCore\Router as Core;
- * use BFITech\ZapStore\SQLite3;
- *
- * $logger = new Logger;
- *
- * $store = new SQLite3(['dbname' => '/tmp/zapmin.sq3'], $logger);
- * $admin = new Admin($store, $logger);
- *
- * $ctrl = new AuthCtrl($admin, $logger);
- * $manage = new AuthManage($admin, $logger);
- *
- * $core = new Core($logger);
- *
- * $web = new RouteDefault($core, $ctrl, $manage);
- * $web->run();
- * // $adm->route('/status', [$adm, 'route_status'], 'GET');
- *
- * # run it with something like `php -S 0.0.0.0:8000`
- * @endcode
- *
+ * @if TRUE
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ * @endif
  */
 class RouteDefault extends Route {
 
-	/** Router instancs */
+	/** Router instance. */
 	public static $core;
-	/** AuthCtrl instance. */
-	public static $admin;
-	/** AuthManage instance. */
-	public static $ctrl;
 	/** Admin instance. */
+	public static $admin;
+	/** AuthCtrl instance. */
+	public static $ctrl;
+	/** AuthManage instance. */
 	public static $manage;
 
 	/**
@@ -69,85 +48,132 @@ class RouteDefault extends Route {
 		parent::__construct($core, $ctrl, $manage);
 	}
 
-	/** `GET: /` */
+	/**
+	 * `GET: /`
+	 *
+	 * Sample homepage.
+	 **/
 	public function route_home() {
 		echo '<h1>It wurks!</h1>';
 	}
 
-	/** `GET: /status` */
+	/**
+	 * `GET: /status`
+	 *
+	 * Sample implementation of user status.
+	 **/
 	public function route_status() {
 		return static::$core->pj(
-			static::$ctrl->get_safe_user_data(), 401);
+			self::$ctrl->get_safe_user_data(), 401);
 	}
 
-	/** `POST: /login` */
+	/**
+	 * `POST: /login`
+	 *
+	 * Sample implementation of signing in. If source of authentication
+	 * token is cookie, don't forget to send the cookie on success.
+	 **/
 	public function route_login(array $args) {
-		$ctrl = static::$ctrl;
-		$retval = $ctrl->login($args);
+		$ctrl = self::$ctrl;
+		$retval = $ctrl->login($args['post']);
 		if ($retval[0] === 0)
-			static::$core->send_cookie(
+			self::$core->send_cookie(
 				$this->token_name, $retval[1]['token'],
 				time() + $ctrl::$admin->get_expiration(), '/');
-		return static::$core->pj($retval);
+		return self::$core->pj($retval);
 	}
 
-	/** `GET|POST: /logout` */
-	public function route_logout(array $args) {
-		$retval = static::$ctrl->logout($args);
+	/**
+	 * `GET|POST: /logout`
+	 *
+	 * Sample implementation of signing out. If source of authentication
+	 * token is cookie, don't forget to destroy the cookie on success.
+	 **/
+	public function route_logout() {
+		$retval = self::$ctrl->logout();
 		if ($retval[0] === 0)
-			static::$core->send_cookie(
+			self::$core->send_cookie(
 				$this->token_name, '', time() - (3600 * 48), '/');
-		return static::$core->pj($retval);
+		return self::$core->pj($retval);
 	}
 
-	/** `POST: /chpasswd` */
+	/**
+	 *
+	 * `POST: /chpasswd`
+	 *
+	 * Sample implementation of changing password.
+	 **/
 	public function route_chpasswd(array $args) {
-		return static::$core->pj(
-			static::$ctrl->change_password($args, true));
+		return self::$core->pj(
+			self::$ctrl->change_password($args['post'], true));
 	}
 
-	/** `POST: /chbio` */
+	/**
+	 * `POST: /chbio`
+	 *
+	 * Sample implementation of changing bio.
+	 **/
 	public function route_chbio(array $args) {
-		return static::$core->pj(static::$ctrl->change_bio($args));
+		return self::$core->pj(self::$ctrl->change_bio($args['post']));
 	}
 
-	/** `POST: /register` */
+	/**
+	 * `POST: /register`
+	 *
+	 * Sample implementation of user registration.
+	 **/
 	public function route_register(array $args) {
-		$core = static::$core;
-		$retval = static::$manage->self_add($args, true, true);
+		$core = self::$core;
+		$retval = self::$manage->self_add($args['post'], true, true);
 		if ($retval[0] !== 0)
 			# fail
 			return $core->pj($retval);
 		# success, autologin
 		$args['post']['uname'] = $args['post']['addname'];
 		$args['post']['upass'] = $args['post']['addpass1'];
-		$retval = $this->ctrl->login($args);
+		$retval = self::$ctrl->login($args['post']);
 		$core->send_cookie(
 			$this->token_name, $retval[1]['token'],
 			time() + $this->expiration, '/');
-		return $this->core->pj($retval);
+		return $core->pj($retval);
 	}
 
-	/** `POST: /useradd` */
+	/**
+	 *
+	 * `POST: /useradd`
+	 *
+	 * Sample implementation of user addition.
+	 **/
 	public function route_useradd(array $args) {
-		return static::$core->pj(
-			static::$manage->add($args, false, true, true), 403);
+		return self::$core->pj(
+			self::$manage->add($args['post'], false, true, true), 403);
 	}
 
-	/** `POST: /userdel` */
+	/**
+	 *
+	 * `DELETE: /userdel`
+	 *
+	 * Sample implementation of user deletion.
+	 **/
 	public function route_userdel(array $args) {
-		return static::$core->pj(
-			static::$manage->delete($args), 403);
+		return self::$core->pj(
+			self::$manage->delete($args['post']), 403);
 	}
 
-	/** `POST: /userlist` */
+	/**
+	 * `GET: /userlist`
+	 *
+	 * Sample implementation of user listing.
+	 **/
 	public function route_userlist(array $args) {
-		return static::$core->pj(
-			static::$manage->list($args), 403);
+		return self::$core->pj(
+			self::$manage->list($args['get']), 403);
 	}
 
 	/**
 	 * `GET|POST: /byway`
+	 *
+	 * Sample implementation of byway routing.
 	 *
 	 * @note
 	 * - This is a mock method. Real method must manipulate `$args`
@@ -158,20 +184,16 @@ class RouteDefault extends Route {
 	 *   expiration, use separate instance of Admin.
 	 */
 	public function route_byway(array $args) {
-		$core = static::$core;
-		### start mock
-		if (isset($args['post']['service']))
-			$args['service'] = $args['post']['service'];
-		### end mock
-		$retval = static::$manage->self_add_passwordless($args);
+		$core = self::$core;
+		$retval = self::$manage->self_add_passwordless($args['post']);
 		if ($retval[0] !== 0)
 			return $core->pj($retval, 403);
 		# alway autologin on success
 		$token = $retval[1]['token'];
-		static::$ctrl->set_token_value($token);
+		self::$ctrl->set_token_value($token);
 		$core->send_cookie(
 			$this->token_name, $token,
-			time() + static::$admin->get_expiration(), '/'
+			time() + self::$admin->get_expiration(), '/'
 		);
 		return $core->pj($retval);
 	}

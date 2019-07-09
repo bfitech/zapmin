@@ -152,7 +152,7 @@ class Admin {
 		$data = @json_decode($data, true);
 		if (!$data)
 			# cached data is broken
-			$data = ['uid' => -2];
+			$data = ['uid' => -1];
 		self::$logger->debug(sprintf(
 			"Zapmin: session read from cache: '%s' <- '%s'.",
 			$token_value, json_encode($data)));
@@ -199,7 +199,9 @@ class Admin {
 	/* setters */
 
 	/**
+	 * Set expiration.
 	 *
+	 * @param int $exp Session expiration, in seconds.
 	 */
 	final public function set_expiration(int $exp) {
 		if ($exp < 600)

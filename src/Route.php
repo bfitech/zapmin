@@ -18,17 +18,18 @@ use BFITech\ZapCore\Router;
 class Route {
 
 	public static $core;
-	public static $admin;
 	public static $ctrl;
-	public static $auth;
+	public static $manage;
 
 	protected $token_name;
 	protected $expiration;
 
-	public function __construct(Router $core, AuthCtrl $ctrl) {
+	public function __construct(
+		Router $core, AuthCtrl $ctrl, AuthManage $manage
+	) {
 		self::$core = $core;
 		self::$ctrl = $ctrl;
-		self::$admin = $ctrl::$admin;
+		self::$manage = $manage;
 
 		$this->token_name = $ctrl::$admin->get_token_name();
 		$this->expiration = $ctrl::$admin->get_expiration();
@@ -52,6 +53,8 @@ class Route {
 			if (isset($args['cookie'][$token_name])) {
 				# via cookie
 				static::$ctrl->set_token_value(
+					$args['cookie'][$token_name]);
+				static::$manage->set_token_value(
 					$args['cookie'][$token_name]);
 			} elseif (isset($args['header']['authorization'])) {
 				# via request header

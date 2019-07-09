@@ -56,7 +56,7 @@ class RouteDefault extends Route {
 		self::$manage = $manage;
 		self::$admin = $ctrl::$admin;
 
-		parent::__construct($core, $ctrl);
+		parent::__construct($core, $ctrl, $manage);
 	}
 
 	/** `GET: /` */
@@ -126,7 +126,8 @@ class RouteDefault extends Route {
 
 	/** `POST: /userdel` */
 	public function route_userdel(array $args) {
-		return static::$core->pj($this->manage->delete($args), 403);
+		return static::$core->pj(
+			static::$manage->delete($args), 403);
 	}
 
 	/** `POST: /userlist` */

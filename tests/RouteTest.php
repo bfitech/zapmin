@@ -438,21 +438,24 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_userdel() {
-	 	$this->markTestIncomplete("Reworking ...");
-
-		$adm = $this->make_router();
-		$core = $adm->core;
+		$router = $this->make_router();
+		$core = $router::$core;
+		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
-		$token = $this->login_sequence($adm);
+		$token = $this->login_sequence($router);
 
 		###
 
 		$post = ['x' => ''];
 		$this->request_authed($rdev, '/userdel', 'POST',
 			['post' => $post], $token);
-		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
+		$router->route(
+			'/userdel', function($args) use($router, $post
+			) {
+				$router->route_userdel(['post' => $post]);
+		}, 'POST');
 		$this->assertEquals($core::$code, 403);
-		$this->assertEquals($core::$errno, Err::DATA_INCOMPLETE);
+		$this->assertEquals($core::$errno, Error::DATA_INCOMPLETE);
 
 		###
 
@@ -463,7 +466,11 @@ class RouteTest extends TestCase {
 		];
 		$this->request_authed($rdev, '/useradd', 'POST',
 			['post' => $post], $token);
-		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
+		$router->route(
+			'/useradd', function($args) use($router, $post
+			) {
+				$router->route_useradd(['post' => $post]);
+		}, 'POST');
 		$this->assertEquals($core::$errno, 0);
 
 		###
@@ -471,15 +478,23 @@ class RouteTest extends TestCase {
 		$post = ['uid' => 3];
 		$this->request_authed($rdev, '/userdel', 'POST',
 			['post' => $post], $token);
-		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
-		$this->assertEquals($core::$errno, Err::USER_NOT_FOUND);
+		$router->route(
+			'/userdel', function($args) use($router, $post
+			) {
+				$router->route_userdel(['post' => $post]);
+		}, 'POST');
+		$this->assertEquals($core::$errno, Error::USER_NOT_FOUND);
 
 		###
 
 		$post = ['uid' => 2];
 		$this->request_authed($rdev, '/userdel', 'POST',
 			['post' => $post], $token);
-		$adm->route('/userdel', [$adm, 'route_userdel'], 'POST');
+		$router->route(
+			'/userdel', function($args) use($router, $post
+			) {
+				$router->route_userdel(['post' => $post]);
+		}, 'POST');
 		$this->assertEquals($core::$errno, 0);
 	}
 

@@ -499,12 +499,11 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_userlist() {
-	 	$this->markTestIncomplete("Reworking ...");
-
-		$adm = $this->make_router();
-		$core = $adm->core;
+		$router = $this->make_router();
+		$core = $router::$core;
+		$admin = $router::$admin;
 		$rdev = new RoutingDev($core);
-		$token = $this->login_sequence($adm);
+		$token = $this->login_sequence($router);
 
 		###
 
@@ -515,13 +514,20 @@ class RouteTest extends TestCase {
 		];
 		$this->request_authed($rdev, '/useradd', 'POST',
 			['post' => $post], $token);
-		$adm->route('/useradd', [$adm, 'route_useradd'], 'POST');
+		$router->route(
+			'/useradd', function($args) use($router, $post
+			) {
+				$router->route_useradd(['post' => $post]);
+		}, 'POST');
 		$this->assertEquals($core::$errno, 0);
 
 		###
 
-		$this->request_authed($rdev, '/userlist', 'POST', [], $token);
-		$adm->route('/userlist', [$adm, 'route_userlist'], 'POST');
+		$this->request_authed(
+			$rdev, '/userlist', 'POST', ['post' => []], $token);
+		$router->route('/userlist', function($args) use($router) {
+			$router->route_userlist(['post' => []]);
+		}, 'POST');
 		$this->assertEquals($core::$errno, 0);
 		$this->assertEquals($core::$data[0]['uname'], 'root');
 	}

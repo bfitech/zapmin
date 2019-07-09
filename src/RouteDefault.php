@@ -132,7 +132,8 @@ class RouteDefault extends Route {
 
 	/** `POST: /userlist` */
 	public function route_userlist(array $args) {
-		return static::$core->pj($this->manage->list($args), 403);
+		return static::$core->pj(
+			static::$manage->list($args), 403);
 	}
 
 	/**

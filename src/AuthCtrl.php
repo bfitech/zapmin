@@ -35,12 +35,12 @@ class AuthCtrl extends Auth {
 		if ($this->is_logged_in())
 			return [Error::USER_ALREADY_LOGGED_IN];
 
-		if (!isset($args['post']))
+		if (!$args)
 			return [Error::DATA_INCOMPLETE];
 
-		if (!Common::check_idict($args['post'], ['uname', 'upass']))
+		if (!Common::check_idict($args, ['uname', 'upass']))
 			return [Error::DATA_INCOMPLETE];
-		extract($args['post']);
+		extract($args);
 
 		$sql = self::$admin::$store;
 
@@ -148,10 +148,10 @@ class AuthCtrl extends Auth {
 		if ($with_old_password)
 			$keys[] = 'pass0';
 
-		$post = Common::check_idict($args['post'], $keys);
-		if (!$post)
+		$args = Common::check_idict($args, $keys);
+		if (!$args)
 			return [Error::DATA_INCOMPLETE];
-		extract($post);
+		extract($args);
 
 		# check old password if applicable
 		if (
@@ -192,12 +192,11 @@ class AuthCtrl extends Auth {
 		if (!$this->is_logged_in())
 			return [Error::USER_NOT_LOGGED_IN];
 
-		$post = $args['post'];
 		$vars = [];
 		foreach (['fname', 'site'] as $key) {
-			if (!isset($post[$key]))
+			if (!isset($args[$key]))
 				continue;
-			$val = trim($post[$key]);
+			$val = trim($args[$key]);
 			if (!$val)
 				continue;
 			$vars[$key] = $val;
@@ -205,12 +204,13 @@ class AuthCtrl extends Auth {
 		if (!$vars)
 			# no change
 			return [0];
+		$site = '';
 		extract($vars);
 
 		$log = self::$logger;
 
 		# verify site url value
-		if (isset($site) && !Utils::verify_site_url($site)) {
+		if ($site && !Utils::verify_site_url($site)) {
 			$log->warning(
 				"Zapmin: chbio: site URL invalid: '$site'.");
 			return [Error::SITEURL_INVALID];

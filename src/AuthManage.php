@@ -83,9 +83,8 @@ class AuthManage extends Auth {
 	/**
 	 * Register a new user.
 	 *
-	 * @param array $args Dict with 'post' having keys: `addname`,
-	 *     `addpass1`, and optional `addpass2` unless `$pass_twice` is
-	 *     set to true.
+	 * @param array $args Dict with keys: `addname`, `addpass1`, and
+	 *     optional `addpass2` unless `$pass_twice` is set to true.
 	 * @param bool $pass_twice Whether password must be entered twice.
 	 * @param bool $allow_self_register Whether self-registration is
 	 *     allowed.
@@ -118,14 +117,11 @@ class AuthManage extends Auth {
 		if ($email_required)
 			$keys[] = 'email';
 
-		if (!isset($args['post']))
+		$args = Common::check_idict($args, $keys);
+		if (!$args)
 			return [Error::DATA_INCOMPLETE];
-		$post = Common::check_idict($args['post'], $keys);
-		if (!$post)
-			return [Error::DATA_INCOMPLETE];
-
 		$addname = $addpass1 = $addpass2 = $email = null;
-		extract($post);
+		extract($args);
 
 		$udata = [];
 
@@ -143,6 +139,7 @@ class AuthManage extends Auth {
 			$udata['email'] = $email;
 		}
 
+		# if password is only required once
 		if (!$pass_twice)
 			$addpass2 = $addpass1;
 
@@ -176,14 +173,14 @@ class AuthManage extends Auth {
 	/**
 	 * Self-register.
 	 *
-	 * @note This is just a special case of add() with
-	 *     additional condition: user must not be authenticated.
-	 *
 	 * @param array $args Dict with keys: `addname`, `addpass1`,
 	 *     and optional `addpass2` unless `$pass_twice` is set to true.
 	 * @param bool $pass_twice Whether password must be entered twice.
 	 * @param bool $email_required Whether an email address must be
 	 *     provided.
+	 *
+	 * @note This is just a special case of add() with
+	 *     additional condition: user must not be authenticated.
 	 */
 	final public function self_add(
 		array $args, bool $pass_twice=false, bool $email_required=false
@@ -203,16 +200,9 @@ class AuthManage extends Auth {
 	 * also returns `sid` to associate `session.sid` with a column
 	 * on different table.
 	 *
-	 * @param array $args Dict of the form:
-	 *     @code
-	 *     (dict){
-	 *       'service': (dict){
-	 *         'uname': (string uname),
-	 *         'uservice': (string uservice)
-	 *       }
-	 *     }
-	 *     @endcode
-	 *
+	 * @param array $args Dict with keys: `uname`, `uservice`. Ensure
+	 *     a combination of `uname` and `uservice` is unique for each
+	 *     user.
 	 * @return array An array of the form:
 	 *     @code
 	 *     (array)[
@@ -231,10 +221,7 @@ class AuthManage extends Auth {
 			return [Error::USER_ALREADY_LOGGED_IN];
 
 		# check vars
-		if (!isset($args['service']))
-			return [Error::DATA_INCOMPLETE];
-		$service = Common::check_idict($args['service'],
-			['uname', 'uservice']);
+		$service = Common::check_idict($args, ['uname', 'uservice']);
 		if (!$service)
 			return [Error::DATA_INCOMPLETE];
 		$uname = $uservice = null;
@@ -301,7 +288,7 @@ class AuthManage extends Auth {
 	/**
 	 * Delete a user.
 	 *
-	 * @param array $args Dict with POST key having key: `uid`.
+	 * @param array $args Dict with keys: `uid`.
 	 */
 	final public function delete(array $args) {
 		$log = $this::$logger;
@@ -310,10 +297,10 @@ class AuthManage extends Auth {
 		if (!$this->is_logged_in())
 			return [Error::USER_NOT_LOGGED_IN];
 
-		if (!Common::check_idict($args['post'], ['uid']))
+		if (!Common::check_idict($args, ['uid']))
 			return [Error::DATA_INCOMPLETE];
 		$uid = 0;
-		extract($args['post']);
+		extract($args);
 
 		if (!$this->authz_delete(intval($uid)))
 			return [Error::USER_NOT_AUTHORIZED];
@@ -353,13 +340,8 @@ class AuthManage extends Auth {
 	/**
 	 * List all users.
 	 *
-	 * @param array $args Router dict with 'get' key containing:
-	 *     `page`, `limit`, `order` where `order` is `ASC` or `DESC`.
-	 *
-	 * @manonly
-	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
-	 * @SuppressWarnings(PHPMD.NPathComplexity)
-	 * @endmanonly
+	 * @param array $args Dict with keys: `page`, `limit`, `order`
+	 *     where `order` is `ASC` or `DESC`.
 	 */
 	final public function list(array $args) {
 		if (!$this->is_logged_in())
@@ -370,7 +352,7 @@ class AuthManage extends Auth {
 
 		$page = $limit = 0;
 		$order = '';
-		extract($args['post']);
+		extract($args);
 
 		$page = intval($page);
 		if ($page < 0)
@@ -387,9 +369,9 @@ class AuthManage extends Auth {
 
 		// @note MySQL doesn't support '?' placeholder for limit and
 		// offset.
-		$stmt = sprintf(
-			"SELECT uid, uname, fname, site, since " .
-			"FROM udata ORDER BY uid %s LIMIT %s OFFSET %s
+		$stmt = sprintf("
+			SELECT uid, uname, fname, site, since
+			FROM udata ORDER BY uid %s LIMIT %s OFFSET %s
 		", $order, $limit, $offset);
 		return [0, self::$admin::$store->query($stmt, [], true)];
 	}

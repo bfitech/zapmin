@@ -10,8 +10,10 @@ use BFITech\ZapCore\Router;
 /**
  * Default routing implementation.
  *
- * See each underlying method documentation for more precise control.
- * By convention, routing method is always prefixed `route_*`.
+ * See each underlying method documentation of AuthCtrl and AuthManage
+ * for more precise control. By convention, routing method is always
+ * prefixed `route_*`. Change request method as you see fit on your
+ * own implementation, e.g. `DELETE` for RouteDefault::route_userdel.
  *
  * @see WebDefault for sample dispatcher.
  *
@@ -151,7 +153,7 @@ class RouteDefault extends Route {
 
 	/**
 	 *
-	 * `DELETE: /userdel`
+	 * `POST: /userdel`
 	 *
 	 * Sample implementation of user deletion.
 	 **/
@@ -171,7 +173,7 @@ class RouteDefault extends Route {
 	}
 
 	/**
-	 * `GET|POST: /byway`
+	 * `POST: /byway`
 	 *
 	 * Sample implementation of byway routing.
 	 *

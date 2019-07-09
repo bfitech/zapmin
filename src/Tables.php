@@ -24,7 +24,7 @@ class Tables {
 	/**
 	 * Initialize object.
 	 *
-	 * @param AdminStore $admin_store An instance of AdminStore.
+	 * @param Admin $admin An instance of Admin.
 	 */
 	public function __construct(Admin $admin) {
 		$this->admin = $admin;

@@ -17,13 +17,25 @@ use BFITech\ZapCore\Router;
  */
 class Route {
 
+	/** Router instancs */
 	public static $core;
+	/** AuthCtrl instance. */
 	public static $ctrl;
+	/** AuthManage instance. */
 	public static $manage;
 
+	/** Token name */
 	protected $token_name;
+	/** Token expiration */
 	protected $expiration;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param Router $core Router instance.
+	 * @param AuthCtrl $ctrl AuthCtrl instance.
+	 * @param AuthManage $manage AuthManage instance.
+	 */
 	public function __construct(
 		Router $core, AuthCtrl $ctrl, AuthManage $manage
 	) {

@@ -39,15 +39,25 @@ use BFITech\ZapCore\Router;
  * # run it with something like `php -S 0.0.0.0:8000`
  * @endcode
  *
- * @SuppressWarnings(PHPMD)
  */
 class RouteDefault extends Route {
 
+	/** Router instancs */
 	public static $core;
+	/** AuthCtrl instance. */
 	public static $admin;
+	/** AuthManage instance. */
 	public static $ctrl;
+	/** Admin instance. */
 	public static $manage;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param Router $core Router instance.
+	 * @param AuthCtrl $ctrl AuthCtrl instance.
+	 * @param AuthManage $manage AuthManage instance.
+	 */
 	public function __construct(
 		Router $core, AuthCtrl $ctrl, AuthManage $manage
 	) {

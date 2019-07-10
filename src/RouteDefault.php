@@ -65,8 +65,7 @@ class RouteDefault extends Route {
 	 * Sample implementation of user status.
 	 **/
 	public function route_status() {
-		return static::$core->pj(
-			self::$ctrl->get_safe_user_data(), 401);
+		return self::$core->pj(self::$ctrl->get_safe_user_data(), 401);
 	}
 
 	/**
@@ -147,6 +146,8 @@ class RouteDefault extends Route {
 	 * Sample implementation of user addition.
 	 **/
 	public function route_useradd(array $args) {
+		if (!self::$ctrl->get_user_data())
+			return self::$core->pj([Error::USER_NOT_LOGGED_IN], 401);
 		return self::$core->pj(
 			self::$manage->add($args['post'], false, true, true), 403);
 	}
@@ -158,6 +159,8 @@ class RouteDefault extends Route {
 	 * Sample implementation of user deletion.
 	 **/
 	public function route_userdel(array $args) {
+		if (!self::$ctrl->get_user_data())
+			return self::$core->pj([Error::USER_NOT_LOGGED_IN], 401);
 		return self::$core->pj(
 			self::$manage->delete($args['post']), 403);
 	}
@@ -168,6 +171,8 @@ class RouteDefault extends Route {
 	 * Sample implementation of user listing.
 	 **/
 	public function route_userlist(array $args) {
+		if (!self::$ctrl->get_user_data())
+			return self::$core->pj([Error::USER_NOT_LOGGED_IN], 401);
 		return self::$core->pj(
 			self::$manage->list($args['get']), 403);
 	}
@@ -179,8 +184,8 @@ class RouteDefault extends Route {
 	 *
 	 * @note
 	 * - This is a mock method. Real method must manipulate `$args`
-	 *   into containing `service` key that is not sent by client,
-	 *   but by 3rd-party.
+	 *   into containing `uname` and `uservice` keys that is not
+	 *   actually sent by client, but by a middleware.
 	 * - Since version 2, there's no longer difference of expiration
 	 *   between regular and byway. To set different values of
 	 *   expiration, use separate instance of Admin.

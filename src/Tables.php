@@ -53,6 +53,8 @@ class Tables {
 	 *
 	 * @param int $expiration Regular session expiration duration,
 	 *     in second.
+	 *
+	 * @return array SQL statement fragments.
 	 */
 	private function fragments() {
 		$sql = $this->store;
@@ -153,6 +155,8 @@ class Tables {
 	 * Check if tables need upgrade.
 	 *
 	 * @codeCoverageIgnore
+	 *
+	 * @return string Table version.
 	 */
 	private function upgrade() {
 		$sql = $this->store;
@@ -176,6 +180,8 @@ class Tables {
 	 * Upgrade tables.
 	 *
 	 * @codeCoverageIgnore
+	 *
+	 * @return string Table version.
 	 */
 	private function upgrade_tables(string $from_version) {
 		switch ($from_version) {
@@ -190,6 +196,8 @@ class Tables {
 	 * From 0.0 to 1.0.
 	 *
 	 * @codeCoverageIgnore
+	 *
+	 * @return string Table version.
 	 */
 	private function upgrade_0_0() {
 		$sql = $this->store;

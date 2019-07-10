@@ -47,7 +47,12 @@ abstract class Route {
 		$this->expiration = $ctrl::$admin->get_expiration();
 	}
 
-	private function _set_token_value($token_value) {
+	/**
+	 * Set token value
+	 *
+	 * @param string $token_value Session token value.
+	 */
+	private function _set_token_value(string $token_value) {
 		self::$ctrl->set_token_value($token_value);
 		if (self::$manage)
 			self::$manage->set_token_value($token_value);

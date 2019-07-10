@@ -18,6 +18,8 @@ class Utils {
 	 * @param string $uname Username.
 	 * @param string $upass Password.
 	 * @param string $usalt Salt.
+	 *
+	 * @return string Hash password.
 	 */
 	public static function hash_password(
 		string $uname, string $upass, string $usalt
@@ -37,6 +39,8 @@ class Utils {
 	 *
 	 * @param string $pass1 First password.
 	 * @param string $pass2 Second password.
+	 *
+	 * @return int Errno.
 	 */
 	public static function verify_password(
 		string $pass1, string $pass2
@@ -59,6 +63,8 @@ class Utils {
 	 * @param string $key HMAC key.
 	 * @param int $length Maximum length of generated salt. Normal
 	 *     usage is 16 for user salt and 64 for hashed password.
+	 *
+	 * @return string Secret key.
 	 */
 	public static function generate_secret(
 		string $data, string $key=null, int $length=64
@@ -76,6 +82,8 @@ class Utils {
 	 * Verify site url
 	 *
 	 * @param string $url Site URL.
+	 *
+	 * @return string|bool Filtered data, or FALSE if the filter fails.
 	 */
 	public static function verify_site_url(string $url) {
 		$url = trim($url);
@@ -88,6 +96,8 @@ class Utils {
 	 * Verify email address.
 	 *
 	 * @param string $email Email address.
+	 *
+	 * @return string|bool Filtered data, or FALSE if the filter fails.
 	 */
 	public static function verify_email_address(string $email) {
 		$email = trim($email);

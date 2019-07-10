@@ -328,7 +328,7 @@ class RouteTest extends Common {
 		];
 		$rdev->request('/register', 'POST', $post);
 		$router->route(
-			'/chbio', function($args) use($router, $post) {
+			'/register', function($args) use($router, $post) {
 				$router->route_register($post);
 		}, 'POST');
 		$eq($core::$errno, 0);

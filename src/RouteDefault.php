@@ -125,14 +125,15 @@ class RouteDefault extends Route {
 	 **/
 	public function route_register(array $args) {
 		$core = self::$core;
-		$retval = self::$manage->self_add($args['post'], true, true);
+		$post = $args['post'];
+		$retval = self::$manage->self_add($post, true, true);
 		if ($retval[0] !== 0)
 			# fail
 			return $core->pj($retval);
 		# success, autologin
-		$args['post']['uname'] = $args['post']['addname'];
-		$args['post']['upass'] = $args['post']['addpass1'];
-		$retval = self::$ctrl->login($args['post']);
+		$post['uname'] = $post['addname'];
+		$post['upass'] = $post['addpass1'];
+		$retval = self::$ctrl->login($post);
 		$core->send_cookie(
 			$this->token_name, $retval[1]['token'],
 			time() + $this->expiration, '/');

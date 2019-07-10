@@ -33,12 +33,12 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "BFITech\\ZapCoreDev\\": ""
+      "BFITech\\ZapCoreDev\\": "vendor/bfitech"
     }
   },
   "extra": {
     "branch-alias": {
-      "dev-master": "2.0.x-dev"
+      "dev-master": "2.1.x-dev"
     }
   }
 }

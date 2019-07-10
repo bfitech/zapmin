@@ -62,6 +62,11 @@ class Admin {
 	 *   - (bool)check_tables: Check table existence. To prevent this
 	 *     check on every call, save previous state, e.g. on config,
 	 *     and run only when necessary.
+	 *
+	 * @param string $key Config key name.
+	 * @param string $val Config value.
+	 *
+	 * @return instance of Admin.
 	 */
 	public function config(string $key, string $val=null) {
 		if ($this->initialized)
@@ -80,7 +85,13 @@ class Admin {
 		return $this;
 	}
 
-	private function fatal($errno, $message) {
+	/**
+	 * Fatal error.
+	 *
+	 * @param int $errno Errno.
+	 * @param string $message Error message.
+	 */
+	private function fatal(int $errno, string $message) {
 		self::$logger->error("Zapmin: $message.");
 		throw new Error($errno, $message);
 	}
@@ -139,6 +150,8 @@ class Admin {
 	 * Read session data from cache.
 	 *
 	 * @param string $token_value Session token value.
+	 *
+	 * @return array Cache data.
 	 */
 	final public function cache_read(string $token_value) {
 		if (!self::$redis)

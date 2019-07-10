@@ -93,6 +93,8 @@ class AuthCtrl extends Auth {
 	 * Sign out.
 	 *
 	 * @note Using _GET is enough for this operation.
+	 *
+	 * @return array Errno.
 	 */
 	final public function logout() {
 		if (!$this->is_logged_in())
@@ -129,6 +131,8 @@ class AuthCtrl extends Auth {
 	 *     to true.
 	 * @param bool $with_old_password Whether user should provide valid
 	 *     old password.
+	 *
+	 * @return array Errno.
 	 */
 	public function change_password(
 		array $args, bool $with_old_password=null
@@ -187,6 +191,8 @@ class AuthCtrl extends Auth {
 	 * Change user info.
 	 *
 	 * @param array $args Dict with keys: `fname`, `site`.
+	 *
+	 * @return array Errno.
 	 */
 	public function change_bio(array $args) {
 		if (!$this->is_logged_in())

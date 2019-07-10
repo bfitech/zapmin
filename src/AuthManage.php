@@ -15,7 +15,7 @@ class AuthManage extends Auth {
 	/**
 	 * Default method to decide if adding new user is allowed.
 	 *
-	 * This succeeds if current user is root.
+	 * @return bool This succeeds if current user is root.
 	 */
 	public function authz_add() {
 		return $this->get_user_data()['uid'] == 1;
@@ -23,6 +23,10 @@ class AuthManage extends Auth {
 
 	/**
 	 * Verify username of new user.
+	 *
+	 * @param string $addname User name.
+	 *
+	 * @return int Errno.
 	 */
 	private function _add_verify_name(string $addname) {
 		$log = self::$logger;
@@ -54,6 +58,11 @@ class AuthManage extends Auth {
 
 	/**
 	 * Verify email of new user.
+	 *
+	 * @param string $email User email.
+	 * @param string $addname User name.
+	 *
+	 * @return int Errno.
 	 */
 	private function _add_verify_email(
 		string $email, string $addname
@@ -89,6 +98,8 @@ class AuthManage extends Auth {
 	 * @param bool $allow_self_register Whether self-registration is
 	 *     allowed.
 	 * @param bool $email_required Whether email address is mandatory.
+	 *
+	 * @return array Errno.
 	 *
 	 * @if TRUE
 	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
@@ -178,6 +189,8 @@ class AuthManage extends Auth {
 	 * @param bool $pass_twice Whether password must be entered twice.
 	 * @param bool $email_required Whether an email address must be
 	 *     provided.
+	 *
+	 * @return int Errno.
 	 *
 	 * @note This is just a special case of add() with
 	 *     additional condition: user must not be authenticated.
@@ -271,10 +284,10 @@ class AuthManage extends Auth {
 	/**
 	 * Default method to decide if user deletion is allowed.
 	 *
-	 * This succeeds if current user is root, or if it's a case of
-	 * self-deletion for non-root user.
-	 *
 	 * @param int $uid User ID to delete.
+	 *
+	 * @return bool This succeeds if current user is root,
+	 * or if it's a case of self-deletion for non-root user.
 	 */
 	public function authz_delete(int $uid) {
 		$udata = $this->get_user_data();
@@ -289,6 +302,8 @@ class AuthManage extends Auth {
 	 * Delete a user.
 	 *
 	 * @param array $args Dict with keys: `uid`.
+	 *
+	 * @return array Errno.
 	 */
 	final public function delete(array $args) {
 		$log = $this::$logger;
@@ -331,7 +346,7 @@ class AuthManage extends Auth {
 	/**
 	 * Default method to decide if user listing is allowed.
 	 *
-	 * This succeeds if current user is root.
+	 * @return bool This succeeds if current user is root.
 	 */
 	public function authz_list() {
 		return $this->authz_add();
@@ -342,6 +357,9 @@ class AuthManage extends Auth {
 	 *
 	 * @param array $args Dict with keys: `page`, `limit`, `order`
 	 *     where `order` is `ASC` or `DESC`.
+	 *
+	 * @return array Errno and user data if succeeds.
+	 * Errno only if error.
 	 */
 	final public function list(array $args) {
 		if (!$this->is_logged_in())

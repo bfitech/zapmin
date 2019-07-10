@@ -46,6 +46,8 @@ abstract class Auth {
 
 	/**
 	 * Get user data.
+	 *
+	 * @return array User data from session.
 	 */
 	final public function get_user_data() {
 		if ($this->token_value === null) {
@@ -94,6 +96,8 @@ abstract class Auth {
 
 	/**
 	 * Get user data excluding sensitive info.
+	 *
+	 * @return array User data.
 	 */
 	final public function get_safe_user_data() {
 		if (!$this->is_logged_in())
@@ -120,6 +124,8 @@ abstract class Auth {
 
 	/**
 	 * Check if current user is signed in.
+	 *
+	 * @return array User data.
 	 */
 	final public function is_logged_in() {
 		if ($this->user_data === null)

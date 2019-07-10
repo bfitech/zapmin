@@ -53,18 +53,19 @@ class WebDefault {
 	 */
 	public function __construct(Route $route, bool $run=true) {
 
+		$this->r = $route;
 		$routes = self::$routes = [
-			['/',         [$route, 'route_home']],
-			['/status',   [$route, 'route_status']],
-			['/login',    [$route, 'route_login'],    'POST'],
-			['/logout',   [$route, 'route_logout'],   ['GET', 'POST']],
-			['/chpasswd', [$route, 'route_chpasswd'], 'POST'],
-			['/chbio',    [$route, 'route_chbio'],    'POST'],
-			['/register', [$route, 'route_register'], 'POST'],
-			['/useradd',  [$route, 'route_useradd'],  'POST'],
-			['/userdel',  [$route, 'route_userdel'],  'POST'],
-			['/userlist', [$route, 'route_userlist']],
-			['/byway',    [$route, 'route_byway'],    'POST'],
+			['/',         'route_home'],
+			['/status',   'route_status'],
+			['/login',    'route_login',    'POST'],
+			['/logout',   'route_logout',   ['GET', 'POST']],
+			['/chpasswd', 'route_chpasswd', 'POST'],
+			['/chbio',    'route_chbio',    'POST'],
+			['/register', 'route_register', 'POST'],
+			['/useradd',  'route_useradd',  'POST'],
+			['/userdel',  'route_userdel',  'POST'],
+			['/userlist', 'route_userlist'],
+			['/byway',    'route_byway',    'POST'],
 		];
 
 		foreach ($routes as $rtn) {
@@ -77,8 +78,11 @@ class WebDefault {
 				$rtn[2][] = 'OPTIONS';
 			else
 				$rtn[2] = [$rtn[2], 'OPTIONS'];
+			// @codeCoverageIgnoreStart
 			if ($run)
-				$route->route($rtn[0], $rtn[1], $rtn[2], $rtn[3]);
+				$route->route(
+					$rtn[0], [$route, $rtn[1]], $rtn[2], $rtn[3]);
+			// @codeCoverageIgnoreEnd
 		}
 	}
 

@@ -76,8 +76,8 @@ abstract class AuthCommon extends Common {
 				"ERROR: Cannot connect to redis server.\n" .
 				"       Please check configuration: '%s'.\n\n" .
 				"CURRENT CONFIGURATION:\n\n%s\n\n",
-				$redisconfig,
-				json_encode($redisparams, JSON_PRETTY_PRINT)
+				$configfile,
+				json_encode($params, JSON_PRETTY_PRINT)
 			);
 			exit(1);
 		}
@@ -92,7 +92,7 @@ abstract class AuthCommon extends Common {
 		# default
 		$params = [
 			'REDISHOST' => '127.0.0.1',
-			'REDISPORT' => 16379,
+			'REDISPORT' => 6379,
 			'REDISDATABASE' => 10,
 			'REDISPASSWORD' => 'xoxo',
 		];

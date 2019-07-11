@@ -17,9 +17,8 @@ class Tables {
 	/** Current table version. */
 	const TABLE_VERSION = '1.0';
 
-	private $admin;
-	private $store;
-	private $logger;
+	/** Admin instance. */
+	public static $admin;
 
 	/**
 	 * Initialize object.
@@ -27,9 +26,7 @@ class Tables {
 	 * @param Admin $admin An instance of Admin.
 	 */
 	public function __construct(Admin $admin) {
-		$this->admin = $admin;
-		$this->store = $admin::$store;
-		$this->logger = $admin::$logger;
+		self::$admin = $admin;
 		$this->exists();
 	}
 
@@ -39,10 +36,8 @@ class Tables {
 	 */
 	public function exists() {
 		try {
-			$this->store->query("SELECT 1 FROM udata LIMIT 1");
-			// @codeCoverageIgnoreStart
+			self::$admin::$store->query("SELECT 1 FROM udata LIMIT 1");
 			$this->upgrade();
-			// @codeCoverageIgnoreEnd
 		} catch (SQLError $e) {
 			$this->install();
 		}
@@ -57,13 +52,13 @@ class Tables {
 	 * @return array SQL statement fragments.
 	 */
 	private function fragments() {
-		$sql = $this->store;
+		$sql = self::$admin::$store;
 		$args = [];
 		$args['index'] = $sql->stmt_fragment('index');
 		$args['engine'] = $sql->stmt_fragment('engine');
 		$args['dtnow'] = $sql->stmt_fragment('datetime');
 		$args['expire'] = $sql->stmt_fragment('datetime',
-			['delta' => $this->admin->get_expiration()]);
+			['delta' => self::$admin->get_expiration()]);
 		if ($sql->get_connection_params()['dbtype'] == 'mysql')
 			$args['dtnow'] = $args['expire'] = 'CURRENT_TIMESTAMP';
 		return $args;
@@ -80,10 +75,10 @@ class Tables {
 	 */
 	private function install() {
 
-		$sql = $this->store;
+		$sql = self::$admin::$store;
 
 		$dtnow = $expire = $engine = $index = null;
-		extract($this->fragments($this->admin->get_expiration()));
+		extract($this->fragments(self::$admin->get_expiration()));
 
 		# user table
 
@@ -154,53 +149,49 @@ class Tables {
 	/**
 	 * Check if tables need upgrade.
 	 *
-	 * @codeCoverageIgnore
-	 *
 	 * @return string Table version.
 	 */
 	private function upgrade() {
-		$sql = $this->store;
 
 		$version = '0.0';
 		try {
-			$version = $sql->query(
+			$version = self::$admin::$store->query(
 				"SELECT version FROM meta LIMIT 1")['version'];
 		} catch(SQLError $e) {
 			return self::upgrade_tables($version);
 		}
 
 		if (0 <= version_compare($version, self::TABLE_VERSION))
-			return $this->logger->debug(
+			return self::$admin::$logger->debug(
 				"Zapmin: Tables are up-to-date.");
 
+		// @codeCoverageIgnoreStart
+		# no use cases just yet
 		return self::upgrade_tables($version);
+		// @codeCoverageIgnoreEnd
 	}
 
 	/**
 	 * Upgrade tables.
-	 *
-	 * @codeCoverageIgnore
 	 *
 	 * @return string Table version.
 	 */
 	private function upgrade_tables(string $from_version) {
 		switch ($from_version) {
 			case '0.0':
-				return $this->upgrade_tables($this->upgrade_0_0());
-			default:
-				return;
+				$this->upgrade_tables($this->upgrade_0_0());
+			# more cases here until reaching latest version
 		}
+		return self::TABLE_VERSION;
 	}
 
 	/**
 	 * From 0.0 to 1.0.
 	 *
-	 * @codeCoverageIgnore
-	 *
 	 * @return string Table version.
 	 */
 	private function upgrade_0_0() {
-		$sql = $this->store;
+		$sql = self::$admin::$store;
 		$sql->query_raw("
 			CREATE TABLE meta (
 				version VARCHAR(24) NOT NULL DEFAULT '0.0'
@@ -209,7 +200,7 @@ class Tables {
 		$sql->insert('meta', [
 			'version' => self::TABLE_VERSION,
 		]);
-		$this->logger->info(sprintf(
+		self::$admin::$logger->info(sprintf(
 			"Zapmin: Upgrading tables: '0.0' -> '%s'.",
 			self::TABLE_VERSION));
 		return self::TABLE_VERSION;

@@ -16,7 +16,7 @@ use BFITech\ZapCore\Router;
  */
 abstract class Route {
 
-	/** Router instancs */
+	/** Router instance. */
 	public static $core;
 	/** AuthCtrl instance. */
 	public static $ctrl;
@@ -31,9 +31,9 @@ abstract class Route {
 	/**
 	 * Constructor.
 	 *
-	 * @param Router $core Router instance.
+	 * @param Router $core BFITech\\ZapCore\\Router instance.
 	 * @param AuthCtrl $ctrl AuthCtrl instance.
-	 * @param AuthManage $manage AuthManage instance. Leave this black
+	 * @param AuthManage $manage AuthManage instance. Leave this blank
 	 *     if you don't care about user management.
 	 */
 	public function __construct(

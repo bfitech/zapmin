@@ -6,6 +6,9 @@ require_once __DIR__ . '/AuthCommon.php';
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQLite3;
 
+use BFITech\ZapAdmin\Admin;
+use BFITech\ZapAdmin\Tables;
+
 
 class AuthSQLite3Test extends AuthCommon {
 
@@ -22,46 +25,39 @@ class AuthSQLite3Test extends AuthCommon {
 		self::redis_open($configfile, $logger);
 	}
 
-	public function test_upgrade_tables() {
-		$this->markTestIncomplete('Reworking ...');
-
+	public function test_upgrade_0_0() {
 		$logfile = testdir() . '/zapmin-table-update.log';
 		if (file_exists($logfile))
 			unlink($logfile);
-		$logger = new Logger(Logger::DEBUG, $logfile);
 
-		$sql = new SQLite3(['dbname' => ':memory:'], $logger);
+		$eq = $this->eq();
+		$log = new Logger(Logger::DEBUG, $logfile);
+		$sql = new SQLite3(['dbname' => ':memory:'], $log);
+		$admin = (new Admin($sql, $log))
+			->config('expire', 3600)
+			->config('token_name', 'bar')
+			->config('check_tables', true)
+			->init();
 
-		$open_adm = function($drop=null) use($sql, $logger) {
-			$_adm = (new AdminStore($sql, $logger));
-			if ($drop)
-				$_adm->config('force_create_table', true);
-			return $_adm->init();
-		};
+		### dummy drop, sqlite3 does not support DROP * CASCADE
+		foreach (['meta', 'udata', 'usess'] as $table)
+			$sql->query_raw("DROP TABLE $table");
+		$sql->query_raw("DROP VIEW v_usess");
+		new Tables($admin);
+		# tables are recreated
+		$eq($sql->query("SELECT version FROM meta LIMIT 1")['version'],
+			Tables::TABLE_VERSION);
 
-		$tab = new za\AdminStoreTables;
-
-		# dummy drop
-		$sql->query_raw("CREATE TABLE udata (key VARCHAR(20))");
-		$adm = $open_adm(true);
-		$this->ae($adm->get_table_version(),
-			$tab::TABLE_VERSION);
-
-		# fake table upgrading from no version
+		### table upgrading from no version
 		$sql->query_raw("DROP TABLE IF EXISTS meta");
-		$adm = $open_adm();
-		$this->eq($adm->get_table_version(),
-			$tab::TABLE_VERSION);
+		new Tables($admin);
+		# table 'meta' is recreated
+		$eq($sql->query("SELECT version FROM meta LIMIT 1")['version'],
+			Tables::TABLE_VERSION);
 
-		# fake table upgrading from 0.1
-		$sql->update('meta', ['version' => '0.1']);
-		$this->eq($adm->get_table_version(), '0.1');
-		$adm = $open_adm();
-		$this->eq($adm->get_table_version(),
-			$tab::TABLE_VERSION);
-
+		### table upgrading from 0.1
+		new Tables($admin);
 		# no table updates
-		$adm = $open_adm();
 		$this->assertNotFalse(strpos(
 			file_get_contents($logfile), "Tables are up-to-date."));
 	}

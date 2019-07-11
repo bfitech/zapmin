@@ -1,15 +1,16 @@
 <?php
 
+require_once(__DIR__ . '/AuthCommon.php');
 
-require_once(__DIR__ . '/AdminStoreWrapper.php');
 
 use BFITech\ZapCore\Logger;
-use BFITech\ZapStore as zs;
+use BFITech\ZapStore\MySQL;
+use BFITech\ZapStore\SQLError;
 
 
-class AdminStoreMyTest extends AdminStoreWrapper {
+class AuthMySQLTest extends AuthCommon {
 
-	private static function prepare_config($dbconfig) {
+	private static function mysql_config($dbconfig) {
 		if (file_exists($dbconfig))
 			return json_decode(
 				file_get_contents($dbconfig), true);
@@ -53,18 +54,18 @@ class AdminStoreMyTest extends AdminStoreWrapper {
 		if (file_exists($logfile))
 			unlink($logfile);
 
-		$logger = new Logger(Logger::DEBUG, $logfile);
-		$dbconfig = testdir() . '/zapmin-mysql.json';
-		$dbparams = self::prepare_config($dbconfig);
+		self::$logger = $logger = new Logger(Logger::DEBUG, $logfile);
+		$configfile = testdir() . '/zapmin-mysql.json';
+		$params = self::mysql_config($configfile);
 		try {
-			self::$sql = new zs\MySQL($dbparams, $logger);
-		} catch(zs\SQLError $e) {
+			self::$sql = new MySQL($params, $logger);
+		} catch(SQLError $e) {
 			printf(
 				"\n" .
 				"ERROR: Cannot connect to mysql test database.\n" .
 				"       Please check configuration: '%s'.\n\n" .
 				"CURRENT CONFIGURATION:\n\n%s\n\n",
-				$dbconfig, json_encode($dbparams, JSON_PRETTY_PRINT)
+				$configfile, json_encode($params, JSON_PRETTY_PRINT)
 			);
 			exit(1);
 		}
@@ -73,11 +74,11 @@ class AdminStoreMyTest extends AdminStoreWrapper {
 			self::$sql->query_raw("DROP VIEW v_usess");
 			foreach (['meta', 'usess', 'udata'] as $table)
 				self::$sql->query_raw("DROP TABLE $table CASCADE");
-		} catch (zs\SQLError $e) {
+		} catch (SQLError $e) {
 		}
-		self::$adm = (new AdminStore(self::$sql, $logger))
-			->config('expiration', 600)
-			->config('force_create_table', true);
+
+		$configfile = testdir() . '/zapmin-redis.json';
+		self::redis_open($configfile, $logger);
 	}
 
 }

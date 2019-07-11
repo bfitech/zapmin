@@ -5,32 +5,25 @@
  * Dummy index.
  *
  * This is not used by unit tests but may be useful when we are to
- * develop authentication proxy via some other languages, which
+ * develop authentication proxy via some other languages, which,
  * in this case, running `$ php -S 0.0.0.0:9090` will generally
- * suffice. All routings are using methods provided by
- * AdminRouteDefault.
+ * suffice. All routings are using methods provided by RouteDefault.
  */
 
 require __DIR__ .'/../vendor/autoload.php';
+require __DIR__ .'/Common.php';
 
 
 use BFITech\ZapCommonDev\CommonDev;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapCore\Router as DefaultRouter;
 use BFITech\ZapStore\SQLite3;
-use BFITech\ZapAdmin\AdminRouteDefault;
+use BFITech\ZapAdmin\Admin;
+use BFITech\ZapAdmin\AuthCtrl;
+use BFITech\ZapAdmin\AuthManage;
+use BFITech\ZapAdmin\RouteDefault;
+use BFITech\ZapAdmin\WebDefault;
 
-
-CommonDev::testdir(__FILE__);
-$dbname = __TESTDIR__ . '/zapmin-http.sq3';
-$logfile = __TESTDIR__ . '/zapmin-http.log';
-$logger = new Logger(Logger::DEBUG, $logfile);
-
-# Remote test database. Use this on teardown.
-if (isset($_GET['reloaddb'])) {
-	unlink($dbname);
-	die();
-}
 
 # Use this router with its simplified abort.
 class Router extends DefaultRouter {
@@ -42,19 +35,27 @@ class Router extends DefaultRouter {
 
 }
 
-$core = (new Router)->config('logger', $logger);
-$store = new SQLite3(['dbname' => $dbname], $logger);
 
-$adm = new AdminRouteDefault($store, $logger, null, $core);
+function run() {
+	$dbname = testdir() . '/zapmin-http.sq3';
+	$logfile = testdir() . '/zapmin-http.log';
+	$log = new Logger(Logger::DEBUG, $logfile);
 
-$adm->route('/',         [$adm, 'route_home'],     'GET');
-$adm->route('/status',   [$adm, 'route_status'],   'GET');
-$adm->route('/login',    [$adm, 'route_login'],    'POST');
-$adm->route('/logout',   [$adm, 'route_logout'],   ['GET', 'POST']);
-$adm->route('/chpasswd', [$adm, 'route_chpasswd'], 'POST');
-$adm->route('/chbio',    [$adm, 'route_chbio'],    'POST');
-$adm->route('/register', [$adm, 'route_register'], 'POST');
-$adm->route('/useradd',  [$adm, 'route_useradd'],  'POST');
-$adm->route('/userdel',  [$adm, 'route_userdel'],  'POST');
-$adm->route('/userlist', [$adm, 'route_userlist'], 'POST');
-$adm->route('/byway',    [$adm, 'route_byway'],    ['GET', 'POST']);
+	# Remove test database. Use this to clear up database and start
+	# over.
+	if (isset($_GET['reloaddb']))
+		unlink($dbname);
+
+	$core = (new Router)->config('logger', $log);
+	$store = new SQLite3(['dbname' => $dbname], $log);
+
+	$admin = (new Admin($store, $log))
+		->config('check_tables', true)
+		->init();
+	$ctrl = new AuthCtrl($admin, $log);
+	$manage = new AuthManage($admin, $log);
+
+	$route = new RouteDefault($core, $ctrl, $manage);
+	new WebDefault($route);
+}
+run();

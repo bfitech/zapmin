@@ -1,15 +1,16 @@
 <?php
 
+require_once(__DIR__ . '/AuthCommon.php');
 
-require_once(__DIR__ . '/AdminStoreWrapper.php');
 
 use BFITech\ZapCore\Logger;
-use BFITech\ZapStore as zs;
+use BFITech\ZapStore\PgSQL;
+use BFITech\ZapStore\SQLError;
 
 
-class AdminStorePgTest extends AdminStoreWrapper {
+class AuthPostgresTest extends AuthCommon {
 
-	private static function prepare_config($dbconfig) {
+	private static function postgres_config($dbconfig) {
 		if (file_exists($dbconfig))
 			return json_decode(
 				file_get_contents($dbconfig), true);
@@ -53,12 +54,12 @@ class AdminStorePgTest extends AdminStoreWrapper {
 		if (file_exists($logfile))
 			unlink($logfile);
 
-		$logger = new Logger(Logger::DEBUG, $logfile);
+		self::$logger = $logger = new Logger(Logger::DEBUG, $logfile);
 		$dbconfig = testdir() . '/zapmin-pgsql.json';
-		$dbparams = self::prepare_config($dbconfig);
+		$dbparams = self::postgres_config($dbconfig);
 		try {
-			self::$sql = new zs\PgSQL($dbparams, $logger);
-		} catch(zs\SQLError $e) {
+			self::$sql = new PgSQL($dbparams, $logger);
+		} catch(SQLError $e) {
 			printf(
 				"\n" .
 				"ERROR: Cannot connect to pgsql test database.\n" .
@@ -71,11 +72,11 @@ class AdminStorePgTest extends AdminStoreWrapper {
 		try {
 			foreach (['meta', 'usess', 'udata'] as $table)
 				self::$sql->query_raw("DROP TABLE $table CASCADE");
-		} catch (zs\SQLError $e) {
+		} catch (SQLError $e) {
 		}
-		self::$adm = (new AdminStore(self::$sql, $logger))
-			->config('expiration', 600)
-			->config('force_create_table', true);
+
+		$configfile = testdir() . '/zapmin-redis.json';
+		self::redis_open($configfile, $logger);
 	}
 
 }

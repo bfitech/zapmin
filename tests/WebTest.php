@@ -53,11 +53,9 @@ class WebTest extends Common {
 				$method = $method[0];
 
 			# fake routing
-			# @fixme RoutingDev does not clear up fake HTTP variables
-			# after usage, causing a polluted subsequent requests. One
-			# way to clear it is resetting the params manually below.
-			$rdev->request($reqpath, $method, ['post' => []]);
-			$route->route($rtn[0], [$route, $callback], $method);
+			$rdev
+				->request($reqpath, $method)
+				->route($rtn[0], [$route, $callback], $method);
 			if ($callback == 'route_home') {
 				# home is always 200
 				$eq($core::$code, '200');

@@ -1,14 +1,14 @@
 <?php
 
-require_once __DIR__ . '/Common.php';
 
-
+use BFITech\ZapCoreDev\TestCase;
 use BFITech\ZapCore\Logger;
+use BFITech\ZapCore\Config;
 use BFITech\ZapStore\Redis;
 use BFITech\ZapStore\RedisError;
+use BFITech\ZapStore\SQL;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapStore\SQLError;
-
 use BFITech\ZapAdmin\Admin;
 use BFITech\ZapAdmin\AuthCtrl;
 use BFITech\ZapAdmin\AuthManage;
@@ -16,6 +16,7 @@ use BFITech\ZapAdmin\Error;
 
 
 class Ctrl extends AuthCtrl {
+	# nothing to patch
 }
 
 class Manage extends AuthManage {
@@ -54,7 +55,7 @@ class Manage extends AuthManage {
 /**
  * Use tests under respective database backends.
  */
-abstract class AuthCommon extends Common {
+abstract class AuthCommon extends TestCase {
 
 	protected static $sql;
 	protected static $redis;
@@ -66,74 +67,124 @@ abstract class AuthCommon extends Common {
 	protected static $p_ctrl;
 	protected static $p_manage;
 
-	public static function redis_open($configfile, $logger) {
-		$params = self::redis_config($configfile);
-		try {
-			$redis = new Redis($params, $logger);
-		} catch(RedisError $e) {
-			printf(
-				"\n" .
-				"ERROR: Cannot connect to redis server.\n" .
-				"       Please check configuration: '%s'.\n\n" .
-				"CURRENT CONFIGURATION:\n\n%s\n\n",
-				$configfile,
-				json_encode($params, JSON_PRETTY_PRINT)
-			);
-			exit(1);
-		}
-		self::$redis = $redis;
+	protected static $cfile;
+
+	/**
+	 * Default configuration and environment variable lookup.
+	 *
+	 * Watch out the env var names. They come mostly from various
+	 * official docker images hence the irregularities. In case of no
+	 * env vars involved, e.g. on Travis, the setup must match
+	 * the default values.
+	 */
+	private static function config_default() {
+		return [
+			'mysql' => [
+				['dbhost', 'MYSQL_HOST', 'localhost'],
+				['dbport', 'MYSQL_PORT', 3306],
+				['dbuser', 'MYSQL_USER', 'root'],
+				['dbpass', 'MYSQL_PASSWORD', ''],
+				['dbname', 'MYSQL_DATABASE', 'zapstore_test_db'],
+			],
+			'pgsql' => [
+				['dbhost', 'POSTGRES_HOST', 'localhost'],
+				['dbport', 'POSTGRES_PORT', 5432],
+				['dbuser', 'POSTGRES_USER', 'postgres'],
+				['dbpass', 'POSTGRES_PASSWORD', ''],
+				['dbname', 'POSTGRES_DB', 'zapstore_test_db'],
+			],
+			'sqlite3' => [
+				['dbname', null, ':memory:'],
+			],
+			'redis' => [
+				['redishost', 'REDISHOST', 'localhost'],
+				['redisport', 'REDISPORT', 6379],
+				['redispassword', 'REDISPASSWORD', 'xoxo'],
+				['redisdatabase', 'REDISDATABASE', 10],
+			],
+		];
 	}
 
-	public static function redis_config($configfile) {
-		if (file_exists($configfile))
-			return json_decode(
-				file_get_contents($configfile), true);
+	public static function conn_bail($type, $logfile) {
+		printf(
+			"\nERROR: Cannot connect to '%s' test database.\n\n" .
+			"- Check extensions for interpreter: '%s'.\n" .
+			"- Fix test configuration '%s': %s\n" .
+			"- Inspect test log: %s.\n\n",
+			$type, PHP_BINARY, self::$cfile,
+			file_get_contents(self::$cfile), $logfile);
+		exit(1);
+	}
 
-		# default
-		$params = [
-			'REDISHOST' => '127.0.0.1',
-			'REDISPORT' => 6379,
-			'REDISDATABASE' => 10,
-			'REDISPASSWORD' => 'xoxo',
-		];
+	/**
+	 * Open configuration file.
+	 */
+	public static function open_config($engine) {
+		$cfile = self::tdir(__FILE__) . "/zapmin.json";
+		self::$cfile = $cfile;
 
-		# parse from environment
-		foreach (array_keys($params) as $key) {
-			$val = getenv($key);
-			if (!$val)
-				continue;
-			$params[$key] = $val;
+		# use existing config
+		if (file_exists($cfile))
+			return (new Config($cfile))->get($engine);
+
+		# create new
+		file_put_contents($cfile, '[]');
+		$cnf = new Config($cfile);
+
+		# load from default values or from env vars if applicable
+		foreach (self::config_default() as $section => $sval) {
+			foreach ($sval as $val) {
+				list($key, $env, $dfl) = $val;
+				$ckey = sprintf('%s.%s', $section, $key);
+				$cval = $dfl;
+				if ($env !== null && getenv($env))
+					$cval = getenv($env);
+				$cnf->add($ckey, $cval);
+			}
 		}
-		extract($params);
 
-		# set to standard zapstore params
-		$redisparams = [
-			'redishost' => $REDISHOST,
-			'redisport' => $REDISPORT,
-			'redisdatabase' => $REDISDATABASE,
-			'redispassword' => $REDISPASSWORD,
-		];
+		return $cnf->get($engine);
+	}
 
-		# save config
-		file_put_contents($configfile,
-			json_encode($redisparams, JSON_PRETTY_PRINT));
+	public static function open_connections($dbtype) {
+		$logfile = self::tdir(__FILE__) . "/zamin-$dbtype.log";
+		if (file_exists($logfile))
+			unlink($logfile);
+		$log = self::$logger = new Logger(Logger::ERROR, $logfile);
+		$params = self::open_config(null);
 
-		return $redisparams;
+		try {
+			$dbparams = $params[$dbtype];
+			$dbparams['dbtype'] = $dbtype;
+			self::$sql = new SQL($dbparams, $log);
+			# mysql doesn't cascade on views propperly
+			self::$sql->query_raw("DROP VIEW v_usess");
+			foreach (['meta', 'usess', 'udata'] as $table)
+				self::$sql->query_raw("DROP TABLE $table CASCADE");
+		} catch(SQLError $err) {
+			self::conn_bail($dbtype, $logfile);
+		}
+
+		try {
+			$redisparams = $params['redis'];
+			self::$redis = new Redis($redisparams, $log);
+		} catch(RedisError $err) {
+			self::conn_bail($redistype, $logfile);
+		}
 	}
 
 	public function setUp() {
-		$logger = self::$logger;
-
-		$admin = new Admin(self::$sql, self::$logger, self::$redis);
+		$log = self::$logger;
+		$admin = new Admin(self::$sql, $log, self::$redis);
 		$admin
 			->config('expire', 3600)
 			->config('check_tables', true);
-
-		self::$ctrl = new AuthCtrl($admin, $logger);
-		self::$manage = new AuthManage($admin, $logger);
-
-		self::$p_ctrl = new Ctrl($admin, $logger);
-		self::$p_manage = new Manage($admin, $logger);
+		### original Auth* classess
+		self::$ctrl = new AuthCtrl($admin, $log);
+		self::$manage = new AuthManage($admin, $log);
+		### patched Auth* subclasses
+		self::$p_ctrl = new Ctrl($admin, $log);
+		self::$p_manage = new Manage($admin, $log);
 	}
 
 	public function tearDown() {

@@ -5,7 +5,6 @@ require_once __DIR__ . '/AuthCommon.php';
 
 use BFITech\ZapCore\Logger;
 use BFITech\ZapStore\SQLite3;
-
 use BFITech\ZapAdmin\Admin;
 use BFITech\ZapAdmin\Tables;
 
@@ -13,24 +12,16 @@ use BFITech\ZapAdmin\Tables;
 class AuthSQLite3Test extends AuthCommon {
 
 	public static function setUpBeforeClass() {
-		$logfile = testdir() . '/zapmin-sqlite3.log';
-		if (file_exists($logfile))
-			unlink($logfile);
-		self::$logger = $logger = new Logger(Logger::DEBUG, $logfile);
-		self::$sql = new SQLite3([
-			'dbname' => ':memory:'
-		], $logger);
-
-		$configfile = testdir() . '/zapmin-redis.json';
-		self::redis_open($configfile, $logger);
+		self::open_connections('mysql');
 	}
 
 	public function test_upgrade_0_0() {
-		$logfile = testdir() . '/zapmin-table-update.log';
+		$eq = $this->eq();
+
+		$logfile = self::tdir(__FILE__) . '/zapmin-table-update.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 
-		$eq = $this->eq();
 		$log = new Logger(Logger::DEBUG, $logfile);
 		$sql = new SQLite3(['dbname' => ':memory:'], $log);
 		$admin = (new Admin($sql, $log))

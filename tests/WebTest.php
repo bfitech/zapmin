@@ -1,13 +1,11 @@
 <?php
 
-require_once __DIR__ . '/Common.php';
 
-
+use BFITech\ZapCoreDev\TestCase;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapCoreDev\RouterDev;
 use BFITech\ZapCoreDev\RoutingDev;
 use BFITech\ZapStore\SQLite3;
-
 use BFITech\ZapAdmin\Admin;
 use BFITech\ZapAdmin\AuthCtrl;
 use BFITech\ZapAdmin\AuthManage;
@@ -15,7 +13,7 @@ use BFITech\ZapAdmin\RouteDefault;
 use BFITech\ZapAdmin\WebDefault;
 
 
-class WebTest extends Common {
+class WebTest extends TestCase {
 
 	public function test_web() {
 		$log = new Logger(Logger::ERROR, '/dev/null');

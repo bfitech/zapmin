@@ -147,7 +147,7 @@ abstract class AuthCommon extends TestCase {
 	}
 
 	public static function open_connections($dbtype) {
-		$logfile = self::tdir(__FILE__) . "/zamin-$dbtype.log";
+		$logfile = self::tdir(__FILE__) . "/zapmin-$dbtype.log";
 		if (file_exists($logfile))
 			unlink($logfile);
 		$log = self::$logger = new Logger(Logger::ERROR, $logfile);
@@ -157,12 +157,15 @@ abstract class AuthCommon extends TestCase {
 			$dbparams = $params[$dbtype];
 			$dbparams['dbtype'] = $dbtype;
 			self::$sql = new SQL($dbparams, $log);
-			# mysql doesn't cascade on views propperly
+		} catch(SQLError $err) {
+			self::conn_bail($dbtype, $logfile);
+		}
+		try {
+			# mysql doesn't cascade on views properly
 			self::$sql->query_raw("DROP VIEW v_usess");
 			foreach (['meta', 'usess', 'udata'] as $table)
 				self::$sql->query_raw("DROP TABLE $table CASCADE");
 		} catch(SQLError $err) {
-			self::conn_bail($dbtype, $logfile);
 		}
 
 		try {

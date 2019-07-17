@@ -53,7 +53,6 @@ class WebDefault {
 	 */
 	public function __construct(Route $route, bool $run=true) {
 
-		$this->r = $route;
 		$routes = self::$routes = [
 			['/',         'route_home'],
 			['/status',   'route_status'],

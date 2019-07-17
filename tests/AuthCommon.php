@@ -161,8 +161,9 @@ abstract class AuthCommon extends TestCase {
 			self::conn_bail($dbtype, $logfile);
 		}
 		try {
-			# mysql doesn't cascade on views properly
+			# mysql doesn't cascade dropping views from tables properly
 			self::$sql->query_raw("DROP VIEW v_usess");
+			# drop existing test tables
 			foreach (['meta', 'usess', 'udata'] as $table)
 				self::$sql->query_raw("DROP TABLE $table CASCADE");
 		} catch(SQLError $err) {

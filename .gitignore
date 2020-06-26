@@ -7,6 +7,7 @@
 *.bak
 *.sq3
 *.orig
+*.json
 
 .DS_Store
 composer.lock

@@ -10,15 +10,13 @@
     }
   ],
   "require": {
-    "php": ">=7.0 <7.4",
-    "bfitech/zapcore": "2.1.*",
-    "bfitech/zapstore": "2.1.*",
-    "bfitech/zapstore-sqlite3": "2.1.*"
+    "php": ">=7.0 <7.5",
+    "bfitech/zapstore-sqlite3": "2.2.*"
   },
   "require-dev": {
-    "bfitech/zapstore-mysql": "2.1.*",
-    "bfitech/zapstore-pgsql": "2.1.*",
-    "bfitech/zapstore-redis": "2.1.*",
+    "bfitech/zapstore-mysql": "2.2.*",
+    "bfitech/zapstore-pgsql": "2.2.*",
+    "bfitech/zapstore-redis": "2.2.*",
     "phpunit/phpunit": "6.*"
   },
   "suggest": {
@@ -34,12 +32,12 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "BFITech\\ZapCoreDev\\": "vendor/bfitech"
+      "BFITech\\ZapCoreDev\\": "vendor/bfitech/zapcore/dev"
     }
   },
   "extra": {
     "branch-alias": {
-      "dev-master": "2.1.x-dev"
+      "dev-master": "2.2.x-dev"
     }
   }
 }

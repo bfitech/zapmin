@@ -255,14 +255,13 @@ class AuthManage extends Auth {
 		$token = Utils::generate_secret($dbuname . uniqid(), $uname);
 
 		# get expiration time from sql engine
-		$date_expire = $sql->query(
-			sprintf(
-				"SELECT %s AS date_expire",
-				$sql->stmt_fragment(
-					'datetime',
-					['delta' => self::$admin->get_expiration()])
-				)
-			)['date_expire'];
+		$date_expire = $sql->query(sprintf(
+			"SELECT %s AS date_expire",
+			$sql->stmt_fragment(
+				'datetime',
+				['delta' => self::$admin->get_expiration()])
+			)
+		)['date_expire'];
 
 		# insert
 		$sid = $sql->insert('usess', [

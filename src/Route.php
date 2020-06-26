@@ -48,11 +48,11 @@ abstract class Route {
 	}
 
 	/**
-	 * Set token value
+	 * Set token value for both self::$ctrl and self::$manage.
 	 *
 	 * @param string $token_value Session token value.
 	 */
-	private function _set_token_value(string $token_value) {
+	private function escalate_token_value(string $token_value) {
 		self::$ctrl->set_token_value($token_value);
 		if (self::$manage)
 			self::$manage->set_token_value($token_value);
@@ -77,13 +77,12 @@ abstract class Route {
 			# set token if available
 			if (isset($cookie[$token_name])) {
 				# via cookie
-				$this->_set_token_value($cookie[$token_name]);
+				$this->escalate_token_value($cookie[$token_name]);
 			} elseif (isset($args['header']['authorization'])) {
 				# via request header
 				$auth = explode(' ', $args['header']['authorization']);
-				if (count($auth) == 2 && $auth[0] == $token_name) {
-					$this->_set_token_value($auth[1]);
-				}
+				if (count($auth) == 2 && $auth[0] == $token_name)
+					$this->escalate_token_value($auth[1]);
 			}
 			# execute calback
 			$callback($args);

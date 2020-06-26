@@ -4,19 +4,19 @@
 /**
  * Dummy index.
  *
- * This is not used by unit tests but may be useful when we are to
- * develop authentication proxy via some other languages, which,
- * in this case, running `$ php -S 0.0.0.0:9090` will generally
- * suffice. All routings are using methods provided by RouteDefault.
+ * This is not used by unit tests. This runs WebDefault under actual
+ * HTTP server with SQLite3 backend. Callbacks are provided
+ * by RouteDefault. `$_GET['reloaddb']` on any `GET` request will reset
+ * the database.
+ *
+ * Run with `$ php -S 0.0.0.0:9090`.
  */
 
 require __DIR__ .'/../vendor/autoload.php';
-require __DIR__ .'/Common.php';
 
 
-use BFITech\ZapCommonDev\CommonDev;
 use BFITech\ZapCore\Logger;
-use BFITech\ZapCore\Router as DefaultRouter;
+use BFITech\ZapCore\Router;
 use BFITech\ZapStore\SQLite3;
 use BFITech\ZapAdmin\Admin;
 use BFITech\ZapAdmin\AuthCtrl;
@@ -26,7 +26,7 @@ use BFITech\ZapAdmin\WebDefault;
 
 
 # Use this router with its simplified abort.
-class Router extends DefaultRouter {
+class WebDefaultCore extends Router {
 
 	public function abort_custom($code) {
 		self::start_header($code);
@@ -37,25 +37,26 @@ class Router extends DefaultRouter {
 
 
 function run() {
-	$dbname = testdir() . '/zapmin-http.sq3';
-	$logfile = testdir() . '/zapmin-http.log';
+	$tdir = __DIR__ . '/testdata';
+	@mkdir($tdir, 0755);
+
+	$dbname = $tdir . '/zapmin-http.sq3';
+	$logfile = $tdir  . '/zapmin-http.log';
 	$log = new Logger(Logger::DEBUG, $logfile);
 
-	# Remove test database. Use this to clear up database and start
-	# over.
 	if (isset($_GET['reloaddb']))
-		unlink($dbname);
+		# remove test database
+		@unlink($dbname);
 
-	$core = (new Router)->config('logger', $log);
-	$store = new SQLite3(['dbname' => $dbname], $log);
+	$core = (new WebDefaultCore)->config('logger', $log);
+	$sql = new SQLite3(['dbname' => $dbname], $log);
 
-	$admin = (new Admin($store, $log))
+	$admin = (new Admin($sql, $log))
 		->config('check_tables', true)
 		->init();
 	$ctrl = new AuthCtrl($admin, $log);
 	$manage = new AuthManage($admin, $log);
 
-	$route = new RouteDefault($core, $ctrl, $manage);
-	new WebDefault($route);
+	new WebDefault(new RouteDefault($core, $ctrl, $manage));
 }
 run();

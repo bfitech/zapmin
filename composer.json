@@ -11,12 +11,14 @@
   ],
   "require": {
     "php": ">=7.0 <7.4",
-    "bfitech/zapstore-sqlite3": "~2.1"
+    "bfitech/zapcore": "2.1.*",
+    "bfitech/zapstore": "2.1.*",
+    "bfitech/zapstore-sqlite3": "2.1.*"
   },
   "require-dev": {
-    "bfitech/zapstore-mysql": "~2.1",
-    "bfitech/zapstore-pgsql": "~2.1",
-    "bfitech/zapstore-redis": "~2.1",
+    "bfitech/zapstore-mysql": "2.1.*",
+    "bfitech/zapstore-pgsql": "2.1.*",
+    "bfitech/zapstore-redis": "2.1.*",
     "phpunit/phpunit": "6.*"
   },
   "suggest": {

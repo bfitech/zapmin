@@ -100,19 +100,20 @@ class AuthCtrl extends Auth {
 		if (!$this->is_logged_in())
 			return [Error::USER_NOT_LOGGED_IN];
 
+		$udata = $this->get_user_data();
+		$sid = $udata['sid'];
+		$uname = $udata['uname'];
+
 		# this just close sessions with current sid, whether it exists
 		# or not, including the case of account self-deletion
-		$this->close_session(intval($this->get_user_data()['sid']));
+		$this->close_session(intval($sid));
 
 		# reset status
 		$this->reset();
 
-		# router must set appropriate cookie
+		# router must set appropriate cookie at this point
 
-		self::$logger->info(sprintf(
-			"Zapmin: logout: OK: '%s'.",
-			$this->get_user_data()['uname']
-		));
+		self::$logger->info("Zapmin: logout: OK: '$uname'.");
 		return [0];
 	}
 

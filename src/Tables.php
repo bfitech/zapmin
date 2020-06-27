@@ -153,9 +153,10 @@ class Tables {
 	 */
 	private function upgrade() {
 
+		$sql = self::$admin::$store;
 		$version = '0.0';
 		try {
-			$version = self::$admin::$store->query(
+			$version = $sql->query(
 				"SELECT version FROM meta LIMIT 1")['version'];
 		} catch(SQLError $e) {
 			return self::upgrade_tables($version);
@@ -180,7 +181,7 @@ class Tables {
 		switch ($from_version) {
 			case '0.0':
 				$this->upgrade_tables($this->upgrade_0_0());
-			# more cases here until reaching latest version
+				# more cases here until reaching latest version
 		}
 		return self::TABLE_VERSION;
 	}

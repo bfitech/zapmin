@@ -9,9 +9,40 @@ use BFITech\ZapStore\SQLite3;
 use BFITech\ZapAdmin\Admin;
 use BFITech\ZapAdmin\AuthCtrl;
 use BFITech\ZapAdmin\AuthManage;
+use BFITech\ZapAdmin\Route;
 use BFITech\ZapAdmin\RouteDefault;
 use BFITech\ZapAdmin\Error;
 
+
+/**
+ * Minor patch to RoutingDev so we can chain from the return of
+ * RoutingDev::request.
+ */
+class RoutingDevPatched extends RoutingDev {
+
+	/**
+	 * Instance of BFITech\ZapAdmin\Route where the route method
+	 * authenticates against request header or cookie. This must be set
+	 * after instantiation. See RouteTest::make_zcore for reference.
+	 * Not to be confused with core provided by
+	 * BFITech\ZapCoreDev\Route from which the response is parsed.
+	 *
+	 * FIXME: Allow intercepting request at ZapCoreDev level.
+	 **/
+	public static $zcore;
+
+	/**
+	 * Override parent method. This only modifies the return so that
+	 * we can chain the request-route sequence.
+	 */
+	public function request(
+         string $request_uri=null, string $request_method='GET',
+         array $args=null, array $cookie=[]
+	): Route {
+		parent::request($request_uri, $request_method, $args, $cookie);
+		return self::$zcore;
+	}
+}
 
 class RouteTest extends TestCase {
 
@@ -80,7 +111,7 @@ class RouteTest extends TestCase {
 	private function make_zcore() {
 		### Use new instance on every mock HTTP request. Do not re-use
 		### the router. Re-using SQL within one test method is OK.
-		$rdev = new RoutingDev;
+		$rdev = new RoutingDevPatched;
 
 		$log = self::$logger;
 		$core = $rdev::$core
@@ -102,14 +133,12 @@ class RouteTest extends TestCase {
 		### manage instance
 		$manage = new AuthManage($admin, $log);
 
-		### RouteDefault instance, named $zcore to differ it from
-		### vanilla $core from which response body will be parsed.
+		### RouteDefault instance.
 		$zcore = new RouteDefault($core, $ctrl, $manage);
 
-		### WARNING: Do not call $core->route, but $zcore->route
-		### instead. Otherwise, header and/or cookie won't be processed.
-		### This stops standard chaining $rdev->request(...)->route(...)
-		### from working. Handle with care.
+		### Set $rdev::$zcore so we can do request-route chaining.
+		$rdev::$zcore = $zcore;
+
 		return [$zcore, $rdev, $rdev::$core];
 	}
 
@@ -117,8 +146,9 @@ class RouteTest extends TestCase {
 		extract(self::vars());
 
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/', 'GET');
-		$zcore->route('/', [$zcore, 'route_home']);
+		$rdev
+			->request('/', 'GET')
+			->route('/', [$zcore, 'route_home']);
 		$eq('<h1>It wurks!</h1>', $core::$body_raw);
 		$tr(strpos(strtolower($core::$body_raw), 'it wurks') > 0);
 	}
@@ -130,13 +160,14 @@ class RouteTest extends TestCase {
 	 */
 	private function login_sequence() {
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/login', 'POST', [
-			'post' => [
-				'uname' => 'root',
-				'upass' => 'admin',
-			]
-		]);
-		$zcore->route('/login', [$zcore, 'route_login'], 'POST');
+		$rdev
+			->request('/login', 'POST', [
+				'post' => [
+					'uname' => 'root',
+					'upass' => 'admin',
+				]
+			])
+			->route('/login', [$zcore, 'route_login'], 'POST');
 		$token_name = $zcore::$admin->get_token_name();
 		return [$token_name => $core::$data['token']];
 	}
@@ -146,8 +177,9 @@ class RouteTest extends TestCase {
 
 		# unauthed
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/status', 'GET');
-		$zcore->route('/status', [$zcore, 'route_status']);
+		$rdev
+			->request('/status', 'GET')
+			->route('/status', [$zcore, 'route_status']);
 		$eq($core::$code, 401);
 		$eq($core::$errno, Error::USER_NOT_LOGGED_IN);
 
@@ -174,7 +206,7 @@ class RouteTest extends TestCase {
 		$eq($core::$code, 200);
 		$eq($core::$data['uid'], 1);
 
-		# authed via global cookie
+		# authed via $_COOKIES
 		list($zcore, $rdev, $core) = $this->make_zcore();
 		$rdev->request('/status', 'GET');
 		$_COOKIE[$tname] = $tval;
@@ -184,8 +216,9 @@ class RouteTest extends TestCase {
 
 		# authed via cookie
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/status', 'GET', [], $cookie);
-		$zcore->route('/status', [$zcore, 'route_status']);
+		$rdev
+			->request('/status', 'GET', [], $cookie)
+			->route('/status', [$zcore, 'route_status']);
 		$eq($core::$code, 200);
 		$eq($core::$data['uid'], 1);
 	}
@@ -195,8 +228,9 @@ class RouteTest extends TestCase {
 
 		# login, incomplete data
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/login', 'POST');
-		$zcore->route('/login', [$zcore, 'route_login'], 'POST');
+		$rdev
+			->request('/login', 'POST')
+			->route('/login', [$zcore, 'route_login'], 'POST');
 		$eq($core::$code, 401);
 		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
@@ -205,15 +239,17 @@ class RouteTest extends TestCase {
 
 		# logout ok
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/logout', 'GET', [], $cookie);
-		$zcore->route('/logout', [$zcore, 'route_logout']);
+		$rdev
+			->request('/logout', 'GET', [], $cookie)
+			->route('/logout', [$zcore, 'route_logout']);
 		$eq($core::$code, 200);
 		$eq($core::$errno, 0);
 
 		# cannot relogout
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/logout', 'GET', [], $cookie);
-		$zcore->route('/logout', [$zcore, 'route_logout']);
+		$rdev
+			->request('/logout', 'GET', [], $cookie)
+			->route('/logout', [$zcore, 'route_logout']);
 		$eq($core::$code, 401);
 		$eq($core::$errno, Error::USER_NOT_LOGGED_IN);
 	}
@@ -226,22 +262,23 @@ class RouteTest extends TestCase {
 
 		# incomplete data
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/chpasswd', 'POST', [], $cookie);
-		$zcore->route('/chpasswd',
-			[$zcore, 'route_chpasswd'], 'POST');
+		$rdev
+			->request('/chpasswd', 'POST', [], $cookie)
+			->route('/chpasswd', [$zcore, 'route_chpasswd'], 'POST');
 		$eq($core::$code, 401);
 		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
 		# success
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/chpasswd', 'POST', [
-			'post' => [
-				'pass0' => 'admin',
-				'pass1' => 'admin1',
-				'pass2' => 'admin1',
-			],
-		], $cookie);
-		$zcore->route('/chpasswd', [$zcore, 'route_chpasswd'], 'POST');
+		$rdev
+			->request('/chpasswd', 'POST', [
+				'post' => [
+					'pass0' => 'admin',
+					'pass1' => 'admin1',
+					'pass2' => 'admin1',
+				],
+			], $cookie)
+			->route('/chpasswd', [$zcore, 'route_chpasswd'], 'POST');
 		$eq($core::$code, 200);
 		$eq($core::$errno, 0);
 	}
@@ -255,35 +292,39 @@ class RouteTest extends TestCase {
 		# success
 		list($router, $rdev, $core) = $this->make_zcore();
 		$args = ['post' => ['fname' => 'The Handyman']];
-		$rdev->request('/chbio', 'POST', [
-			'post' => ['fname' => 'The Handyman'],
-		], $cookie);
-		$router->route('/chbio', [$router, 'route_chbio'], 'POST');
+		$rdev
+			->request('/chbio', 'POST', [
+				'post' => ['fname' => 'The Handyman'],
+			], $cookie)
+			->route('/chbio', [$router, 'route_chbio'], 'POST');
 		$eq($core::$code, 200);
 		$eq($core::$errno, 0);
 
 		# invalid url
 		list($router, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/chbio', 'POST', [
+		$rdev
+			->request('/chbio', 'POST', [
 			'post' => ['site' => 'Wrongurl'],
-		], $cookie);
-		$router->route('/chbio', [$router, 'route_chbio'], 'POST');
+			], $cookie)
+			->route('/chbio', [$router, 'route_chbio'], 'POST');
 		$eq($core::$code, 401);
 		$eq($core::$errno, Error::SITEURL_INVALID);
 
 		# success
 		list($router, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/chbio', 'POST', [
-			'post' => ['site' => 'http://bfi.io'],
-		], $cookie);
-		$router->route('/chbio', [$router, 'route_chbio'], 'POST');
+		$rdev
+			->request('/chbio', 'POST', [
+				'post' => ['site' => 'http://bfi.io'],
+			], $cookie)
+			->route('/chbio', [$router, 'route_chbio'], 'POST');
 		$eq($core::$code, 200);
 		$eq($core::$errno, 0);
 
 		### check new value via /status
 		list($router, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/status', 'GET', [], $cookie);
-		$router->route('/status', [$router, 'route_status']);
+		$rdev
+			->request('/status', 'GET', [], $cookie)
+			->route('/status', [$router, 'route_status']);
 		$eq($core::$data['fname'], 'The Handyman');
 		$eq($core::$data['site'], 'http://bfi.io');
 	}
@@ -293,22 +334,24 @@ class RouteTest extends TestCase {
 
 		# incomplete data
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/register', 'POST');
-		$zcore->route('/register', [$zcore, 'route_register'], 'POST');
+		$rdev
+			->request('/register', 'POST')
+			->route('/register', [$zcore, 'route_register'], 'POST');
 		$eq($core::$code, 401);
 		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
 		# success
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/register', 'POST', [
-			'post' => [
-				'addname' => 'jim',
-				'addpass1' => '123456',
-				'addpass2' => '123456',
-				'email' => 'here@exampe.org',
-			],
-		]);
-		$zcore->route('/register', [$zcore, 'route_register'], 'POST');
+		$rdev
+			->request('/register', 'POST', [
+				'post' => [
+					'addname' => 'jim',
+					'addpass1' => '123456',
+					'addpass2' => '123456',
+					'email' => 'here@exampe.org',
+				],
+			])
+			->route('/register', [$zcore, 'route_register'], 'POST');
 		$eq($core::$errno, 0);
 		$eq($core::$data['uname'], 'jim');
 	}
@@ -318,8 +361,9 @@ class RouteTest extends TestCase {
 
 		# unauthed
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/useradd', 'POST');
-		$zcore->route('/useradd', [$zcore, 'route_useradd'], 'POST');
+		$rdev
+			->request('/useradd', 'POST')
+			->route('/useradd', [$zcore, 'route_useradd'], 'POST');
 		$eq($core::$errno, Error::USER_NOT_LOGGED_IN);
 
 		### login
@@ -327,10 +371,11 @@ class RouteTest extends TestCase {
 
 		# incomplete data
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/useradd', 'POST', [
-			'post' => ['x' => ''],
-		], $cookie);
-		$zcore->route('/useradd', [$zcore, 'route_useradd'], 'POST');
+		$rdev
+			->request('/useradd', 'POST', [
+				'post' => ['x' => ''],
+			], $cookie)
+			->route('/useradd', [$zcore, 'route_useradd'], 'POST');
 		$eq($core::$code, 403);
 		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
@@ -343,14 +388,16 @@ class RouteTest extends TestCase {
 				'email' => 'here@exampe.org',
 			],
 		];
-		$rdev->request('/useradd', 'POST', $args, $cookie);
-		$zcore->route('/useradd', [$zcore, 'route_useradd'], 'POST');
+		$rdev
+			->request('/useradd', 'POST', $args, $cookie)
+			->route('/useradd', [$zcore, 'route_useradd'], 'POST');
 		$eq($core::$errno, 0);
 
 		# re-adding fails because of non-unique email
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/useradd', 'POST', $args, $cookie);
-		$zcore->route('/useradd', [$zcore, 'route_useradd'], 'POST');
+		$rdev
+			->request('/useradd', 'POST', $args, $cookie)
+			->route('/useradd', [$zcore, 'route_useradd'], 'POST');
 		$eq($core::$code, 403);
 		$eq($core::$errno, Error::EMAIL_EXISTS);
 	}
@@ -360,8 +407,9 @@ class RouteTest extends TestCase {
 
 		# unauthed
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/userdel', 'POST');
-		$zcore->route('/userdel', [$zcore, 'route_userdel'], 'POST');
+		$rdev
+			->request('/userdel', 'POST')
+			->route('/userdel', [$zcore, 'route_userdel'], 'POST');
 		$eq($core::$errno, Error::USER_NOT_LOGGED_IN);
 
 		### login
@@ -369,39 +417,43 @@ class RouteTest extends TestCase {
 
 		# incomplete data
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/userdel', 'POST', [
-			'post' => ['x' => ''],
-		], $cookie);
-		$zcore->route('/userdel', [$zcore, 'route_userdel'], 'POST');
+		$rdev
+			->request('/userdel', 'POST', [
+				'post' => ['x' => ''],
+			], $cookie)
+			->route('/userdel', [$zcore, 'route_userdel'], 'POST');
 		$eq($core::$code, 403);
 		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
 		### adding
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/useradd', 'POST', [
-			'post' => [
-				'addname' => 'jimmy',
-				'addpass1' => '123456',
-				'email' => 'here@exampe.org',
-			],
-		], $cookie);
-		$zcore->route('/useradd', [$zcore, 'route_useradd'], 'POST');
+		$rdev
+			->request('/useradd', 'POST', [
+				'post' => [
+					'addname' => 'jimmy',
+					'addpass1' => '123456',
+					'email' => 'here@exampe.org',
+				],
+			], $cookie)
+			->route('/useradd', [$zcore, 'route_useradd'], 'POST');
 		$eq($core::$errno, 0);
 
 		# uid=3 not found
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/userdel', 'POST', [
-			'post' => ['uid' => 3],
-		], $cookie);
-		$zcore->route('/userdel', [$zcore, 'route_userdel'], 'POST');
+		$rdev
+			->request('/userdel', 'POST', [
+				'post' => ['uid' => 3],
+			], $cookie)
+			->route('/userdel', [$zcore, 'route_userdel'], 'POST');
 		$eq($core::$errno, Error::USER_NOT_FOUND);
 
 		# success for uid=2
 		$args['post']['uid'] = 2;
-		$rdev->request('/userdel', 'POST', [
-			'post' => ['uid' => 3],
-		], $cookie);
-		$zcore->route('/userdel', [$zcore, 'route_userdel'], 'POST');
+		$rdev
+			->request('/userdel', 'POST', [
+				'post' => ['uid' => 3],
+			], $cookie)
+			->route('/userdel', [$zcore, 'route_userdel'], 'POST');
 		$eq($core::$errno, 0);
 	}
 
@@ -410,8 +462,9 @@ class RouteTest extends TestCase {
 
 		# unauthed
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/userlist');
-		$zcore->route('/userlist', [$zcore, 'route_userlist']);
+		$rdev
+			->request('/userlist')
+			->route('/userlist', [$zcore, 'route_userlist']);
 		$eq($core::$errno, Error::USER_NOT_LOGGED_IN);
 
 		### login
@@ -419,19 +472,21 @@ class RouteTest extends TestCase {
 
 		### adding
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/useradd', 'POST', [
-			'post' => [
-				'addname' => 'jimmy',
-				'addpass1' => '123456',
-				'email' => 'here@exampe.org',
-			],
-		], $cookie);
-		$zcore->route('/useradd', [$zcore, 'route_useradd'], 'POST');
+		$rdev
+			->request('/useradd', 'POST', [
+				'post' => [
+					'addname' => 'jimmy',
+					'addpass1' => '123456',
+					'email' => 'here@exampe.org',
+				],
+			], $cookie)
+			->route('/useradd', [$zcore, 'route_useradd'], 'POST');
 
 		# success
 		list($zcore, $rdev, $core) = $this->make_zcore();
-		$rdev->request('/userlist', 'GET', [], $cookie);
-		$zcore->route('/userlist', [$zcore, 'route_userlist']);
+		$rdev
+			->request('/userlist', 'GET', [], $cookie)
+			->route('/userlist', [$zcore, 'route_userlist']);
 		$eq($core::$errno, 0);
 		$eq($core::$data[1]['uname'], 'jimmy');
 	}
@@ -447,15 +502,17 @@ class RouteTest extends TestCase {
 		# incomplete data
 		list($zcore, $rdev, $core) = $this->make_zcore();
 		$args = ['post' => ['uname' => 'someone']];
-		$rdev->request('/byway', 'POST', $args);
-		$zcore->route('/byway', [$zcore, 'route_byway'], 'POST');
+		$rdev
+			->request('/byway', 'POST', $args)
+			->route('/byway', [$zcore, 'route_byway'], 'POST');
 		$eq($core::$errno, Error::DATA_INCOMPLETE);
 
 		# success
 		list($zcore, $rdev, $core) = $this->make_zcore();
 		$args['post']['uservice'] = '[github]';
-		$rdev->request('/byway', 'POST', $args);
-		$zcore->route('/byway', [$zcore, 'route_byway'], 'POST');
+		$rdev
+			->request('/byway', 'POST', $args)
+			->route('/byway', [$zcore, 'route_byway'], 'POST');
 		$eq($core::$errno, 0);
 		$eq($core::$data['uname'], '+someone:[github]');
 	}

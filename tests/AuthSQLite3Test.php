@@ -12,11 +12,11 @@ use BFITech\ZapAdmin\Tables;
 class AuthSQLite3Test extends AuthCommon {
 
 	public static function setUpBeforeClass() {
-		self::open_connections('mysql');
+		self::open_connections('sqlite3');
 	}
 
 	public function test_upgrade_0_0() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		$logfile = self::tdir(__FILE__) . '/zapmin-table-update.log';
 		if (file_exists($logfile))

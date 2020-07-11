@@ -167,6 +167,7 @@ abstract class AuthCommon extends TestCase {
 			foreach (['meta', 'usess', 'udata'] as $table)
 				self::$sql->query_raw("DROP TABLE $table CASCADE");
 		} catch(SQLError $err) {
+			// no-op
 		}
 
 		try {
@@ -228,10 +229,10 @@ abstract class AuthCommon extends TestCase {
 			return;
 		}
 
-		$logger = new Logger(Logger::ERROR, '/dev/null');
-		$sql = new SQLite3(['dbname' => ':memory:'], $logger);
+		$log = new Logger(Logger::ERROR, '/dev/null');
+		$sql = new SQLite3(['dbname' => ':memory:'], $log);
 
-		$admin = new Admin($sql, $logger);
+		$admin = new Admin($sql, $log);
 		$expire_invalid = false;
 		try {
 			$admin->config('expiration', 360)->init();
@@ -248,7 +249,7 @@ abstract class AuthCommon extends TestCase {
 		}
 		$tr($token_name_not_set);
 
-		$admin = (new Admin($sql, $logger))->init();
+		$admin = (new Admin($sql, $log))->init();
 		$admin->config('token_name', 'quux')->init();
 		$this->eq()($admin->get_token_name(), 'zapmin');
 	}

@@ -61,7 +61,7 @@ class RouteTest extends TestCase {
 		$ctrl = new AuthCtrl($admin, $log);
 		$manage = new AuthManage($admin, $log);
 
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		$zcore = new RouteDefault($core, $ctrl, $manage);
 		# token name successfully changed
@@ -146,7 +146,7 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_status() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		# unauthed
 		list($zcore, $rdev, $core) = $this->make_zcore();
@@ -197,7 +197,7 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_login_logout() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		# login, incomplete data
 		list($zcore, $rdev, $core) = $this->make_zcore();
@@ -228,7 +228,7 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_chpasswd() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		### login
 		$cookie = $this->login_sequence();
@@ -257,7 +257,7 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_chbio() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		### login
 		$cookie = $this->login_sequence();
@@ -303,7 +303,7 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_register() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		# incomplete data
 		list($zcore, $rdev, $core) = $this->make_zcore();
@@ -330,7 +330,7 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_useradd() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		# unauthed
 		list($zcore, $rdev, $core) = $this->make_zcore();
@@ -376,7 +376,7 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_userdel() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		# unauthed
 		list($zcore, $rdev, $core) = $this->make_zcore();
@@ -431,7 +431,7 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_userlist() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		# unauthed
 		list($zcore, $rdev, $core) = $this->make_zcore();
@@ -465,7 +465,7 @@ class RouteTest extends TestCase {
 	}
 
 	public function test_byway() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		# minimum expiration is hardcoded 60 sec
 		list($zcore, $_, $_) = $this->make_zcore();

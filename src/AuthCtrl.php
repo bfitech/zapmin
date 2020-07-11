@@ -49,8 +49,7 @@ class AuthCtrl extends Auth {
 		$sql = self::$admin::$store;
 
 		$usalt = $sql->query(
-			"SELECT usalt FROM udata WHERE uname=? LIMIT 1",
-			[$uname]);
+			"SELECT usalt FROM udata WHERE uname=? LIMIT 1", [$uname]);
 		if (!$usalt)
 			# user not found
 			return [Error::USER_NOT_FOUND];

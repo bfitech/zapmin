@@ -66,6 +66,8 @@ abstract class RouteAdmin {
 	/**
 	 * Middleware to collect authentication information.
 	 *
+	 * All byway implementations are using this.
+	 *
 	 * @param &$args Reference to Router `$args`.
 	 */
 	final public function mdw_collect_token(&$args) {
@@ -75,7 +77,9 @@ abstract class RouteAdmin {
 		if (isset($cookie[$token_name])) {
 			# via cookie
 			$this->escalate_token_value($cookie[$token_name]);
-		} elseif (isset($args['header']['authorization'])) {
+			return;
+		}
+		if (isset($args['header']['authorization'])) {
 			# via request header
 			$auth = explode(' ', $args['header']['authorization']);
 			if (count($auth) == 2 && $auth[0] == $token_name)

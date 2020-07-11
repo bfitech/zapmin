@@ -41,7 +41,7 @@ class WebTest extends TestCase {
 	 * routing list exists.
 	 */
 	public function test_web() {
-		$eq = $this->eq();
+		$eq = self::eq();
 
 		list($zcore, $_, $_) = $this->make_zcore();
 		$web = new WebDefault($zcore, false);

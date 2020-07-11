@@ -130,17 +130,16 @@ class Admin {
 	 * @param string $uname Username.
 	 * @param string $upass User plain text password.
 	 * @param string $usalt User salt.
-	 * @return array|bool False on failure, user data on success. User
-	 *     data elements are subset of those returned by
-	 *     AdminStore::adm_get_safe_user_data.
+	 * @return array|bool False on failure, dict of uid and username
+	 *     on success.
 	 */
 	final public function match_password(
 		string $uname, string $upass, string $usalt
 	) {
-		$udata = self::$store->query(
-			"SELECT uid, uname " .
-				"FROM udata WHERE upass=? LIMIT 1",
-			[Utils::hash_password($uname, $upass, $usalt)]);
+		$udata = self::$store->query("
+			SELECT uid, uname 
+			FROM udata WHERE upass=? LIMIT 1
+		", [Utils::hash_password($uname, $upass, $usalt)]);
 		if (!$udata)
 			return false;
 		return $udata;

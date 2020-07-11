@@ -80,9 +80,9 @@ class AuthManage extends Auth {
 			return Error::EMAIL_INVALID;
 		}
 
-		if (self::$admin::$store->query(
-			"SELECT uid FROM udata WHERE email=? LIMIT 1",
-			[$email])
+		if (self::$admin::$store->query("
+			SELECT uid FROM udata WHERE email=? LIMIT 1
+		", [$email])
 		) {
 			$log->warning(sprintf(
 				"Zapmin: usradd: email exists: '%s' <- '%s'.",

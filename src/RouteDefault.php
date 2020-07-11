@@ -21,7 +21,7 @@ use BFITech\ZapCore\Router;
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  * @endif
  */
-class RouteDefault extends Route {
+class RouteDefault extends RouteAdmin {
 
 	/** Router instance. */
 	public static $core;

@@ -14,36 +14,6 @@ use BFITech\ZapAdmin\RouteDefault;
 use BFITech\ZapAdmin\Error;
 
 
-/**
- * Minor patch to RoutingDev so we can chain from the return of
- * RoutingDev::request.
- */
-class RoutingDevPatched extends RoutingDev {
-
-	/**
-	 * Instance of BFITech\ZapAdmin\Route where the route method
-	 * authenticates against request header or cookie. This must be set
-	 * after instantiation. See RouteTest::make_zcore for reference.
-	 * Not to be confused with core provided by
-	 * BFITech\ZapCoreDev\Route from which the response is parsed.
-	 *
-	 * FIXME: Allow intercepting request at ZapCoreDev level.
-	 **/
-	public static $zcore;
-
-	/**
-	 * Override parent method. This only modifies the return so that
-	 * we can chain the request-route sequence.
-	 */
-	public function request(
-         string $request_uri=null, string $request_method='GET',
-         array $args=null, array $cookie=[]
-	): Route {
-		parent::request($request_uri, $request_method, $args, $cookie);
-		return self::$zcore;
-	}
-}
-
 class RouteTest extends TestCase {
 
 	public static $logger;
@@ -111,7 +81,7 @@ class RouteTest extends TestCase {
 	private function make_zcore() {
 		### Use new instance on every mock HTTP request. Do not re-use
 		### the router. Re-using SQL within one test method is OK.
-		$rdev = new RoutingDevPatched;
+		$rdev = new RoutingDev;
 
 		$log = self::$logger;
 		$core = $rdev::$core
@@ -135,9 +105,6 @@ class RouteTest extends TestCase {
 
 		### RouteDefault instance.
 		$zcore = new RouteDefault($core, $ctrl, $manage);
-
-		### Set $rdev::$zcore so we can do request-route chaining.
-		$rdev::$zcore = $zcore;
 
 		return [$zcore, $rdev, $rdev::$core];
 	}

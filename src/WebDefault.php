@@ -51,7 +51,7 @@ class WebDefault {
 	 *     defer execution, useful when you want to merge routing with
 	 *     other application logic.
 	 */
-	public function __construct(Route $route, bool $run=true) {
+	public function __construct(RouteAdmin $route, bool $run=true) {
 
 		$routes = self::$routes = [
 			['/',         'route_home'],

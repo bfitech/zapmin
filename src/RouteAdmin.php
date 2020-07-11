@@ -8,13 +8,16 @@ use BFITech\ZapCore\Router;
 
 
 /**
- * Route class.
+ * RouteAdmin class.
  *
- * This is a thin layer than glues router and storage together.
+ * This is a thin layer than glues router and data model together.
+ *
+ * By convention, Router instance is named `$core`, while instance of
+ * subclasses of this class is named `$zcore`.
  *
  * @see RouteDefault for sample implemetation.
  */
-abstract class Route {
+abstract class RouteAdmin {
 
 	/** Router instance. */
 	public static $core;
@@ -45,6 +48,8 @@ abstract class Route {
 
 		$this->token_name = $ctrl::$admin->get_token_name();
 		$this->expiration = $ctrl::$admin->get_expiration();
+
+		$core->add_middleware([$this, 'mdw_collect_token']);
 	}
 
 	/**
@@ -59,6 +64,26 @@ abstract class Route {
 	}
 
 	/**
+	 * Middleware to collect authentication information.
+	 *
+	 * @param &$args Reference to router args.
+	 */
+	public function mdw_collect_token(&$args) {
+		$token_name = $this->token_name;
+		$cookie = $args['cookie'];
+		# set token if available
+		if (isset($cookie[$token_name])) {
+			# via cookie
+			$this->escalate_token_value($cookie[$token_name]);
+		} elseif (isset($args['header']['authorization'])) {
+			# via request header
+			$auth = explode(' ', $args['header']['authorization']);
+			if (count($auth) == 2 && $auth[0] == $token_name)
+				$this->escalate_token_value($auth[1]);
+		}
+	}
+
+	/**
 	 * Standard wrapper for Router::route.
 	 *
 	 * @param string $path Router path.
@@ -66,25 +91,13 @@ abstract class Route {
 	 * @param string|array $method Router request method.
 	 * @param bool $is_raw If true, accept raw request body. For POST
 	 *     request only.
+	 * @deprecated As of 2.3, we can use $core directly.
 	 */
 	public function route(
 		string $path, callable $callback, $method='GET',
 		bool $is_raw=null
 	) {
 		self::$core->route($path, function($args) use($callback) {
-			$token_name = $this->token_name;
-			$cookie = $args['cookie'];
-			# set token if available
-			if (isset($cookie[$token_name])) {
-				# via cookie
-				$this->escalate_token_value($cookie[$token_name]);
-			} elseif (isset($args['header']['authorization'])) {
-				# via request header
-				$auth = explode(' ', $args['header']['authorization']);
-				if (count($auth) == 2 && $auth[0] == $token_name)
-					$this->escalate_token_value($auth[1]);
-			}
-			# execute calback
 			$callback($args);
 		}, $method, $is_raw);
 	}

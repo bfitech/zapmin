@@ -34,7 +34,7 @@ abstract class RouteAdmin {
 	/**
 	 * Constructor.
 	 *
-	 * @param Router $core BFITech\\ZapCore\\Router instance.
+	 * @param Router $core BFITech.ZapCore.Router instance.
 	 * @param AuthCtrl $ctrl AuthCtrl instance.
 	 * @param AuthManage $manage AuthManage instance. Leave this blank
 	 *     if you don't care about user management.
@@ -66,9 +66,9 @@ abstract class RouteAdmin {
 	/**
 	 * Middleware to collect authentication information.
 	 *
-	 * @param &$args Reference to router args.
+	 * @param &$args Reference to Router `$args`.
 	 */
-	public function mdw_collect_token(&$args) {
+	final public function mdw_collect_token(&$args) {
 		$token_name = $this->token_name;
 		$cookie = $args['cookie'];
 		# set token if available
@@ -84,14 +84,15 @@ abstract class RouteAdmin {
 	}
 
 	/**
-	 * Standard wrapper for Router::route.
+	 * Wrapper for Router::route.
 	 *
 	 * @param string $path Router path.
 	 * @param callable $callback Router callback.
 	 * @param string|array $method Router request method.
 	 * @param bool $is_raw If true, accept raw request body. For POST
 	 *     request only.
-	 * @deprecated As of 2.3, we can use $core directly.
+	 * @deprecated As of 2.3, we can use instance of `$core` directly
+	 *     to execute BFITech.ZapCore.Router::route.
 	 */
 	public function route(
 		string $path, callable $callback, $method='GET',

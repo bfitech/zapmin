@@ -70,7 +70,7 @@ class RouteTest extends TestCase {
 		### $_COOKIES are passed this way, but not if we use
 		### $rdev->request('/test') which always resets all HTTP
 		### variables and fills $_COOKIES from fourth parameter.
-		$zcore->route('/test', function($args) use($zcore, $eq){
+		$core->route('/test', function($args) use($zcore, $eq){
 			$eq($args['cookie']['foo'], 'test');
 			echo "HELLO, FRIEND";
 		});
@@ -106,18 +106,24 @@ class RouteTest extends TestCase {
 		### RouteDefault instance.
 		$zcore = new RouteDefault($core, $ctrl, $manage);
 
-		return [$zcore, $rdev, $rdev::$core];
+		return [$zcore, $rdev, $core];
 	}
 
 	public function test_home() {
 		extract(self::vars());
+		$body_raw = '<h1>It wurks!</h1>';
 
 		list($zcore, $rdev, $core) = $this->make_zcore();
 		$rdev
 			->request('/', 'GET')
 			->route('/', [$zcore, 'route_home']);
-		$eq('<h1>It wurks!</h1>', $core::$body_raw);
-		$tr(strpos(strtolower($core::$body_raw), 'it wurks') > 0);
+		$eq($body_raw, $core::$body_raw);
+
+		# route with deprecated route method
+		list($zcore, $rdev, $core) = $this->make_zcore();
+		$rdev->request('/', 'GET');
+		$zcore->route('/', [$zcore, 'route_home']);
+		$eq($body_raw, $core::$body_raw);
 	}
 
 	/**
@@ -160,7 +166,7 @@ class RouteTest extends TestCase {
 		$rdev->request('/status', 'GET', $cookie);
 		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
 			"%s-%s", $tname, $tval);
-		$zcore->route('/status', [$zcore, 'route_status']);
+		$core->route('/status', [$zcore, 'route_status']);
 		$eq($core::$code, 401);
 		$eq($core::$errno, Error::USER_NOT_LOGGED_IN);
 
@@ -169,7 +175,7 @@ class RouteTest extends TestCase {
 		$rdev->request('/status', 'GET');
 		$_SERVER['HTTP_AUTHORIZATION'] = sprintf(
 			"%s %s", $tname, $tval);
-		$zcore->route('/status', [$zcore, 'route_status']);
+		$core->route('/status', [$zcore, 'route_status']);
 		$eq($core::$code, 200);
 		$eq($core::$data['uid'], 1);
 
@@ -177,7 +183,7 @@ class RouteTest extends TestCase {
 		list($zcore, $rdev, $core) = $this->make_zcore();
 		$rdev->request('/status', 'GET');
 		$_COOKIE[$tname] = $tval;
-		$zcore->route('/status', [$zcore, 'route_status']);
+		$core->route('/status', [$zcore, 'route_status']);
 		$eq($core::$code, 200);
 		$eq($core::$data['uid'], 1);
 
@@ -271,7 +277,7 @@ class RouteTest extends TestCase {
 		list($router, $rdev, $core) = $this->make_zcore();
 		$rdev
 			->request('/chbio', 'POST', [
-			'post' => ['site' => 'Wrongurl'],
+				'post' => ['site' => 'Wrongurl'],
 			], $cookie)
 			->route('/chbio', [$router, 'route_chbio'], 'POST');
 		$eq($core::$code, 401);

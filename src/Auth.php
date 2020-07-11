@@ -9,6 +9,10 @@ use BFITech\ZapCore\Logger;
 
 /**
  * Auth class.
+ *
+ * This class takes care of authenticating a user given a session token.
+ * It also retrieves userdata, or lack thereof in case of
+ * unauthenticated user.
  */
 abstract class Auth {
 
@@ -28,13 +32,11 @@ abstract class Auth {
 	 * Constructor.
 	 *
 	 * @param Admin $admin Admin instance.
-	 * @param Logger $logger Logger instance.
+	 * @param Logger $log Logger instance.
 	 */
-	public function __construct(
-		Admin $admin, Logger $logger=null
-	) {
+	public function __construct(Admin $admin, Logger $log=null) {
 		self::$admin = $admin->init();
-		self::$logger = $logger ?? $admin::$logger;
+		self::$logger = $log ?? $admin::$logger;
 	}
 
 	/**

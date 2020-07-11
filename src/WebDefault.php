@@ -5,7 +5,7 @@ namespace BFITech\ZapAdmin;
 
 
 /**
- * Default routing dispatcher.
+ * RouteDefault dispatcher.
  *
  * ### Example:
  * @code
@@ -14,7 +14,7 @@ namespace BFITech\ZapAdmin;
  * namespace BFITech\ZapAdmin;
  *
  * use BFITech\ZapCore\Logger;
- * use BFITech\ZapCore\Router as Core;
+ * use BFITech\ZapCore\Router;
  * use BFITech\ZapStore\SQLite3;
  *
  * $log = new Logger(Logger::DEBUG, '/tmp/zapmin.log');
@@ -24,10 +24,10 @@ namespace BFITech\ZapAdmin;
  * $ctrl = new AuthCtrl($admin, $log);
  * $manage = new AuthManage($admin, $log);
  *
- * $core = new Core($log);
- * $route = new RouteDefault($core, $ctrl, $manage);
+ * $core = new Router($log);
+ * $zcore = new RouteDefault($core, $ctrl, $manage);
  *
- * new WebDefault($route);
+ * new WebDefault($zcore);
  *
  * # run it with something like `php -S 0.0.0.0:8000`
  * @endcode
@@ -35,25 +35,26 @@ namespace BFITech\ZapAdmin;
 class WebDefault {
 
 	/**
-	 * Collection of Route instances, each of which has Route::route
-	 * method to execute. Use this if you defer routing execution and
-	 * merge routes with other application logic.
+	 * Collection of RouteAdmin callbacks with their associated path and
+	 * requiest method. Use this if you'd like defer routing execution
+	 * and merge routes with other application logic beforehand.
 	 */
-	public static $routes;
+	public static $zcol;
+
+	private static $zcore;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param Route $route zapmin Route instance. Not to be confused
-	 *     with zapcore Router which is typically instantiated as
-	 *     $core.
+	 * @param RouteAdmin $zcore RouteAdmin instance. Not to be confused
+	 *     with zapcore Router which is typically instantiated as $core.
 	 * @param bool $run If true, execute routing immediately. Otherwise,
-	 *     defer execution, useful when you want to merge routing with
+	 *     defer execution. Useful when you want to merge routing with
 	 *     other application logic.
 	 */
-	public function __construct(RouteAdmin $route, bool $run=true) {
-
-		$routes = self::$routes = [
+	public function __construct(RouteAdmin $zcore, bool $run=true) {
+		self::$zcore = $zcore;
+		$zcol = self::$zcol = [
 			['/',         'route_home'],
 			['/status',   'route_status'],
 			['/login',    'route_login',    'POST'],
@@ -67,21 +68,34 @@ class WebDefault {
 			['/byway',    'route_byway',    'POST'],
 		];
 
-		foreach ($routes as $rtn) {
-			$len = count($rtn);
-			if ($len < 3)
-				$rtn[] = 'GET';
-			if ($len < 4)
-				$rtn[] = false;
-			if (is_array($rtn[2]))
-				$rtn[2][] = 'OPTIONS';
+		foreach ($zcol as $zdata) {
+			if (count($zdata) < 3)
+				$zdata[] = 'GET';
+			if (count($zdata) < 4)
+				$zdata[] = false;
+			if (is_array($zdata[2]))
+				$zdata[2][] = 'OPTIONS';
 			else
-				$rtn[2] = [$rtn[2], 'OPTIONS'];
-			// @codeCoverageIgnoreStart
-			if ($run)
-				$route->route(
-					$rtn[0], [$route, $rtn[1]], $rtn[2], $rtn[3]);
-			// @codeCoverageIgnoreEnd
+				$zdata[2] = [$zdata[2], 'OPTIONS'];
+		}
+
+		// @codeCoverageIgnoreStart
+		if ($run)
+			$this->run();
+		// @codeCoverageIgnoreEnd
+	}
+
+	/**
+	 * Run all routes.
+	 *
+	 * @codeCoverageIgnoreStart
+	 */
+	public function run() {
+		$zcore = self::$zcore;
+		foreach (self::$zcol as $zdata) {
+			list($path, $cbname, $method, $is_raw) = $zdata;
+			$zcore::$core->route(
+				$path, [$zcore, $cbname], $method, $is_raw);
 		}
 	}
 

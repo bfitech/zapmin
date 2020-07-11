@@ -65,7 +65,7 @@ class RouteDefault extends RouteAdmin {
 	 * Sample implementation of user status.
 	 **/
 	public function route_status() {
-		return self::$core->pj(self::$ctrl->get_safe_user_data(), 401);
+		return self::$core::pj(self::$ctrl->get_safe_user_data(), 401);
 	}
 
 	/**
@@ -81,7 +81,7 @@ class RouteDefault extends RouteAdmin {
 			self::$core->send_cookie(
 				$this->token_name, $retval[1]['token'],
 				time() + $ctrl::$admin->get_expiration(), '/');
-		return self::$core->pj($retval);
+		return self::$core::pj($retval);
 	}
 
 	/**
@@ -95,7 +95,7 @@ class RouteDefault extends RouteAdmin {
 		if ($retval[0] === 0)
 			self::$core->send_cookie(
 				$this->token_name, '', time() - (3600 * 48), '/');
-		return self::$core->pj($retval);
+		return self::$core::pj($retval);
 	}
 
 	/**
@@ -105,7 +105,7 @@ class RouteDefault extends RouteAdmin {
 	 * Sample implementation of changing password.
 	 **/
 	public function route_chpasswd(array $args) {
-		return self::$core->pj(
+		return self::$core::pj(
 			self::$ctrl->change_password($args['post'], true));
 	}
 
@@ -115,7 +115,7 @@ class RouteDefault extends RouteAdmin {
 	 * Sample implementation of changing bio.
 	 **/
 	public function route_chbio(array $args) {
-		return self::$core->pj(self::$ctrl->change_bio($args['post']));
+		return self::$core::pj(self::$ctrl->change_bio($args['post']));
 	}
 
 	/**
@@ -129,7 +129,7 @@ class RouteDefault extends RouteAdmin {
 		$retval = self::$manage->self_add($post, true, true);
 		if ($retval[0] !== 0)
 			# fail
-			return $core->pj($retval);
+			return $core::pj($retval);
 		# success, autologin
 		$post['uname'] = $post['addname'];
 		$post['upass'] = $post['addpass1'];
@@ -137,7 +137,7 @@ class RouteDefault extends RouteAdmin {
 		$core->send_cookie(
 			$this->token_name, $retval[1]['token'],
 			time() + $this->expiration, '/');
-		return $core->pj($retval);
+		return $core::pj($retval);
 	}
 
 	/**
@@ -148,8 +148,8 @@ class RouteDefault extends RouteAdmin {
 	 **/
 	public function route_useradd(array $args) {
 		if (!self::$ctrl->get_user_data())
-			return self::$core->pj([Error::USER_NOT_LOGGED_IN], 401);
-		return self::$core->pj(
+			return self::$core::pj([Error::USER_NOT_LOGGED_IN], 401);
+		return self::$core::pj(
 			self::$manage->add($args['post'], false, true, true), 403);
 	}
 
@@ -161,8 +161,8 @@ class RouteDefault extends RouteAdmin {
 	 **/
 	public function route_userdel(array $args) {
 		if (!self::$ctrl->get_user_data())
-			return self::$core->pj([Error::USER_NOT_LOGGED_IN], 401);
-		return self::$core->pj(
+			return self::$core::pj([Error::USER_NOT_LOGGED_IN], 401);
+		return self::$core::pj(
 			self::$manage->delete($args['post']), 403);
 	}
 
@@ -173,8 +173,8 @@ class RouteDefault extends RouteAdmin {
 	 **/
 	public function route_userlist(array $args) {
 		if (!self::$ctrl->get_user_data())
-			return self::$core->pj([Error::USER_NOT_LOGGED_IN], 401);
-		return self::$core->pj(
+			return self::$core::pj([Error::USER_NOT_LOGGED_IN], 401);
+		return self::$core::pj(
 			self::$manage->list($args['get']), 403);
 	}
 
@@ -195,7 +195,7 @@ class RouteDefault extends RouteAdmin {
 		$core = self::$core;
 		$retval = self::$manage->self_add_passwordless($args['post']);
 		if ($retval[0] !== 0)
-			return $core->pj($retval, 403);
+			return $core::pj($retval, 403);
 		# alway autologin on success
 		$token = $retval[1]['token'];
 		self::$ctrl->set_token_value($token);
@@ -203,7 +203,7 @@ class RouteDefault extends RouteAdmin {
 			$this->token_name, $token,
 			time() + self::$admin->get_expiration(), '/'
 		);
-		return $core->pj($retval);
+		return $core::pj($retval);
 	}
 
 }

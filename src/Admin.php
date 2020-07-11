@@ -39,16 +39,16 @@ class Admin {
 	 * Constructor.
 	 *
 	 * @param SQL $store SQL instance.
-	 * @param Logger $logger Logger instance.
+	 * @param Logger $log Logger instance.
 	 * @param RedisConn $redis RedisConn instance.
 	 */
 	public function __construct(
-		SQL $store, Logger $logger=null, RedisConn $redis=null
+		SQL $store, Logger $log=null, RedisConn $redis=null
 	) {
 		# database
 		self::$store = $store;
 		# logger
-		self::$logger = $logger ?? new Logger;
+		self::$logger = $log ?? new Logger;
 		# redis
 		self::$redis = $redis;
 	}

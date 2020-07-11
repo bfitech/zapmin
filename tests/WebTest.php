@@ -46,29 +46,30 @@ class WebTest extends TestCase {
 		list($zcore, $_, $_) = $this->make_zcore();
 		$web = new WebDefault($zcore, false);
 
-		foreach ($web::$routes as $rtn) {
+		foreach ($web::$zcol as $zdata) {
 			# reset zcore each time
 			list($zcore, $rdev, $core) = $this->make_zcore();
 
 			# callback existence
-			$callback = $rtn[1];
+			$callback = $zdata[1];
 			if (!method_exists($zcore, $callback)) {
 				$this->fail(sprintf("MISSING: %s::%s",
-					get_class($route), $callback));
+					get_class($zcore), $callback));
 			}
 
 			# reconstructed request path, identical with route path
 			# since there's no compound
-			$reqpath = $rtn[0];
+			$reqpath = $zdata[0];
 
 			# satisfying method
-			$method = $rtn[2] ?? 'GET';
+			$method = $zdata[2] ?? 'GET';
 			if (is_array($method))
 				$method = $method[0];
 
 			# fake routing
-			$rdev->request($reqpath, $method);
-			$zcore->route($rtn[0], [$zcore, $callback], $method);
+			$rdev
+				->request($reqpath, $method)
+				->route($zdata[0], [$zcore, $callback], $method);
 
 			if ($callback == 'route_home') {
 				# home is always 200

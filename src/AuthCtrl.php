@@ -10,6 +10,10 @@ use BFITech\ZapStore\SQLError;
 
 /**
  * AuthCtrl class.
+ *
+ * This class extends Auth with facilities to associate routing args
+ * with data model: login, logout, change bio, etc. Typically used
+ * by users themselves.
  */
 class AuthCtrl extends Auth {
 
@@ -30,7 +34,7 @@ class AuthCtrl extends Auth {
 	 *     @endcode
 	 */
 	final public function login(array $args) {
-		$logger = self::$logger;
+		$log = self::$logger;
 
 		if ($this->is_logged_in())
 			return [Error::USER_ALREADY_LOGGED_IN];
@@ -55,7 +59,7 @@ class AuthCtrl extends Auth {
 		$udata = self::$admin->match_password($uname, $upass, $usalt);
 		if (!$udata) {
 			# wrong password
-			$logger->warning(
+			$log->warning(
 				"Zapmin: login: wrong password: '$uname'.");
 			return [Error::WRONG_PASSWORD];
 		}
@@ -81,7 +85,7 @@ class AuthCtrl extends Auth {
 		// token must be used by the router; this is a subset
 		// of return value of get_safe_user_data() so it needs
 		// a re-request after signing in
-		$logger->info("Zapmin: login: OK: '$uname'.");
+		$log->info("Zapmin: login: OK: '$uname'.");
 		return [0, [
 			'uid' => $udata['uid'],
 			'uname' => $udata['uname'],

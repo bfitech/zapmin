@@ -9,6 +9,10 @@ use BFITech\ZapStore\SQLError;
 
 /**
  * AuthManage class.
+ *
+ * This class extends Auth with facilities to manipulate users: add,
+ * remove, list. Typically used by site admin, except for self-addition
+ * commonly found in open registration.
  */
 class AuthManage extends Auth {
 

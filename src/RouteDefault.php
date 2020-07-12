@@ -75,13 +75,20 @@ class RouteDefault extends RouteAdmin {
 	 * token is cookie, don't forget to send the cookie on success.
 	 **/
 	public function route_login(array $args) {
+		$core = self::$core;
 		$ctrl = self::$ctrl;
 		$retval = $ctrl->login($args['post']);
-		if ($retval[0] === 0)
-			self::$core->send_cookie(
-				$this->token_name, $retval[1]['token'],
-				time() + $ctrl::$admin->get_expiration(), '/');
-		return self::$core::pj($retval);
+		if ($retval[0] === 0) {
+			$token = $retval[1]['token'];
+			$expires = time() + $ctrl::$admin->get_expiration();
+			$core::send_cookie_with_opts($this->token_name, $token, [
+				'path' => '/',
+				'expires' => $expires,
+				'httponly' => true,
+				'samesite' => 'Lax',
+			]);
+		}
+		return $core::pj($retval);
 	}
 
 	/**
@@ -91,11 +98,17 @@ class RouteDefault extends RouteAdmin {
 	 * token is cookie, don't forget to destroy the cookie on success.
 	 **/
 	public function route_logout() {
+		$core = self::$core;
 		$retval = self::$ctrl->logout();
-		if ($retval[0] === 0)
-			self::$core->send_cookie(
-				$this->token_name, '', time() - (3600 * 48), '/');
-		return self::$core::pj($retval);
+		if ($retval[0] === 0) {
+			$core::send_cookie_with_opts($this->token_name, '', [
+				'path' => '/',
+				'expires' => 1,
+				'httponly' => true,
+				'samesite' => 'Lax',
+			]);
+		}
+		return $core::pj($retval);
 	}
 
 	/**
@@ -127,16 +140,22 @@ class RouteDefault extends RouteAdmin {
 		$core = self::$core;
 		$post = $args['post'];
 		$retval = self::$manage->self_add($post, true, true);
+
+		# fail
 		if ($retval[0] !== 0)
-			# fail
 			return $core::pj($retval);
+
 		# success, autologin
 		$post['uname'] = $post['addname'];
 		$post['upass'] = $post['addpass1'];
 		$retval = self::$ctrl->login($post);
-		$core->send_cookie(
-			$this->token_name, $retval[1]['token'],
-			time() + $this->expiration, '/');
+		$token = $retval[1]['token'];
+		$core::send_cookie_with_opts($this->token_name, $token, [
+			'path' => '/',
+			'expires' => time() + $this->expiration,
+			'httponly' => true,
+			'samesite' => 'Lax',
+		]);
 		return $core::pj($retval);
 	}
 
@@ -199,10 +218,13 @@ class RouteDefault extends RouteAdmin {
 		# alway autologin on success
 		$token = $retval[1]['token'];
 		self::$ctrl->set_token_value($token);
-		$core->send_cookie(
-			$this->token_name, $token,
-			time() + self::$admin->get_expiration(), '/'
-		);
+		$expires = time() + self::$admin->get_expiration();
+		$core::send_cookie_with_opts($this->token_name, $token, [
+			'path' => '/',
+			'expires' => $expires,
+			'httponly' => true,
+			'samesite' => 'Lax',
+		]);
 		return $core::pj($retval);
 	}
 

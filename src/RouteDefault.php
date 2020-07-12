@@ -69,6 +69,14 @@ class RouteDefault extends RouteAdmin {
 	}
 
 	/**
+	 * Get database \*nix timestamp with a delta. Used to determine
+	 * cookie expiry.
+	 */
+	private static function get_db_expires(int $delta) {
+		return self::$ctrl::$admin::$store->time() + $delta;
+	}
+
+	/**
 	 * `POST: /login`
 	 *
 	 * Sample implementation of signing in. If source of authentication
@@ -80,7 +88,8 @@ class RouteDefault extends RouteAdmin {
 		$retval = $ctrl->login($args['post']);
 		if ($retval[0] === 0) {
 			$token = $retval[1]['token'];
-			$expires = time() + $ctrl::$admin->get_expiration();
+			$expires = self::get_db_expires(
+				$ctrl::$admin->get_expiration());
 			$core::send_cookie_with_opts($this->token_name, $token, [
 				'path' => '/',
 				'expires' => $expires,
@@ -150,9 +159,10 @@ class RouteDefault extends RouteAdmin {
 		$post['upass'] = $post['addpass1'];
 		$retval = self::$ctrl->login($post);
 		$token = $retval[1]['token'];
+		$expires = self::get_db_expires($this->expiration);
 		$core::send_cookie_with_opts($this->token_name, $token, [
 			'path' => '/',
-			'expires' => time() + $this->expiration,
+			'expires' => $expires,
 			'httponly' => true,
 			'samesite' => 'Lax',
 		]);
@@ -218,7 +228,8 @@ class RouteDefault extends RouteAdmin {
 		# alway autologin on success
 		$token = $retval[1]['token'];
 		self::$ctrl->set_token_value($token);
-		$expires = time() + self::$admin->get_expiration();
+		$expires = self::get_db_expires(
+			self::$admin->get_expiration());
 		$core::send_cookie_with_opts($this->token_name, $token, [
 			'path' => '/',
 			'expires' => $expires,

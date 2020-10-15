@@ -57,26 +57,28 @@ class Admin {
 	 * Configure.
 	 *
 	 * Available configurables:
-	 *   - (int)expiration: Regular session expiration, in seconds.
-	 *   - (string)token_name: Session token name.
+	 *   - (int)expiration: Session expiration, in positive seconds.
+	 *   - (string)token_name: Session token name. Must not be empty.
 	 *   - (bool)check_tables: Check table existence. To prevent this
 	 *     check on every call, save previous state, e.g. on config,
 	 *     and run only when necessary.
 	 *
 	 * @param string $key Config key name.
-	 * @param string $val Config value.
+	 * @param any $val Config value.
 	 *
 	 * @return instance of Admin.
 	 */
-	public function config(string $key, string $val=null) {
+	public function config(string $key, $val=null) {
 		if ($this->initialized)
 			return $this;
 		switch ($key) {
 			case 'expiration':
-				$this->$key = intval($val);
+				$val = intval($val);
+				if ($val)
+					$this->$key = $val;
 				break;
 			case 'token_name':
-				$this->token_name = rawurlencode($val);
+				$this->token_name = rawurlencode((string)$val);
 				break;
 			case 'check_tables':
 				$this->check_tables = (bool)$val;

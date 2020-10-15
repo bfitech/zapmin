@@ -243,7 +243,7 @@ abstract class AuthCommon extends TestCase {
 
 		$token_name_not_set = false;
 		try {
-			$admin->config('token_name', '')->init();
+			$admin->config('token_name', null)->init();
 		} catch(Error $e) {
 			$token_name_not_set = true;
 		}
